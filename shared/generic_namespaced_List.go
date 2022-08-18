@@ -1,0 +1,293 @@
+/**
+ * Copyright 2022 Comcast Cable Communications Management, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package shared
+
+import (
+	"errors"
+	"fmt"
+	"net"
+	"regexp"
+	"time"
+
+	"xconfwebconfig/db"
+	"xconfwebconfig/util"
+)
+
+// GenericNamespacedListType
+type GenericNamespacedListType string
+
+const (
+	STRING      = "STRING"
+	MAC_LIST    = "MAC_LIST"
+	IP_LIST     = "IP_LIST"
+	RI_MAC_LIST = "RI_MAC_LIST"
+)
+
+func IsValidType(stype string) bool {
+	return STRING == stype || MAC_LIST == stype || IP_LIST == stype || RI_MAC_LIST == stype
+}
+
+// NamespacedList XconfNamedList table
+type NamespacedList struct {
+	ID       string   `json:"id"`
+	Updated  int64    `json:"updated"`
+	Data     []string `json:"data"`
+	TypeName string   `json:"typeName"`
+}
+
+func (obj *NamespacedList) Clone() (*NamespacedList, error) {
+	cloneObj, err := util.Copy(obj)
+	if err != nil {
+		return nil, err
+	}
+	return cloneObj.(*NamespacedList), nil
+}
+
+// NewGenericNamespacedListInf constructor
+func NewNamespacedListInf() interface{} {
+	return &NamespacedList{}
+}
+
+// GenericNamespacedList GenericXconfNamedList table
+type GenericNamespacedList struct {
+	ID       string   `json:"id"`
+	Updated  int64    `json:"updated,omitempty"`
+	Data     []string `json:"data"`
+	TypeName string   `json:"typeName,omitempty"`
+}
+
+func (obj *GenericNamespacedList) Clone() (*GenericNamespacedList, error) {
+	cloneObj, err := util.Copy(obj)
+	if err != nil {
+		return nil, err
+	}
+	return cloneObj.(*GenericNamespacedList), nil
+}
+
+func (obj *GenericNamespacedList) Validate() error {
+	matched, _ := regexp.MatchString("^[-a-zA-Z0-9_.' ]+$", obj.ID)
+	if !matched {
+		return errors.New("Name is invalid")
+	}
+
+	return ValidateListData(obj.TypeName, obj.Data)
+}
+
+func ValidateListData(typeName string, listData []string) error {
+	if !IsValidType(typeName) {
+		return errors.New("Type is invalid")
+	}
+
+	if len(listData) == 0 {
+		return errors.New("List must not be empty")
+	}
+
+	var invalidAddresses []string
+	if typeName == IP_LIST {
+		for _, ipAddress := range listData {
+			if net.ParseIP(ipAddress) == nil {
+				invalidAddresses = append(invalidAddresses, ipAddress)
+			}
+		}
+	} else if typeName == MAC_LIST {
+		for _, mac := range listData {
+			if !util.IsValidMacAddress(mac) {
+				invalidAddresses = append(invalidAddresses, mac)
+			}
+		}
+	}
+	if len(invalidAddresses) > 0 {
+		return fmt.Errorf("List contains invalid address(es): %v", invalidAddresses)
+	}
+
+	return nil
+}
+
+// NewGenericNamespacedListInf constructor
+func NewGenericNamespacedListInf() interface{} {
+	return &GenericNamespacedList{}
+}
+
+// TODO Updated is NOT included in the constructor. EVAL if it is ok
+func NewGenericNamespacedList(id string, typeName string, data []string) *GenericNamespacedList {
+	return &GenericNamespacedList{
+		ID:       id,
+		TypeName: typeName,
+		Data:     data,
+	}
+}
+
+func NewEmptyGenericNamespacedList(typeName string) *GenericNamespacedList {
+	return &GenericNamespacedList{}
+}
+
+func NewMacList() *GenericNamespacedList {
+	return &GenericNamespacedList{
+		TypeName: MAC_LIST,
+	}
+}
+
+func NewIpList() *GenericNamespacedList {
+	return &GenericNamespacedList{
+		TypeName: IP_LIST,
+	}
+}
+
+func (g *GenericNamespacedList) IsMacList() bool {
+	if MAC_LIST == g.TypeName {
+		return true
+	}
+	return false
+}
+
+func (g *GenericNamespacedList) IsIpList() bool {
+	if IP_LIST == g.TypeName {
+		return true
+	}
+	return false
+}
+
+func GetGenericNamedListOneDB(id string) (*GenericNamespacedList, error) {
+	instlst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_GENERIC_NS_LIST, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if instlst == nil {
+		return nil, nil
+	}
+
+	lstptr := instlst.(*GenericNamespacedList)
+	return lstptr, nil
+}
+
+func GetGenericNamedListListsDB() ([]*GenericNamespacedList, error) {
+	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_GENERIC_NS_LIST, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	i := 0
+	glist := make([]*GenericNamespacedList, len(list))
+	for _, obj := range list {
+		nl := obj.(*GenericNamespacedList)
+		glist[i] = nl
+		i++
+	}
+
+	return glist, nil
+}
+
+func GetGenericNamedListListsByTypeDB(typeName string) ([]*GenericNamespacedList, error) {
+	if !IsValidType(typeName) {
+		return nil, fmt.Errorf("Invalid GenericNamespacedList typeName %s", typeName)
+	}
+
+	result := []*GenericNamespacedList{}
+	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_GENERIC_NS_LIST, 0)
+	if err != nil {
+		return nil, err
+	}
+	for _, obj := range list {
+		nl := obj.(*GenericNamespacedList)
+		if nl.TypeName == typeName {
+			result = append(result, nl)
+		}
+	}
+	return result, nil
+}
+
+func CreateGenericNamedListOneDB(newList *GenericNamespacedList) error {
+	newList.Updated = util.GetTimestamp(time.Now())
+	err := db.GetCachedSimpleDao().SetOne(db.TABLE_GENERIC_NS_LIST, newList.ID, newList)
+	return err
+}
+
+func (g *GenericNamespacedList) String() string {
+	return fmt.Sprintf("GenericNamespacedList(%v |%v| %v)", g.ID, g.TypeName, g.Data)
+}
+
+func GetGenericNamedListOneByType(id string, typeName string) (*GenericNamespacedList, error) {
+	lst, err := GetGenericNamedListOneDB(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if lst.TypeName == typeName {
+		return lst, nil
+	}
+
+	return nil, nil
+}
+
+func GetGenericNamedListOneByTypeNonCached(id string, typeName string) (*GenericNamespacedList, error) {
+	instlst, err := db.GetCompressingDataDao().GetOne(db.TABLE_GENERIC_NS_LIST, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if instlst == nil {
+		return nil, nil
+	}
+
+	lstptr := instlst.(*GenericNamespacedList)
+	if lstptr.TypeName == typeName {
+		return lstptr, nil
+	}
+
+	return nil, nil
+}
+
+func DeleteOneGenericNamedList(id string) error {
+	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_GENERIC_NS_LIST, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (g *GenericNamespacedList) IsInIpRange(ipAddressStr string) bool {
+	ipAddressGroup := NewIpAddressGroupWithAddrStrings("foo", "bar", g.Data)
+	return ipAddressGroup.IsInRange(ipAddressStr)
+}
+
+func (g *GenericNamespacedList) CreateIpAddressGroupResponse() *IpAddressGroup {
+	return &IpAddressGroup{
+		Id:             g.ID,
+		Name:           g.ID,
+		RawIpAddresses: g.Data,
+	}
+}
+
+func (g *GenericNamespacedList) CreateGenericNamespacedListResponse() *GenericNamespacedList {
+	return &GenericNamespacedList{
+		ID:   g.ID,
+		Data: g.Data,
+	}
+}
+
+func ConvertToIpAddressGroup(genericIpList *GenericNamespacedList) *IpAddressGroup {
+	return NewIpAddressGroupWithAddrStrings(genericIpList.ID, genericIpList.ID, genericIpList.Data)
+}
+
+func ConvertFromIpAddressGroup(ipAddressGroup *IpAddressGroup) *GenericNamespacedList {
+	ipList := NewIpList()
+	ipList.ID = ipAddressGroup.Name
+	ipList.Data = ipAddressGroup.RawIpAddresses
+	return ipList
+}
