@@ -72,7 +72,7 @@ func (this *ApplicableActionType) IsSuperSetOf(that *ApplicableActionType) bool 
 	return strings.Contains(baseName, givenName)
 }
 
-// ApplicableAction's Type is the Java class name and has to be one of these
+// ApplicableAction's Type has to be one of these
 const (
 	ApplicableActionClass               = ".ApplicableAction"
 	RuleActionClass                     = ".RuleAction"
@@ -82,9 +82,11 @@ const (
 )
 
 func isValidApplicableClass(class string) bool {
-	return class == ApplicableActionClass || class == RuleActionClass ||
-		class == DefinePropertiesActionClass || class == DefinePropertiesTemplateActionClass ||
-		class == BlockingFilterActionClass
+	return strings.Contains(class, ApplicableActionClass) ||
+		strings.Contains(class, RuleActionClass) ||
+		strings.Contains(class, DefinePropertiesActionClass) ||
+		strings.Contains(class, DefinePropertiesTemplateActionClass) ||
+		strings.Contains(class, BlockingFilterActionClass)
 }
 
 // RuleAction ...

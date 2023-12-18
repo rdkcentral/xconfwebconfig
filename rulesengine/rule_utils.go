@@ -21,9 +21,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"net/http"
 	"reflect"
 	"strings"
-
 	"xconfwebconfig/common"
 	"xconfwebconfig/util"
 
@@ -34,6 +34,11 @@ const (
 	voffset = float64(math.MaxInt64 + 1)
 	vrange  = float64(math.MaxInt64*2 + 1)
 )
+
+type ruleCount struct {
+	rule  Rule
+	count int
+}
 
 func FitsPercent(itf interface{}, percent float64) bool {
 	var bbytes []byte
@@ -72,10 +77,182 @@ func Copy(r Rule) Rule {
 	return result
 }
 
+func GetFixedArgsFromRuleByFreeArgAndOperation(rule Rule, freeArg string, operation string) []string {
+	var result []string
+	conditions := ToConditions(&rule)
+	for _, condition := range conditions {
+		value := GetFixedArgFromConditionByFreeArgAndOperation(*condition, freeArg, operation)
+		if value != nil {
+			switch ty := value.(type) {
+			case string:
+				result = append(result, ty)
+			case float64:
+				result = append(result, fmt.Sprintf("%v", ty))
+			case []string:
+				result = append(result, ty...)
+			}
+		}
+	}
+
+	return result
+}
+
+func GetFixedArgFromConditionByFreeArgAndOperation(condition Condition, freeArg string, operation string) interface{} {
+	if operation == condition.Operation && freeArg == condition.FreeArg.Name {
+		if condition.FixedArg != nil {
+			return condition.FixedArg.GetValue()
+		}
+	}
+
+	return nil
+}
+
 func Not(r Rule) Rule {
 	result := Copy(r)
 	result.SetNegated(!r.IsNegated())
 	return result
+}
+
+func (r *Rule) IsCompoundPartsEmpty() bool {
+	return r.CompoundParts == nil || len(r.CompoundParts) == 0
+}
+
+func (r *Rule) IsEmpty() bool {
+	if r == nil {
+		return true
+	}
+	if r.IsCompoundPartsEmpty() && r.Condition == nil {
+		return true
+	}
+	return false
+}
+
+func EqualComplexRules(rule1 Rule, rule2 Rule) bool {
+	if rule1.IsEmpty() && rule2.IsEmpty() {
+		return true
+	}
+	if &rule1 == nil || &rule2 == nil {
+		return false
+	}
+	result := false
+	flattenedRule1 := FlattenRule(rule1)
+	flattenedRule2 := FlattenRule(rule2)
+	if len(flattenedRule1) != len(flattenedRule2) {
+		return false
+	}
+	if len(flattenedRule1) > 1 &&
+		allRulesHaveSameRelation(flattenedRule1) &&
+		allRulesHaveSameRelation(flattenedRule2) {
+		sameRelation := flattenedRule1[len(flattenedRule1)-1].GetRelation()
+		flattenedRule1[0].SetRelation(sameRelation)
+		flattenedRule2[0].SetRelation(sameRelation)
+		result = equalNonCompoundRulesCollections(flattenedRule1, flattenedRule2)
+		sameRelation = ""
+		flattenedRule1[0].SetRelation(sameRelation)
+		flattenedRule2[0].SetRelation(sameRelation)
+	} else {
+		result = equalNonCompoundRulesCollectionsRegardingTheOrder(flattenedRule1, flattenedRule2)
+	}
+
+	return result
+}
+
+func equalNonCompoundRulesCollections(list1 []Rule, list2 []Rule) bool {
+	if len(list1) == len(list2) {
+		return len(intersectionOfNonCompoundRules(list1, list2)) == len(list1)
+	}
+	return false
+}
+
+func intersectionOfNonCompoundRules(rules1 []Rule, rules2 []Rule) (result []Rule) {
+	for i := 0; i < len(rules1); i++ {
+		for j := 0; j < len(rules2); j++ {
+			if equalNonCompoundRules(rules1[i], rules2[j]) {
+				result = append(result, rules1[i])
+				rules2 = append(rules2[:j], rules2[j+1:]...)
+				break
+			}
+		}
+	}
+	return result
+}
+
+func equalNonCompoundRulesCollectionsRegardingTheOrder(list1 []Rule, list2 []Rule) bool {
+	if len(list1) != len(list2) {
+		return false
+	}
+
+	for i := 0; i < len(list1); i++ {
+		if !equalNonCompoundRules(list1[i], list2[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func equalNonCompoundRules(rule1 Rule, rule2 Rule) bool {
+	if &rule1 == nil && &rule2 == nil {
+		return true
+	}
+	if &rule1 == nil || &rule2 == nil {
+		return false
+	}
+	if rule1.IsNegated() != rule2.IsNegated() {
+		return false
+	}
+	if rule1.Relation != rule2.Relation {
+		return false
+	}
+
+	return equalConditions(rule1.Condition, rule2.Condition)
+}
+
+func equalConditions(condition1 *Condition, condition2 *Condition) bool {
+	if condition1 == nil && condition2 == nil {
+		return true
+	}
+
+	if condition1 == nil || condition2 == nil {
+		return false
+	}
+
+	if condition1.FreeArg != nil && condition2.FreeArg != nil {
+		if condition1.FreeArg.Name != condition2.FreeArg.Name {
+			return false
+		}
+	} else if condition1.FreeArg == nil || condition2.FreeArg == nil {
+		return false
+	}
+	if condition1.Operation != "" && condition2.Operation != "" {
+		if condition1.Operation != condition2.Operation {
+			return false
+		}
+	} else if condition1.Operation == "" || condition2.Operation == "" {
+		return false
+	}
+
+	if condition1.FixedArg != nil && condition2.FixedArg != nil {
+		return condition1.FixedArg.Equals(condition2.FixedArg)
+	} else if condition1.FixedArg == nil || condition2.FixedArg == nil {
+		return false
+	}
+
+	return true
+}
+
+func allRulesHaveSameRelation(rules []Rule) bool {
+	sz := len(rules)
+	for i := 0; i < sz; i++ {
+		if util.IsBlank(rules[i].GetRelation()) {
+			continue
+		}
+		if rules[sz-1].GetRelation() != rules[i].GetRelation() {
+			return false
+		}
+	}
+
+	return true
 }
 
 func Or(r Rule) Rule {
@@ -270,9 +447,6 @@ func RemElemFromRuleList(rules []*Rule) (*Rule, []*Rule) {
  * @return comparison result according to {@link java.util.Comparator#compare(Object, Object)}
  */
 func CompareRules(r1 Rule, r2 Rule) int {
-	// based on Java code static int compare(boolean a,boolean b
-	// a positive number if only a is true, a negative number if only b is true, or zero if a == b
-
 	compoundResult := 0
 	if r1.IsCompound() != r2.IsCompound() {
 		if r1.IsCompound() {
@@ -350,7 +524,129 @@ func GetFixedArgFromConditionByOperation(condition *Condition, operation string)
 	return nil
 }
 
+func GetDuplicateFixedArgListItems(fixedArg FixedArg) (retList []string) {
+	if fixedArg.IsCollectionValue() {
+		colMap := make(map[string]int)
+		for _, val := range fixedArg.Collection.Value {
+			colMap[val] = colMap[val] + 1
+		}
+		for k, v := range colMap {
+			if v != 1 {
+				retList = append(retList, k)
+			}
+		}
+	}
+	return retList
+}
+
+func CheckFreeArgExists2(conditionInfos []ConditionInfo, freeArg FreeArg) error {
+	if !FreeArgExists(conditionInfos, freeArg) {
+		return common.NewRemoteError(http.StatusBadRequest, freeArg.GetName()+" does not exist")
+	}
+	return nil
+}
+
+func FreeArgExists(conditionInfos []ConditionInfo, freeArg FreeArg) bool {
+	for _, conditionInfo := range conditionInfos {
+		if conditionInfo.FreeArg.Equals(&freeArg) {
+			return true
+		}
+	}
+	return false
+}
+
+func GetConditionInfos(conditions []*Condition) (result []ConditionInfo) {
+	for _, condition := range conditions {
+		condInfo := NewConditionInfo(*condition.GetFreeArg(), condition.GetOperation())
+		result = append(result, *condInfo)
+	}
+	return result
+}
+
+func CheckFreeArgExists3(conditionInfos []ConditionInfo, freeArg FreeArg, operation string) error {
+	if !FreeArgExists2(conditionInfos, freeArg, operation) {
+		return common.NewRemoteError(http.StatusBadRequest, freeArg.GetName()+" with "+operation+" operation is required")
+	}
+	return nil
+}
+
+func FreeArgExists2(conditionInfos []ConditionInfo, freeArg FreeArg, operation string) bool {
+	for _, conditionInfo := range conditionInfos {
+		if conditionInfo.FreeArg.Equals(&freeArg) && conditionInfo.Operation == operation {
+			return true
+		}
+	}
+	return false
+}
+
+func ChangeFixedArgToNewValue(oldFixedArgValue string, newFixedArgValue string, rule Rule, operation string) bool {
+	isChanged := false
+	conditions := ToConditions(&rule)
+	for _, condition := range conditions {
+		if condition.Operation == operation && condition.FixedArg != nil && condition.FixedArg.IsStringValue() {
+			fixedArgValue := condition.FixedArg.GetValue().(string)
+			if fixedArgValue == oldFixedArgValue {
+				condition.FixedArg.Bean.Value.JLString = newFixedArgValue
+				isChanged = true
+			}
+		}
+	}
+	return isChanged
+}
+
+func GetDuplicateConditionsFromRule(rule Rule) (result []Condition) {
+	if &rule == nil {
+		return result
+	}
+
+	duplicateRules := getDuplicateNonCompoundRules(FlattenRule(rule))
+
+	for _, duplicateRule := range duplicateRules {
+		result = append(result, *duplicateRule.GetCondition())
+	}
+
+	return result
+}
+
 //
+
+func ruleArrayContains(carray []ruleCount, rule Rule) int {
+	for i, c := range carray {
+		if rule.Equals(&c.rule) {
+			return i
+		}
+	}
+	return -1
+}
+
+func ConditionHasEmptyElements(rule Rule) bool {
+	return &rule == nil || rule.GetCondition() == nil || rule.GetFreeArg() == nil || rule.GetCondition().GetFixedArg() == nil
+}
+
+func getDuplicateNonCompoundRules(nonCompoundRules []Rule) (result []Rule) {
+	if len(nonCompoundRules) > 1 {
+		nonCompoundRules[0].SetRelation(RelationAnd)
+		ruleCounts := []ruleCount{}
+		for _, rule := range nonCompoundRules {
+			pos := ruleArrayContains(ruleCounts, rule)
+			if pos != -1 {
+				ruleCounts[pos].count++
+			} else {
+				temp := ruleCount{}
+				temp.count = 1
+				temp.rule = rule
+				ruleCounts = append(ruleCounts, temp)
+			}
+		}
+		for _, c := range ruleCounts {
+			if c.count != 1 {
+				result = append(result, c.rule)
+			}
+		}
+		nonCompoundRules[0].SetRelation("")
+	}
+	return result
+}
 
 func NormalizeConditions(rule *Rule) {
 	conditions := ToConditions(rule)
@@ -432,8 +728,8 @@ func isMacAddressFreeArgByOperation(freeArg *FreeArg, operation string) bool {
 		(operation == StandardOperationIs || operation == StandardOperationIn)
 }
 
-func GetDuplicateConditionsBetweenOR(rule *Rule) (result []Condition) {
-	rules := FlattenRule(*rule)
+func GetDuplicateConditionsBetweenOR(rule Rule) (result []Condition) {
+	rules := FlattenRule(rule)
 	split := []Condition{}
 	for _, one := range rules {
 		if RelationOr == one.Relation {

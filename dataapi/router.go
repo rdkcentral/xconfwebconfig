@@ -31,6 +31,7 @@ import (
 	fw "xconfwebconfig/shared/firmware"
 	"xconfwebconfig/shared/logupload"
 	"xconfwebconfig/shared/rfc"
+	"xconfwebconfig/util"
 
 	conf "github.com/go-akka/configuration"
 	"github.com/gorilla/mux"
@@ -40,9 +41,13 @@ type XconfConfigs struct {
 	DeriveAppTypeFromPartnerId   bool
 	PartnerApplicationTypes      []string // List of partner's application type
 	EnableDeviceService          bool
+	EnableDeviceDBLookup         bool
 	EnableAccountService         bool
+	EnableGroupService           bool
+	GroupServiceModelSet         util.Set
 	EnableTaggingService         bool
 	EnableTaggingServiceRFC      bool
+	EnableCdnDirect              bool
 	ReturnAccountId              bool
 	ReturnAccountHash            bool
 	DiagnosticAPIsEnabled        bool
@@ -51,7 +56,8 @@ type XconfConfigs struct {
 
 // Function to register the table name and the corresponding model/struct constructor
 // so the DAO can instantiate the object when unmarshalling JSON data from the DB
-func registerTables() {
+
+func RegisterTables() {
 	db.RegisterTableConfigSimple(db.TABLE_DCM_RULE, logupload.NewDCMGenericRuleInf)
 	db.RegisterTableConfigSimple(db.TABLE_ENVIRONMENT, shared.NewEnvironmentInf)
 	db.RegisterTableConfigSimple(db.TABLE_MODEL, shared.NewModelInf)
@@ -76,6 +82,7 @@ func registerTables() {
 	db.RegisterTableConfigSimple(db.TABLE_TELEMETRY_TWO_RULES, logupload.NewTelemetryTwoRuleInf)
 	db.RegisterTableConfigSimple(db.TABLE_XCONF_FEATURE, rfc.NewFeatureInf)
 	db.RegisterTableConfigSimple(db.TABLE_FEATURE_CONTROL_RULE, rfc.NewFeatureRuleInf)
+	db.RegisterTableConfigSimple(db.TABLE_APP_SETTINGS, shared.NewAppSettingInf)
 
 	db.RegisterTableConfig(&db.TableInfo{
 		TableName:       db.TABLE_XCONF_CHANGE,
@@ -88,6 +95,17 @@ func registerTables() {
 		ConstructorFunc: change.NewApprovedChangeInf,
 		TTL:             432000,
 		CacheData:       false,
+	})
+
+	db.RegisterTableConfig(&db.TableInfo{
+		TableName:       db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
+		ConstructorFunc: change.NewTelemetryTwoChangeInf,
+	})
+
+	db.RegisterTableConfig(&db.TableInfo{
+		TableName:       db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
+		ConstructorFunc: change.NewApprovedTelemetryTwoChangeInf,
+		TTL:             432000,
 	})
 
 	db.RegisterTableConfig(&db.TableInfo{
@@ -120,6 +138,18 @@ func registerTables() {
 		Key2FieldName:   db.ChangedKeysKey2FieldName,
 		TTL:             86400 * 7, // one week
 	})
+
+	db.RegisterTableConfig(&db.TableInfo{
+		TableName:       db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
+		ConstructorFunc: change.NewTelemetryTwoChangeInf,
+	})
+
+	db.RegisterTableConfig(&db.TableInfo{
+		TableName:       db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
+		ConstructorFunc: change.NewApprovedTelemetryTwoChangeInf,
+		TTL:             432000,
+	})
+
 }
 
 func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
@@ -130,13 +160,23 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		appTypes = append(appTypes, strings.ToLower(v))
 	}
 
+	groupServiceModelList := strings.Split(conf.GetString("xconfwebconfig.xconf.group_service_model_list"), ";")
+	groupsSet := util.NewSet()
+	for _, model := range groupServiceModelList {
+		groupsSet.Add(strings.ToUpper(model))
+	}
+
 	xc := &XconfConfigs{
 		DeriveAppTypeFromPartnerId:   conf.GetBoolean("xconfwebconfig.xconf.derive_application_type_from_partner_id"),
 		PartnerApplicationTypes:      appTypes,
-		EnableDeviceService:          conf.GetBoolean("xconfwebconfig.xconf.enable_odp_service"),
-		EnableAccountService:         conf.GetBoolean("xconfwebconfig.xconf.enable_titan_service"),
+		EnableDeviceService:          conf.GetBoolean("xconfwebconfig.xconf.enable_device_service"),
+		EnableDeviceDBLookup:         conf.GetBoolean("xconfwebconfig.xconf.enable_device_db_lookup"),
+		EnableAccountService:         conf.GetBoolean("xconfwebconfig.xconf.enable_account_service"),
 		EnableTaggingService:         conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service"),
 		EnableTaggingServiceRFC:      conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service_rfc"),
+		EnableGroupService:           conf.GetBoolean("xconfwebconfig.xconf.enable_group_service"),
+		GroupServiceModelSet:         groupsSet,
+		EnableCdnDirect:              conf.GetBoolean("xconfwebconfig.xconf.enable_cdn_direct"),
 		ReturnAccountId:              conf.GetBoolean("xconfwebconfig.xconf.return_account_id"),
 		ReturnAccountHash:            conf.GetBoolean("xconfwebconfig.xconf.return_account_hash"),
 		EstbRecoveryFirmwareVersions: conf.GetString("xconfwebconfig.xconf.estb_recovery_firmware_versions"),
@@ -152,7 +192,7 @@ func XconfSetup(server *xhttp.XconfServer, r *mux.Router) {
 	WebServerInjection(server, xc)
 	db.ConfigInjection(server.ServerConfig.Config)
 
-	registerTables()
+	RegisterTables()
 	db.GetCacheManager() // Initialize cache manager
 
 	routeXconfDataserviceApis(r, server)

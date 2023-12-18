@@ -22,8 +22,9 @@ import (
 )
 
 // NOTE:
-//   The development of this function is postponed because I think this type is not used
-//   in the current prod/ci data set.
+//
+//	The development of this function is postponed because I think this type is not used
+//	in the current prod/ci data set.
 type FnIntEval func(int) bool
 
 type BaseTimeEvaluator struct {

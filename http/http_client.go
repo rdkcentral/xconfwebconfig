@@ -97,7 +97,9 @@ func NewHttpClient(conf *configuration.Config, serviceName string, tlsConfig *tl
 
 // Do is a wrapper around http.Client.Do
 // Inputs: method, url, headers, body as bytes (bbytes), fields for logging (baseFields),
-//         external service being called (loggerName), attempt # (retry)
+//
+//	external service being called (loggerName), attempt # (retry)
+//
 // Returns: response body as bytes, any err, whether a retry is useful or not, and the status code
 func (c *HttpClient) Do(method string, url string, headers map[string]string, bbytes []byte, baseFields log.Fields, loggerName string, retry int) ([]byte, error, bool, int) {
 	// verify a response is received

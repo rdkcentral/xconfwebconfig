@@ -39,10 +39,11 @@ type TimeFilter struct {
 }
 
 type EnvModelRuleBean struct {
-	Id            string `json:"id,omitempty" xml:"id,omitempty"`
-	Name          string `json:"name,omitempty" xml:"name,omitempty"`
-	EnvironmentId string `json:"environmentId,omitempty" xml:"environmentId,omitempty"`
-	ModelId       string `json:"modelId,omitempty" xml:"modelId,omitempty"`
+	Id             string          `json:"id,omitempty" xml:"id,omitempty"`
+	Name           string          `json:"name,omitempty" xml:"name,omitempty"`
+	EnvironmentId  string          `json:"environmentId,omitempty" xml:"environmentId,omitempty"`
+	ModelId        string          `json:"modelId,omitempty" xml:"modelId,omitempty"`
+	FirmwareConfig *FirmwareConfig `json:"firmwareConfig,omitempty" xml:"firmwareConfig,omitempty"`
 }
 
 func TimeFiltersByApplicationType(applicationType string) ([]*TimeFilter, error) {

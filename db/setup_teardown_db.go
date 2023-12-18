@@ -31,6 +31,23 @@ func (c *CassandraClient) SetUp() error {
 		return err
 	}
 
+	c.concurrentQueries <- true
+	defer func() { <-c.concurrentQueries }()
+
+	// NOTE: CREATE cannot be used in batch
+	for _, t := range AllTables {
+		var stmt string
+		if t == "XconfChangedKeys4" {
+			stmt = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" (key bigint, columnName timeuuid, value blob, PRIMARY KEY (key, columnName))`, c.Keyspace, t)
+		} else {
+			stmt = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" (key text, column1 text, value blob, PRIMARY KEY (key, column1))`, c.Keyspace, t)
+		}
+		if err := c.Query(stmt).Exec(); err != nil {
+			fmt.Printf("error at stmt=%v: %v\n", stmt, err)
+			return err
+		}
+	}
+
 	return nil
 }
 

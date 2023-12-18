@@ -71,7 +71,7 @@ func writeByMarshal(w http.ResponseWriter, status int, o interface{}) {
 	}
 }
 
-//helper function to wirte a json response into ResponseWriter
+// helper function to wirte a json response into ResponseWriter
 func WriteOkResponse(w http.ResponseWriter, r *http.Request, data interface{}) {
 	resp := HttpResponse{
 		Status:  http.StatusOK,
@@ -104,7 +104,7 @@ func WriteContentTypeAndResponse(w http.ResponseWriter, r *http.Request, rbytes 
 	w.Write(rbytes)
 }
 
-//helper function to write a failure json response into ResponseWriter
+// helper function to write a failure json response into ResponseWriter
 func WriteErrorResponse(w http.ResponseWriter, status int, err error) {
 	errstr := ""
 	if err != nil {

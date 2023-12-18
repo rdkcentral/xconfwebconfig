@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	deviceServiceServiceName = "device_service"
+	deviceServiceName = "device_service"
 )
 
 type DeviceServiceData struct {
@@ -48,11 +48,11 @@ type DeviceServiceConnector struct {
 }
 
 func NewDeviceServiceConnector(conf *configuration.Config, tlsConfig *tls.Config) *DeviceServiceConnector {
-	confKey := fmt.Sprintf("xconfwebconfig.%v.host", deviceServiceServiceName)
+	confKey := fmt.Sprintf("xconfwebconfig.%v.host", deviceServiceName)
 	host := conf.GetString(confKey)
 
 	return &DeviceServiceConnector{
-		HttpClient: NewHttpClient(conf, deviceServiceServiceName, tlsConfig),
+		HttpClient: NewHttpClient(conf, deviceServiceName, tlsConfig),
 		host:       host,
 	}
 }

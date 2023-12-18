@@ -27,6 +27,7 @@ import (
 
 	common "xconfwebconfig/common"
 	"xconfwebconfig/db"
+	"xconfwebconfig/http"
 	re "xconfwebconfig/rulesengine"
 	"xconfwebconfig/shared/rfc"
 	"xconfwebconfig/util"
@@ -96,7 +97,6 @@ func (f *FeatureControlRuleBase) ProcessFeatureRules(context map[string]string, 
 	featureRules := rfc.GetSortedFeatureRules()
 	var filteredfeatureRules []*rfc.FeatureRule
 	for _, featureRule := range featureRules {
-		// TODO: please add log.Fields to this method
 		if applicationType == featureRule.ApplicationType && f.RuleProcessorFactory.RuleProcessor().Evaluate(featureRule.Rule, context, log.Fields{}) {
 			filteredfeatureRules = append(filteredfeatureRules, featureRule)
 		}
@@ -140,6 +140,7 @@ func (f *FeatureControlRuleBase) LogFeatureInfo(context map[string]string, appli
 	fields["features"] = featureInstances
 	fields["configSetHash"] = f.CalculateHash(features)
 	log.WithFields(fields).Info("FeatureControlRuleBase")
+	http.UpdateLogCounter("FeatureControlRuleBase")
 }
 
 func (f *FeatureControlRuleBase) NormalizeContext(context map[string]string) map[string]string {

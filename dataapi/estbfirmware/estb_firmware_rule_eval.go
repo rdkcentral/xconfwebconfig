@@ -45,8 +45,8 @@ type RunningVersionInfo struct {
 // EstbFirmwareRuleBase ...
 type EstbFirmwareRuleBase struct {
 	ruleProcessorFactory *re.RuleProcessorFactory
-	driAlwaysReply       bool   // java private boolean driAlwaysReply = true;
-	driStateIdentifiers  string // java private String driStateIdentifiers = "P-DRI,B-DRI";
+	driAlwaysReply       bool
+	driStateIdentifiers  string
 }
 
 // NewEstbFirmwareRuleBaseDefault ...
@@ -304,7 +304,6 @@ func (e *EstbFirmwareRuleBase) IsInWhitelist(convertedContext *coreef.ConvertedC
 	if len(whitelist) == 0 {
 		return false
 	}
-	//TODO: add log.Fields to this method
 	return e.ruleProcessorFactory.RuleProcessor().Evaluate(coreef.NewRuleFactory().NewIpFilter(whitelist), convertedContext.GetProperties(), log.Fields{})
 }
 
@@ -428,7 +427,6 @@ func (e *EstbFirmwareRuleBase) ApplyMatchedFilters(
 	bypassFilters map[string]struct{},
 	evaluationResult *EvaluationResult) map[string]interface{} {
 	mapinst := make(map[string]interface{})
-	// TODO: please update log fields here
 	matchedRules := e.FindMatchedRules(rules, templateType, context, bypassFilters, false, true, log.Fields{})
 	matchedActivationVersion := false
 
@@ -632,7 +630,6 @@ func (e *EstbFirmwareRuleBase) FilterByAppType(rules []*corefw.FirmwareRule, app
 func (e *EstbFirmwareRuleBase) HasMinimumFirmware(ctx map[string]string) bool {
 	convertedContext := coreef.GetContextConverted(ctx)
 
-	// TODO: please update log fields here
 	eval, err := e.Eval(ctx, convertedContext, shared.STB, log.Fields{})
 	if err != nil {
 		log.Error(fmt.Sprintf("HasMinimumFirmware eval error: %v", err))

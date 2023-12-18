@@ -18,6 +18,7 @@
 package dataapi
 
 import (
+	"net/http"
 	"strings"
 
 	common "xconfwebconfig/common"
@@ -42,6 +43,30 @@ func WebServerInjection(ws *xhttp.XconfServer, xc *XconfConfigs) {
 		common.CacheUpdateWindowSize = ws.ServerConfig.GetInt64("xconfwebconfig.xconf.cache_update_window_size")
 	}
 	Xc = xc
+}
+
+func GetClientProtocolHeaderValue(r *http.Request) string {
+	return r.Header.Get(common.XCONF_HTTP_HEADER)
+}
+
+func AddClientProtocolToContextMap(contextMap map[string]string, clientProtocolHeader string) {
+	switch clientProtocolHeader {
+	case common.XCONF_HTTPS_VALUE:
+		contextMap[common.CLIENT_PROTOCOL] = common.HTTPS_CLIENT_PROTOCOL
+	case common.XCONF_MTLS_VALUE:
+		contextMap[common.CLIENT_PROTOCOL] = common.MTLS_CLIENT_PROTOCOL
+	case common.XCONF_MTLS_RECOVERY_VALUE:
+		contextMap[common.CLIENT_PROTOCOL] = common.MTLS_RECOVERY_CLIENT_PROTOCOL
+	default:
+		contextMap[common.CLIENT_PROTOCOL] = common.HTTP_CLIENT_PROTOCOL
+	}
+}
+
+func IsSecureConnection(clientProtocolHeader string) bool {
+	if clientProtocolHeader == common.XCONF_HTTPS_VALUE || clientProtocolHeader == common.XCONF_MTLS_VALUE || clientProtocolHeader == common.XCONF_MTLS_RECOVERY_VALUE {
+		return true
+	}
+	return false
 }
 
 func NormalizeCommonContext(contextMap map[string]string, estbMacKey string, ecmMacKey string) {
@@ -92,6 +117,24 @@ func AddContextFromTaggingService(ws *xhttp.XconfServer, contextMap map[string]s
 	}
 }
 
+func AddGroupServiceContext(ws *xhttp.XconfServer, contextMap map[string]string, macKeyName string, fields log.Fields) {
+	if Xc.EnableGroupService {
+		if Xc.GroupServiceModelSet.Contains(strings.ToUpper(contextMap[common.MODEL])) {
+			log.WithFields(fields).Debugf("Getting groups from Group Service for mac=%s, model=%s.", contextMap[macKeyName], contextMap[common.MODEL])
+			// remove colons before calling Group Service
+			macAddress := util.AlphaNumericMacAddress(contextMap[macKeyName])
+			cpeGroups, err := ws.GroupServiceConnector.GetCpeGroups(macAddress, fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Debugf("Error getting groups from Group Service for mac=%s, model=%s.", contextMap[macKeyName], contextMap[common.MODEL])
+				return
+			}
+			for _, group := range cpeGroups {
+				contextMap[group] = ""
+			}
+		}
+	}
+}
+
 func GetPartnerFromAccountServiceByHostMac(ws *xhttp.XconfServer, macAddress string, satToken string, vargs ...log.Fields) string {
 	var fields log.Fields
 	if len(vargs) > 0 {
@@ -110,7 +153,7 @@ func GetPartnerFromAccountServiceByHostMac(ws *xhttp.XconfServer, macAddress str
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Error getting account information")
 		} else {
-			partnerId = strings.ToUpper(accountObject.AccountServiceDeviceData.Partner)
+			partnerId = strings.ToUpper(accountObject.DeviceData.Partner)
 		}
 	}
 	return partnerId

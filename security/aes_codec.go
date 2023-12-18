@@ -15,11 +15,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
-// Some code is adapted from Go example code, which is:
-// Copyright 2012 The Go Authors. All rights reserved.
-// Licensed under the BSD-3 License
-
 package security
 
 import (
@@ -108,6 +103,10 @@ func (c *AesCodec) Decrypt(encryptedB64 string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// Adapted from Go example code, which is:
+	// Copyright 2012 The Go Authors. All rights reserved.
+	// Licensed under the BSD-3 License
 
 	// The IV needs to be unique, but not secure. Therefore it's common to
 	// include it at the beginning of the ciphertext.

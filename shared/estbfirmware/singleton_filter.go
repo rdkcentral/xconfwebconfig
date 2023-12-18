@@ -33,8 +33,9 @@ const (
 type SingletonFilterClass string
 
 const (
-	PercentFilterClass    SingletonFilterClass = "com.comcast.xconf.estbfirmware.PercentFilterValue"
-	RoundRobinFilterClass SingletonFilterClass = "com.comcast.xconf.estbfirmware.DownloadLocationRoundRobinFilterValue"
+	PercentFilterClass        SingletonFilterClass = "com.comcast.xconf.estbfirmware.PercentFilterValue"
+	PercentFilterWrapperClass SingletonFilterClass = "com.comcast.xconf.queries.beans.PercentFilterWrapper"
+	RoundRobinFilterClass     SingletonFilterClass = "com.comcast.xconf.estbfirmware.DownloadLocationRoundRobinFilterValue"
 )
 
 // SingletonFilterValue table - this struct serves as a container for the two subtypes

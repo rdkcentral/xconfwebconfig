@@ -18,12 +18,13 @@
 package shared
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
 	"regexp"
+	"strings"
 	"time"
-
 	"xconfwebconfig/db"
 	"xconfwebconfig/util"
 )
@@ -132,7 +133,7 @@ func NewGenericNamespacedList(id string, typeName string, data []string) *Generi
 	}
 }
 
-func NewEmptyGenericNamespacedList(typeName string) *GenericNamespacedList {
+func NewEmptyGenericNamespacedList() *GenericNamespacedList {
 	return &GenericNamespacedList{}
 }
 
@@ -160,6 +161,51 @@ func (g *GenericNamespacedList) IsIpList() bool {
 		return true
 	}
 	return false
+}
+
+func (obj *GenericNamespacedList) ValidateDataIntersection() error {
+	if obj.TypeName == MAC_LIST {
+		itemsSet := util.Set{}
+		itemsSet.Add(obj.Data...)
+
+		intersectionMap := make(map[string][]string)
+
+		namespacedLists, err := GetGenericNamedListListsByTypeDB(obj.TypeName)
+		if err != nil {
+			return err
+		}
+
+		for _, nsList := range namespacedLists {
+			if obj.ID == nsList.ID {
+				continue
+			}
+			intersection := make([]string, 0)
+			for _, mac := range nsList.Data {
+				if itemsSet.Contains(mac) {
+					intersection = append(intersection, mac)
+				}
+			}
+			if len(intersection) > 0 {
+				intersectionMap[nsList.ID] = intersection
+			}
+		}
+
+		if len(intersectionMap) > 0 {
+			addSeparator := false
+			buffer := bytes.NewBufferString("MAC addresses are already used in other lists: ")
+			for key, value := range intersectionMap {
+				if addSeparator {
+					buffer.WriteString(", ")
+				} else {
+					addSeparator = true
+				}
+				buffer.WriteString(fmt.Sprintf("[%s] in %s", strings.Join(value, ", "), key))
+			}
+			return errors.New(buffer.String())
+		}
+	}
+
+	return nil
 }
 
 func GetGenericNamedListOneDB(id string) (*GenericNamespacedList, error) {

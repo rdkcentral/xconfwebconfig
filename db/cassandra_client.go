@@ -28,6 +28,7 @@ import (
 	"github.com/gocql/gocql"
 
 	"xconfwebconfig/security"
+	"xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -36,22 +37,42 @@ const (
 	ProtocolVersion               = 4
 	DefaultKeyspace               = "ApplicationsDiscoveryDataService"
 	DefaultTestKeyspace           = "ApplicationsDiscoveryDataServiceTest"
+	DefaultDeviceKeyspace         = "odp"
+	DefaultDeviceTestKeyspace     = "odp_test_keyspace"
+	DefaultDevicePodTableName     = "pod_cpe_account"
+	PenetrationMetricsTable       = "PenetrationMetrics"
+	EstbMacColumnValue            = "estb_mac"
 	DisableInitialHostLookup      = false
 	DefaultSleepTimeInMillisecond = 10
 	DefaultConnections            = 2
-
-	DefaultColumnValue        = "data"
-	NamedListPartColumnValue  = "NamedListData_part_"
-	NamedListCountColumnValue = "NamedListData_parts_count"
+	DefaultColumnValue            = "data"
+	NamedListPartColumnValue      = "NamedListData_part_"
+	NamedListCountColumnValue     = "NamedListData_parts_count"
 )
 
 type CassandraClient struct {
 	*gocql.Session
 	*gocql.ClusterConfig
-	sleepTime         int32
-	concurrentQueries chan bool
-	localDc           string
-	testOnly          bool
+	sleepTime          int32
+	concurrentQueries  chan bool
+	localDc            string
+	deviceKeyspace     string
+	devicePodTableName string
+	testOnly           bool
+}
+
+type PenetrationMetrics struct {
+	EstbMac                 string
+	Partner                 string
+	Model                   string
+	FwVersion               string
+	FwReportedVersion       string
+	FwAdditionalVersionInfo string
+	FwAppliedRule           string
+	FwTs                    time.Time
+	RfcAppliedRules         string
+	RfcFeatures             string
+	RfcTs                   time.Time
 }
 
 func NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraClient, error) {
@@ -112,10 +133,13 @@ func NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraCl
 	}
 
 	// Use the appropriate keyspace
+	var deviceKeyspace string
 	if testOnly {
 		cluster.Keyspace = conf.GetString("xconfwebconfig.database.test_keyspace", DefaultTestKeyspace)
+		deviceKeyspace = conf.GetString("webconfig.database.device_test_keyspace", DefaultDeviceTestKeyspace)
 	} else {
 		cluster.Keyspace = conf.GetString("xconfwebconfig.database.keyspace", DefaultKeyspace)
+		deviceKeyspace = conf.GetString("webconfig.database.device_keyspace", DefaultDeviceKeyspace)
 	}
 	log.Debug(fmt.Sprintf("Init CassandraClient with keyspace: %v", cluster.Keyspace))
 
@@ -124,17 +148,49 @@ func NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraCl
 		return nil, err
 	}
 
+	devicePodTableName := conf.GetString("webconfig.database.device_pod_table_name", DefaultDevicePodTableName)
+
 	return &CassandraClient{
-		Session:           session,
-		ClusterConfig:     cluster,
-		sleepTime:         conf.GetInt32("xconfwebconfig.perftest.sleep_in_msecs", DefaultSleepTimeInMillisecond),
-		concurrentQueries: make(chan bool, conf.GetInt32("xconfwebconfig.database.concurrent_queries", 500)),
-		localDc:           localDc,
-		testOnly:          testOnly,
+		Session:            session,
+		ClusterConfig:      cluster,
+		sleepTime:          conf.GetInt32("xconfwebconfig.perftest.sleep_in_msecs", DefaultSleepTimeInMillisecond),
+		concurrentQueries:  make(chan bool, conf.GetInt32("xconfwebconfig.database.concurrent_queries", 500)),
+		localDc:            localDc,
+		deviceKeyspace:     deviceKeyspace,
+		devicePodTableName: devicePodTableName,
+		testOnly:           testOnly,
 	}, nil
 }
 
 // Cassandra Impl of DatabaseClient
+func (c *CassandraClient) GetPenetrationMetrics(estbMac string) (map[string]interface{}, error) {
+	dict := util.Dict{}
+	c.concurrentQueries <- true
+	defer func() { <-c.concurrentQueries }()
+	stmt := fmt.Sprintf("SELECT * FROM \"%s\" WHERE %s=?", PenetrationMetricsTable, EstbMacColumnValue)
+	qry := c.Query(stmt, estbMac)
+	err := qry.MapScan(dict)
+
+	if err != nil {
+		return dict, err
+	}
+
+	return dict, nil
+}
+
+func (c *CassandraClient) SetPenetrationMetrics(pMetrics *PenetrationMetrics) error {
+	values := []interface{}{pMetrics.EstbMac, pMetrics.Partner, pMetrics.Model, pMetrics.FwVersion, pMetrics.FwReportedVersion, pMetrics.FwAdditionalVersionInfo, pMetrics.FwAppliedRule, pMetrics.FwTs, pMetrics.RfcAppliedRules, pMetrics.RfcFeatures, pMetrics.RfcTs}
+	stmt := fmt.Sprintf(`INSERT INTO "%s" (estb_mac,partner,model,fw_version,fw_reported_version,fw_additional_version_info,fw_applied_rule,fw_ts,rfc_features,rfc_applied_rules,rfc_ts) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, PenetrationMetricsTable)
+	c.concurrentQueries <- true
+	defer func() { <-c.concurrentQueries }()
+	qry := c.Query(stmt, values...)
+	err := qry.Exec()
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func (c *CassandraClient) Sleep() {
 	time.Sleep(time.Duration(c.sleepTime) * time.Millisecond)
@@ -155,6 +211,14 @@ func (c *CassandraClient) IsDbNotFound(err error) bool {
 
 func (c *CassandraClient) IsTestOnly() bool {
 	return c.testOnly
+}
+
+func (c *CassandraClient) DeviceKeyspace() string {
+	return c.deviceKeyspace
+}
+
+func (c *CassandraClient) DevicePodTableName() string {
+	return c.devicePodTableName
 }
 
 // SetXconfData Create XconfData for the specified key and value, where value is JSON data
@@ -632,11 +696,10 @@ func (c *CassandraClient) GetAllXconfCompressedDataAsMap(tableName string) map[s
 // Sample data for one record in GenericXconfNamedList table:
 //
 // key               | column1                   | value
-//-------------------+---------------------------+-----------------------------
+// -------------------+---------------------------+-----------------------------
 // Test_Mac_List     |      NamedListData_part_0 | 0x7df05a7b226964223a2241...
 // Test_Mac_List     |      NamedListData_part_1 | 0x60f05f7b226964223a2231...
 // Test_Mac_List     | NamedListData_parts_count |                  0x00000002
-//
 func (c *CassandraClient) GetXconfCompressedDataRaw(tableName string) map[string]map[string][]byte {
 	start := time.Now()
 

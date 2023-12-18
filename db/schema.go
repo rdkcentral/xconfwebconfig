@@ -68,6 +68,7 @@ const (
 	TABLE_GENERIC_NS_LIST    = "GenericXconfNamedList"
 	TABLE_LOGS               = "Logs2"
 	TABLE_XCONF_CHANGED_KEYS = "XconfChangedKeys4"
+	TABLE_APP_SETTINGS       = "AppSettings"
 )
 
 var AllTables = []string{
@@ -182,17 +183,6 @@ func (ti *TableInfo) IsCompressAndSplit() bool {
 	return ti.Compress && ti.Split
 }
 
-/*
-	Map of tablename (CfName) to DAO ID generated from Java Xconf DS.
-	This is needed inorder to write compatible changed data for XconfChangedKeys4 table.
-
-	public int id() {
-        return getCfName()
-                .concat(getKeyClass().getCanonicalName())
-                .concat(getValueClass().getCanonicalName())
-                .hashCode();
-    }
-*/
 var xconfDaoIdMap = map[string]int32{
 	TABLE_FIRMWARE_CONFIG:        1586263717,
 	TABLE_DCM_RULE:               97791402,
@@ -220,4 +210,5 @@ var xconfDaoIdMap = map[string]int32{
 	TABLE_MODEL:                  -795610003,
 	TABLE_LOG_FILES_GROUPS:       -867320790,
 	TABLE_NS_LIST:                1409490260,
+	TABLE_APP_SETTINGS:           1,
 }

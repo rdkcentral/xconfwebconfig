@@ -45,6 +45,8 @@ const (
 	MIN_CHECK_RI              = "MIN_CHECK_RI"
 	GLOBAL_PERCENT            = "GLOBAL_PERCENT"
 	ACTIVATION_VERSION        = "ACTIVATION_VERSION"
+	HTTP_SUFFIX               = "_http"
+	TFTP_SUFFIX               = "_tftp"
 )
 
 func ConvertFirmwareRuleToIpFilter(firmwareRule *firmware.FirmwareRule) *IpFilter {
@@ -66,8 +68,7 @@ func ConvertIpFilterToFirmwareRule(ipFilter *IpFilter) *firmware.FirmwareRule {
 	iprule := NewRuleFactory().NewIpFilter(ipFilter.IpAddressGroup.Name)
 	rule.Rule = *iprule
 	rule.Type = IP_FILTER
-	rule.ApplicableAction = &firmware.ApplicableAction{}
-
+	rule.ApplicableAction = firmware.NewApplicableActionAndType(firmware.BlockingFilterActionClass, firmware.BLOCKING_FILTER, "")
 	rule.Name = ipFilter.Name
 	rule.ID = ipFilter.Id
 	return rule
@@ -94,7 +95,7 @@ func GetIpAddressGroup(cond *re.Condition) *shared.IpAddressGroup {
 	}
 }
 
-//  makeIpAddressGroup ...
+// makeIpAddressGroup ...
 func makeIpAddressGroup(id string) *shared.IpAddressGroup {
 	group := shared.IpAddressGroup{}
 	group.Id = id
@@ -176,7 +177,7 @@ func ConvertPercentageBeanToFirmwareRule(bean PercentageBean) *firmware.Firmware
 		distributions = append(distributions, *distribution)
 	}
 	configEntries := []firmware.ConfigEntry{}
-	for _, configEntry := range convertIntoPercentRange(distributions) {
+	for _, configEntry := range ConvertIntoPercentRange(distributions) {
 		configEntries = append(configEntries, *configEntry)
 	}
 
@@ -218,7 +219,7 @@ func ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule *firmware.Firm
 
 func ConvertFirmwareRuleToPercentageBean(firmwareRule *firmware.FirmwareRule) *PercentageBean {
 	bean := &PercentageBean{}
-	parseEnvModelRule(bean, firmwareRule)
+	ParseEnvModelRule(bean, firmwareRule)
 	if firmwareRule.ApplicableAction != nil {
 		parseRuleAction(bean, firmwareRule.ApplicableAction)
 	}
@@ -226,7 +227,7 @@ func ConvertFirmwareRuleToPercentageBean(firmwareRule *firmware.FirmwareRule) *P
 	return bean
 }
 
-func parseEnvModelRule(bean *PercentageBean, envModelRule *firmware.FirmwareRule) {
+func ParseEnvModelRule(bean *PercentageBean, envModelRule *firmware.FirmwareRule) {
 	bean.ID = envModelRule.ID
 	bean.Name = envModelRule.Name
 	bean.ApplicationType = envModelRule.ApplicationType
@@ -291,12 +292,12 @@ func parseRuleAction(bean *PercentageBean, action *firmware.ApplicableAction) {
 	bean.FirmwareCheckRequired = action.FirmwareCheckRequired
 	bean.FirmwareVersions = action.FirmwareVersions
 	bean.IntermediateVersion = action.IntermediateVersion
-	bean.Distributions = convertIntoPercentRange(action.ConfigEntries)
+	bean.Distributions = ConvertIntoPercentRange(action.ConfigEntries)
 	bean.LastKnownGood = action.ConfigId
 	bean.UseAccountIdPercentage = action.UseAccountPercentage
 }
 
-func convertIntoPercentRange(configEntries []firmware.ConfigEntry) []*firmware.ConfigEntry {
+func ConvertIntoPercentRange(configEntries []firmware.ConfigEntry) []*firmware.ConfigEntry {
 	var result []*firmware.ConfigEntry
 	var prevPercentEnd float64 = 0
 
@@ -354,7 +355,7 @@ func ConvertFirmwareRuleToMacRuleBeanWrapper(firmwareRule *firmware.FirmwareRule
 	macRuleBean.Id = firmwareRule.ID
 	macRuleBean.MacList = &[]string{}
 	for _, condition := range re.ToConditions(&firmwareRule.Rule) {
-		if condition.GetFreeArg() == RuleFactoryMAC {
+		if condition.GetFreeArg().Equals(RuleFactoryMAC) {
 			if condition.GetOperation() == RuleFactoryIN_LIST {
 				macRuleBean.MacListRef = condition.GetFixedArg().GetValue().(string)
 			} else if re.StandardOperationIn == condition.GetOperation() && condition.GetFixedArg().IsCollectionValue() {
@@ -395,7 +396,7 @@ func ConvertFirmwareRuleToEnvModelRuleBean(firmwareRule *firmware.FirmwareRule) 
 	return &envModelRuleBean
 }
 
-func getWhitelistName(ipAddressGroup *shared.IpAddressGroup) string {
+func GetWhitelistName(ipAddressGroup *shared.IpAddressGroup) string {
 	if ipAddressGroup != nil {
 		return ipAddressGroup.Name
 	}
@@ -409,7 +410,7 @@ func getGlobalPercentId(applicationType string) string {
 	return fmt.Sprintf("%s_%s", strings.ToUpper(applicationType), "GLOBAL_PERCENT")
 }
 
-func newGlobalPercentFilter(rule *re.Rule) *firmware.FirmwareRule {
+func NewGlobalPercentFilter(rule *re.Rule) *firmware.FirmwareRule {
 	firmwareRule := firmware.NewEmptyFirmwareRule()
 	firmwareRule.ID = "GLOBAL_PERCENT"
 	firmwareRule.Type = "GLOBAL_PERCENT"
@@ -423,12 +424,12 @@ func ConvertIntoGlobalPercentage(percentFilterValue *PercentFilterValue, applica
 	percentage := percentFilterValue.Percentage
 	//BigDecimal hundredPercentage = new BigDecimal(100);
 	var hundredPercentage float32 = 100.0
-	whitelistName := getWhitelistName(percentFilterValue.Whitelist)
+	whitelistName := GetWhitelistName(percentFilterValue.Whitelist)
 	if whitelistName == "" && percentage == 100.0 {
 		return nil
 	}
 
-	globalPercentFirmwareRule := newGlobalPercentFilter(NewRuleFactory().NewGlobalPercentFilter(hundredPercentage-percentage, whitelistName))
+	globalPercentFirmwareRule := NewGlobalPercentFilter(NewRuleFactory().NewGlobalPercentFilter(hundredPercentage-percentage, whitelistName))
 	globalPercentFirmwareRule.ID = getGlobalPercentId(applicationType)
 	globalPercentFirmwareRule.ApplicationType = applicationType
 	return globalPercentFirmwareRule
@@ -512,7 +513,8 @@ func convertDefineProperties(activationVersion *firmware.ActivationVersion) *fir
 	Properties := make(map[string]string)
 	Properties[common.REBOOT_IMMEDIATELY] = "FALSE"
 	action := &firmware.ApplicableAction{
-		ActionType: "DEFINE_PROPERTIES",
+		Type:       firmware.DefinePropertiesActionClass,
+		ActionType: firmware.DEFINE_PROPERTIES,
 		Properties: Properties,
 	}
 	//action.Properties = Properties
@@ -523,7 +525,7 @@ func convertDefineProperties(activationVersion *firmware.ActivationVersion) *fir
 	return action
 }
 
-//This goes in Rule_factory _template.go
+// This goes in Rule_factory _template.go
 func newActivationRule(partnerId string, model string) re.Rule {
 
 	rule1 := re.Rule{}

@@ -46,7 +46,6 @@ func (l *LogUploadRuleBase) Eval(context map[string]string, fields log.Fields) *
 	settings := logupload.NewSettings(1)
 	rules := l.getSortedDcmRules()
 	for _, rule := range rules {
-		// TODO: please add log.Fields to this method
 		if string(rule.ApplicationType) == context[common.APPLICATION_TYPE] && l.RuleProcessorFactory.RuleProcessor().Evaluate(&rule.Rule, context, log.Fields{}) {
 			logupload.CopySettings(settings, l.GetSettings(rule.ID), rule, context, fields)
 		}
@@ -91,7 +90,6 @@ var GetOneUploadRepositoryFunc = logupload.GetOneUploadRepository
 var GetLogFileListFunc = logupload.GetLogFileList
 var GetOneVodSettingsFunc = logupload.GetOneVodSettings
 
-// GetSettings is from Settings get(String id) of SettingsDAO in java
 func (l *LogUploadRuleBase) GetSettings(id string) *logupload.Settings {
 	settings := logupload.NewSettings(1)
 	var err error

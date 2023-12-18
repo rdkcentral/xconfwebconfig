@@ -135,7 +135,6 @@ func (t *TelemetryProfileService) GetTemporaryProfileForContext(context map[stri
 	//Filter
 	matched := []logupload.TimestampedRule{}
 	for _, tRule := range tRules {
-		// TODO: please add log.Fields to this method
 		if processor.Evaluate(&tRule.Rule, context, log.Fields{}) {
 			matched = append(matched, tRule)
 		}
@@ -245,7 +244,6 @@ func (t *TelemetryProfileService) ProcessTelemetryTwoRules(context map[string]st
 	processor := ruleProcessorFactory.Processor
 	matched := []*logupload.TelemetryTwoRule{}
 	for _, tRule := range all {
-		// TODO: please add log.Fields to this method
 		if processor.Evaluate(&tRule.Rule, context, log.Fields{}) {
 			matched = append(matched, tRule)
 		}

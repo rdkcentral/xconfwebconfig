@@ -145,7 +145,7 @@ func TestMACAddressValidator(t *testing.T) {
 	validMac, err = MACAddressValidator("bd-c5-9a-7e-fd-23")
 	assert.Equal(t, validMac, true)
 
-	validMac, err = MACAddressValidator("bd-c5 9a:7efd23")
+	validMac, err = MACAddressValidator("ab-bc 9a:7efd23")
 	assert.Equal(t, validMac, true)
 
 	// Nagetive scenarios

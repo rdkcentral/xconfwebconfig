@@ -58,7 +58,6 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 			output.CopyLusSetting(settings, false)
 		}
 		output.RuleIDs[rule.ID] = true
-		//todo: in java this.toString(). do not know "this" is what
 		log.WithFields(fields).Info("SettingsUtil Received attributes from device: " + rule.ToStringOnlyBaseProperties() + "  Applied rule for Log Upload Settings: ") //+ this.toString())
 
 		//if timeWindow is 0 then return non-random cron expression.
@@ -68,8 +67,6 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 			output.ScheduleCron = deviceSettingsCron
 		}
 		isDayRandomized := WHOLE_DAY_RANDOMIZED == settings.SchedulerType
-		//XCONF-203 Randomize log upload time cron expression.This shall return random cron expression for each request ,with in the range of initial cron and time window.
-		//if timeWindow is 0 then return non-random cron expression.
 		randomCronExp := randomizeCronIfNecessary(output.LusScheduleCron, output.LusScheduleDurationMinutes, isDayRandomized, context, output.LusTimeZoneMode, "logUploadCronTime", fields)
 		if len(randomCronExp) > 0 {
 			output.LusScheduleCron = randomCronExp
@@ -201,7 +198,6 @@ func getOffset(timeWindow int, context map[string]string, fields log.Fields) int
 	fields["hashValue"] = hash
 	fields["timeWindow"] = timeWindow
 	fields["randomMinutes"] = randomMinutes
-	log.WithFields(fields).Info("calculate cron expression offset")
 	return randomMinutes
 }
 

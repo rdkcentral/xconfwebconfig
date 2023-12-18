@@ -35,6 +35,28 @@ type Bean struct {
 	Value Value `json:"value"`
 }
 
+func (a *FixedArg) IsValid() bool {
+	isCollection := &a.Collection != nil
+	isBean := &a.Bean != nil
+	if isCollection {
+		if isBean {
+			return false // cannot be both collection and bean
+		}
+		return isCollection
+	}
+
+	if isBean {
+		isString := &a.Bean.Value.JLString != nil
+		isDouble := &a.Bean.Value.JLDouble != nil
+		if isString && isDouble {
+			return false // cannot be both string and double
+		}
+		return isString || isDouble
+	}
+
+	return false
+}
+
 func (b *Bean) UnmarshalJSON(bbytes []byte) error {
 	dict := make(map[string]interface{})
 	err := json.Unmarshal(bbytes, &dict)
@@ -121,6 +143,10 @@ func (a *FixedArg) IsCollectionValue() bool {
 		return true
 	}
 	return false
+}
+
+func (a *FixedArg) IsDoubleValue() bool {
+	return &a.Bean != nil && &a.Bean.Value.JLDouble != nil
 }
 
 func (a *FixedArg) IsStringValue() bool {

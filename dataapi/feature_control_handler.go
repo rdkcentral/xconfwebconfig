@@ -44,7 +44,6 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	applicationType, found := mux.Vars(r)[common.APPLICATION_TYPE]
 	queryParams := r.URL.Query()
-	xconfHttp := r.Header.Get(common.XCONF_HTTP_HEADER)
 	configSetHash := r.Header.Get(common.CONFIG_SET_HASH)
 	contextMap := make(map[string]string)
 	if !found {
@@ -56,11 +55,13 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			contextMap[k] = v[0]
 		}
 	}
-	deviceServiceData := AddFeatureControlContext(Ws, r, contextMap, xconfHttp, configSetHash, fields)
+	podData := AddFeatureControlContext(Ws, r, contextMap, configSetHash, fields)
+	clientProtocolHeader := GetClientProtocolHeaderValue(r)
+	AddClientProtocolToContextMap(contextMap, clientProtocolHeader)
 	featureControlRuleBase := featurecontrol.NewFeatureControlRuleBase()
 	featureControl := featureControlRuleBase.Eval(contextMap, contextMap[common.APPLICATION_TYPE], fields)
-	isSecuredConnection := xconfHttp == ""
-	PostProcessFeatureControl(Ws, featureControl, contextMap, isSecuredConnection, deviceServiceData)
+	isSecuredConnection := IsSecureConnection(clientProtocolHeader)
+	PostProcessFeatureControl(Ws, featureControl, contextMap, isSecuredConnection, podData)
 	featureControlMap := &map[string]rfc.FeatureControl{
 		"featureControl": *featureControl,
 	}

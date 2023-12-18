@@ -44,6 +44,11 @@ func NewFeatureRuleInf() interface{} {
 	return &FeatureRule{}
 }
 
+// GetId XRule interface
+func (r *FeatureRule) GetId() string {
+	return r.Id
+}
+
 // GetRule XRule interface
 func (r *FeatureRule) GetRule() *re.Rule {
 	return r.Rule

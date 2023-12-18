@@ -19,6 +19,20 @@ package util
 
 type Set map[string]struct{}
 
+func NewSet(items ...string) Set {
+	s := Set{}
+	s.Add(items...)
+	return s
+}
+
+func (s Set) Contains(obj string) bool {
+	if _, ok := s[obj]; ok {
+		return true
+	} else {
+		return false
+	}
+}
+
 func (s Set) Add(items ...string) {
 	for _, x := range items {
 		s[x] = struct{}{}

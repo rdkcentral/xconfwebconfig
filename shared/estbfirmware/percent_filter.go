@@ -14,22 +14,6 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- */ /**
- * Copyright 2022 Comcast Cable Communications Management, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
  */
 package estbfirmware
 
@@ -37,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 
 	"xconfwebconfig/db"
 	re "xconfwebconfig/rulesengine"
@@ -67,6 +52,16 @@ type EnvModelPercentage struct {
 	IntermediateVersion   string                 `json:"intermediateVersion"`
 	Whitelist             *shared.IpAddressGroup `json:"whitelist"`
 	FirmwareVersions      []string               `json:"firmwareVersions"`
+	Name                  string                 `json:"name,omitempty"` // Only used as part of response for REST API
+}
+
+// REST API response
+type PercentFilterWrapper struct {
+	ID                  string                 `json:"id"`
+	Type                SingletonFilterClass   `json:"type"`
+	Whitelist           *shared.IpAddressGroup `json:"whitelist,omitempty"`
+	Percentage          float64                `json:"percentage"`
+	EnvModelPercentages []EnvModelPercentage   `json:"EnvModelPercentages"`
 }
 
 func NewEnvModelPercentage() *EnvModelPercentage {
@@ -260,7 +255,36 @@ func (p *PercentageBean) GetRuleType() string {
 	return "PercentFilter"
 }
 
-//  GetPercentFilterValueOneDB ...  Java getRaw() in dataapi
+func (p *PercentageBean) ValidateAll(beans []*PercentageBean) error {
+	for _, bean := range beans {
+		if p.ID == bean.ID {
+			continue
+		}
+		if strings.EqualFold(p.Name, bean.Name) {
+			return fmt.Errorf("This name %s is already used", p.Name)
+		}
+		if strings.EqualFold(p.Environment, bean.Environment) && strings.EqualFold(p.Model, bean.Model) &&
+			re.EqualComplexRules(*p.OptionalConditions, *bean.OptionalConditions) {
+			var ruleStr string
+			if p.OptionalConditions != nil {
+				ruleStr = p.OptionalConditions.String()
+			}
+			return fmt.Errorf("PercentageBean already exists with such env/model pair %s/%s and optional condition %s", p.Environment, p.Model, ruleStr)
+		}
+	}
+
+	return nil
+}
+
+func (p *PercentFilterValue) GetEnvModelPercentage(name string) *EnvModelPercentage {
+	if p.EnvModelPercentages != nil {
+		if envModelPercentage, ok := p.EnvModelPercentages[name]; ok {
+			return &envModelPercentage
+		}
+	}
+	return nil
+}
+
 func GetDefaultPercentFilterValueOneDB() (*PercentFilterValue, error) {
 	dbinst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_SINGLETON_FILTER_VALUE, PERCENT_FILTER_SINGLETON_ID)
 
@@ -313,4 +337,15 @@ func validateDistributionOverlapping(distributionToCheck *firmware.ConfigEntry, 
 	}
 
 	return nil
+}
+
+func (wrapper *PercentFilterWrapper) ToPercentFilterValue() *PercentFilterValue {
+	envModelPercentages := make(map[string]EnvModelPercentage)
+	for idx := range wrapper.EnvModelPercentages {
+		name := wrapper.EnvModelPercentages[idx].Name
+		wrapper.EnvModelPercentages[idx].Name = "" // Update the original value since v is only a copy
+		envModelPercentages[name] = wrapper.EnvModelPercentages[idx]
+	}
+
+	return NewPercentFilterValue(wrapper.Whitelist, float32(wrapper.Percentage), envModelPercentages)
 }

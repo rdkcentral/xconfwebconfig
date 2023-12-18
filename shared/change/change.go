@@ -18,9 +18,12 @@
 package change
 
 import (
+	"errors"
+	"reflect"
 	"strings"
-
+	"xconfwebconfig/shared"
 	"xconfwebconfig/shared/logupload"
+	"xconfwebconfig/util"
 )
 
 // EntityType enum
@@ -32,6 +35,23 @@ const (
 
 // ChangeOperation enum
 type ChangeOperation string
+
+// TelemetryTwoChange XconfApprovedTelemetryTwoChange table
+type ApprovedTelemetryTwoChange TelemetryTwoChange
+
+// TelemetryTwoChange XconfTelemetryTwoChange table
+type TelemetryTwoChange struct {
+	ID              string                         `json:"id"`
+	Updated         int64                          `json:"updated"`
+	EntityID        string                         `json:"entityId"`
+	EntityType      string                         `json:"entityType"`
+	ApplicationType string                         `json:"applicationType"`
+	NewEntity       *logupload.TelemetryTwoProfile `json:"newEntity,omitempty"`
+	OldEntity       *logupload.TelemetryTwoProfile `json:"oldEntity,omitempty"`
+	Operation       ChangeOperation                `json:"operation"`
+	Author          string                         `json:"author"`
+	ApprovedUser    string                         `json:"approvedUser,omitempty"`
+}
 
 const (
 	Create ChangeOperation = "CREATE"
@@ -55,6 +75,145 @@ type Change struct {
 	Operation       ChangeOperation                     `json:"operation"`
 	Author          string                              `json:"author"`
 	ApprovedUser    string                              `json:"approvedUser"`
+}
+
+func (c Change) GetID() string {
+	return c.ID
+}
+
+func (c Change) GetEntityID() string {
+	return c.EntityID
+}
+
+func (c Change) GetEntityType() EntityType {
+	return c.EntityType
+}
+
+func (c Change) GetApplicationType() string {
+	return c.ApplicationType
+}
+
+func (c Change) GetNewEntity() *logupload.PermanentTelemetryProfile {
+	return &c.NewEntity
+}
+
+func (c Change) GetOldEntity() *logupload.PermanentTelemetryProfile {
+	return &c.OldEntity
+}
+
+func (c Change) GetOperation() ChangeOperation {
+	return c.Operation
+}
+
+func (c Change) GetAuthor() string {
+	return c.Author
+}
+
+func (c Change) GetApprovedUser() string {
+	return c.ApprovedUser
+}
+
+func (c ApprovedChange) GetID() string {
+	return c.ID
+}
+
+func (c ApprovedChange) GetEntityID() string {
+	return c.EntityID
+}
+
+func (c ApprovedChange) GetEntityType() EntityType {
+	return c.EntityType
+}
+
+func (c ApprovedChange) GetApplicationType() string {
+	return c.ApplicationType
+}
+
+func (c ApprovedChange) GetNewEntity() *logupload.PermanentTelemetryProfile {
+	return &c.NewEntity
+}
+
+func (c ApprovedChange) GetOldEntity() *logupload.PermanentTelemetryProfile {
+	return &c.OldEntity
+}
+
+func (c ApprovedChange) GetOperation() ChangeOperation {
+	return c.Operation
+}
+
+func (c ApprovedChange) GetAuthor() string {
+	return c.Author
+}
+
+func (c ApprovedChange) GetApprovedUser() string {
+	return c.ApprovedUser
+}
+
+func (obj *TelemetryTwoChange) Validate() error {
+	if util.IsBlank(obj.EntityID) {
+		return errors.New("Entity id is empty")
+	}
+	if util.IsBlank(obj.Author) {
+		return errors.New("Author is empty")
+	}
+	if util.IsBlank(string(obj.Operation)) {
+		return errors.New("Operation is empty")
+	}
+	if (obj.Operation == Create || obj.Operation == Update) && obj.NewEntity == nil {
+		return errors.New("New entity is empty")
+	}
+	if (obj.Operation == Update || obj.Operation == Delete) && obj.OldEntity == nil {
+		return errors.New("Old entity is empty")
+	}
+	return nil
+}
+
+func (obj *ApprovedTelemetryTwoChange) Validate() error {
+	change := TelemetryTwoChange(*obj)
+	if err := change.Validate(); err != nil {
+		return err
+	}
+	if util.IsBlank(obj.ApprovedUser) {
+		return errors.New("Approved user is empty")
+	}
+	return nil
+}
+
+type PendingChange interface {
+	GetID() string
+	GetEntityID() string
+	GetEntityType() EntityType
+	GetApplicationType() string
+	GetNewEntity() *logupload.PermanentTelemetryProfile
+	GetOldEntity() *logupload.PermanentTelemetryProfile
+	GetOperation() ChangeOperation
+	GetAuthor() string
+	GetApprovedUser() string
+}
+
+func (c *Change) EqualChangeData(c2 *Change) bool {
+	if c == c2 {
+		return true
+	}
+	return c.EntityType == c2.EntityType &&
+		c.ApplicationType == c2.ApplicationType &&
+		reflect.DeepEqual(c.NewEntity, c2.NewEntity) &&
+		reflect.DeepEqual(c.OldEntity, c2.OldEntity) &&
+		c.Operation == c2.Operation
+}
+
+// NewApprovedTelemetryTwoChangeInf constructor
+func NewApprovedTelemetryTwoChangeInf() interface{} {
+	return &ApprovedTelemetryTwoChange{
+		ApplicationType: shared.STB,
+	}
+}
+
+// NewTelemetryTwoChangeInf constructor
+func NewTelemetryTwoChangeInf() interface{} {
+	return &TelemetryTwoChange{
+		ApplicationType: shared.STB,
+	}
 }
 
 // NewChangeInf constructor

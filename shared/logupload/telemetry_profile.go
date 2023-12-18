@@ -19,9 +19,12 @@ package logupload
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
-
+	"xconfwebconfig/common"
 	"xconfwebconfig/db"
 	re "xconfwebconfig/rulesengine"
 	"xconfwebconfig/util"
@@ -94,6 +97,103 @@ func (obj *PermanentTelemetryProfile) Clone() (*PermanentTelemetryProfile, error
 	return cloneObj.(*PermanentTelemetryProfile), nil
 }
 
+func (obj *PermanentTelemetryProfile) IsEmpty() bool {
+	if obj.Type == "" && obj.ID == "" && obj.TelemetryProfile == nil && obj.Schedule == "" && obj.Name == "" && obj.UploadRepository == "" && obj.UploadProtocol == "" && obj.ApplicationType == "" {
+		return true
+	}
+	return false
+}
+
+func (s *PermanentTelemetryProfile) EqualChangeData(t *PermanentTelemetryProfile) bool {
+	if t == nil {
+		return false
+	}
+
+	return s.Schedule == t.Schedule && s.Expires == t.Expires && s.Name == t.Name && s.UploadRepository == t.UploadRepository &&
+		s.UploadProtocol == t.UploadProtocol && s.ApplicationType == t.ApplicationType && checkEqualTelemetryElements(s.TelemetryProfile, t.TelemetryProfile)
+}
+
+// TODO rework it
+func checkEqualTelemetryElements(s, t []TelemetryElement) bool {
+	if len(s) != len(t) {
+		return false
+	}
+
+	count := 0
+
+	for i := 0; i < len(s); i++ {
+		for j := 0; j < len(t); j++ {
+			if s[i].Header == t[j].Header && s[i].Content == t[j].Content && s[i].Type == t[j].Type && s[i].PollingFrequency == t[j].PollingFrequency && s[i].Component == t[j].Component {
+				count = count + 1
+			}
+		}
+	}
+
+	if count != len(s) {
+		return false
+	}
+
+	return true
+}
+
+func IsValidUploadProtocol(p string) bool {
+	str := strings.ToUpper(p)
+	if str == string(TFTP) || str == string(SFTP) || str == string(SCP) || str == string(HTTP) || str == string(HTTPS) || str == string(S3) {
+		return true
+	}
+	return false
+}
+
+func IsValidUrl(str string) bool {
+	u, err := url.ParseRequestURI(str)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return false
+	}
+	if !IsValidUploadProtocol(u.Scheme) {
+		return false
+	}
+	return urlRe.MatchString(u.Host)
+}
+
+func (obj *PermanentTelemetryProfile) Validate() error {
+	if util.IsBlank(obj.Type) {
+		return common.NewRemoteError(http.StatusBadRequest, "Type is required")
+	}
+	if util.IsBlank(obj.Name) {
+		return common.NewRemoteError(http.StatusBadRequest, "Name is empty")
+	}
+
+	protocol := obj.UploadProtocol
+	host := obj.UploadRepository
+	var url string
+	if strings.Contains(host, "://") || protocol == "" {
+		url = host
+	} else {
+		url = strings.ToLower(string(protocol)) + "://" + host
+	}
+
+	if !IsValidUrl(url) {
+		return common.NewRemoteError(http.StatusBadRequest, "URL is invalid")
+	}
+
+	if elements := obj.TelemetryProfile; len(elements) < 1 {
+		return common.NewRemoteError(http.StatusBadRequest, "Should contain at least one profile entry")
+	} else {
+		for i, element := range elements {
+			_, err := strconv.Atoi(element.PollingFrequency)
+			if err != nil {
+				return common.NewRemoteError(http.StatusBadRequest, "Polling frequency is not a number")
+			}
+			for j := i + 1; j < len(elements); j++ {
+				if element.Equals(&elements[j]) {
+					return common.NewRemoteError(http.StatusBadRequest, "Profile entity has duplicate entries")
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // NewPermanentTelemetryProfileInf constructor
 func NewPermanentTelemetryProfileInf() interface{} {
 	return &PermanentTelemetryProfile{}
@@ -129,11 +229,29 @@ func (obj *TelemetryRule) Clone() (*TelemetryRule, error) {
 	return cloneObj.(*TelemetryRule), nil
 }
 
+func (t *TelemetryElement) Equals(o *TelemetryElement) bool {
+	if t == o {
+		return true
+	}
+	if o == nil {
+		return false
+	}
+	if t.ID == o.ID && t.Header == o.Header && t.Content == o.Content && t.Type == o.Type && t.PollingFrequency == o.PollingFrequency && t.Component == o.Component {
+		return true
+	}
+	return false
+}
+
 func (r *TelemetryRule) GetApplicationType() string {
 	if len(r.ApplicationType) > 0 {
 		return r.ApplicationType
 	}
 	return "stb"
+}
+
+// GetId XRule interface
+func (r *TelemetryRule) GetId() string {
+	return r.ID
 }
 
 // GetRule XRule interface
@@ -215,6 +333,11 @@ func (t *TelemetryTwoRule) String() string {
 		t.ID, t.Name, t.ApplicationType, t.BoundTelemetryIDs, t.Rule.String())
 }
 
+// GetId XRule interface
+func (r *TelemetryTwoRule) GetId() string {
+	return r.ID
+}
+
 // GetRule XRule interface
 func (r *TelemetryTwoRule) GetRule() *re.Rule {
 	return &r.Rule
@@ -267,6 +390,7 @@ func (t *TelemetryTwoRule) Equals(o *TelemetryTwoRule) bool {
 
 // TelemetryTwoProfile TelemetryTwoProfiles table
 type TelemetryTwoProfile struct {
+	Type            string `json:"@type,omitempty"`
 	ID              string `json:"id"`
 	Updated         int64  `json:"updated"`
 	Name            string `json:"name"`
@@ -280,6 +404,49 @@ func (obj *TelemetryTwoProfile) Clone() (*TelemetryTwoProfile, error) {
 		return nil, err
 	}
 	return cloneObj.(*TelemetryTwoProfile), nil
+}
+
+func (entity *TelemetryTwoProfile) Validate() error {
+	if util.IsBlank(entity.Type) {
+		return common.NewRemoteError(http.StatusBadRequest, "Type is required")
+	}
+	if util.IsBlank(entity.Name) {
+		return common.NewRemoteError(http.StatusBadRequest, "Name is not present")
+	}
+	if err := ValidateTelemetryTwoProfileJson(entity.Jsonconfig); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *TelemetryTwoProfile) EqualChangeData(t *TelemetryTwoProfile) bool {
+	if t == nil {
+		return false
+	}
+
+	return s.Name == t.Name && s.Jsonconfig == t.Jsonconfig && s.ApplicationType == t.ApplicationType
+}
+
+func (entity *TelemetryTwoProfile) ValidateAll(existingEntities []*TelemetryTwoProfile) error {
+	for _, profile := range existingEntities {
+		if !(profile.ID == entity.ID) && profile.Name == entity.Name {
+			return common.NewRemoteError(http.StatusConflict, fmt.Sprintf("TelemetryTwo Profile with such name exists: %s", entity.Name))
+		}
+	}
+
+	return nil
+}
+
+func (s *TelemetryTwoProfile) Equals(t *TelemetryTwoProfile) bool {
+	if t == nil {
+		return false
+	}
+	if s.ID != t.ID || s.Name != t.Name || s.Jsonconfig != t.Jsonconfig || s.ApplicationType != t.ApplicationType {
+		return false
+	}
+
+	return true
 }
 
 // NewTelemetryTwoProfileInf constructor

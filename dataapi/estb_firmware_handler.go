@@ -87,16 +87,27 @@ func GetEstbFirmwareSwuHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.Error(w, http.StatusInternalServerError, common.NotOK)
 		return
 	}
+	status, response, firmwareConfigFacade := getFirmwareResponse(w, r, xw, fields)
+	if status == 200 {
+		firmwareConfigResponse := sharedef.CreateFirmwareConfigFacadeResponse(*firmwareConfigFacade)
+		response, _ := util.JSONMarshal(firmwareConfigResponse)
+		xhttp.WriteXconfResponse(w, 200, response)
+	} else {
+		xhttp.WriteXconfResponseAsText(w, status, response)
+	}
+}
 
+func getFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResponseWriter, fields log.Fields) (int, []byte, *sharedef.FirmwareConfigFacade) {
 	queryParams := r.URL.Query()
-	xconfHttp := r.Header.Get(common.XCONF_HTTP_HEADER)
+	clientProtocolHeader := GetClientProtocolHeaderValue(r)
 	contextMap := make(map[string]string)
 	var version string
+	// don't add any variation of "clientProtocol" from query params to contextMap
 	if len(queryParams) > 0 {
 		for k, v := range queryParams {
 			if k == common.VERSION {
 				version = v[0]
-			} else {
+			} else if !strings.EqualFold(k, common.CLIENT_PROTOCOL) {
 				contextMap[k] = strings.Join(v, ",")
 			}
 		}
@@ -109,40 +120,36 @@ func GetEstbFirmwareSwuHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	contextMap[common.APPLICATION_TYPE] = mux.Vars(r)[common.APPLICATION_TYPE]
-	contextMap[common.XCONF_HTTP_HEADER] = xconfHttp
+	contextMap[common.XCONF_HTTP_HEADER] = clientProtocolHeader
+	AddClientProtocolToContextMap(contextMap, clientProtocolHeader)
 	GetFirstElementsInContextMap(contextMap)
 	if contextMap[common.ESTB_MAC] == "" {
 		if util.IsVersionGreaterOrEqual(version, 2.0) {
-			xhttp.WriteXconfResponseAsText(w, 400, []byte("\"eStbMac should be specified\""))
-		} else {
-			xhttp.WriteXconfResponseAsText(w, 500, []byte("\"eStbMac should be specified\""))
+			return http.StatusBadRequest, []byte("\"eStbMac should be specified\""), nil
 		}
-	} else if !IsSecureConnection(Ws, contextMap) {
-		xhttp.WriteXconfResponseAsText(w, 403, []byte("FORBIDDEN"))
-	} else {
-		_, errmac := util.MACAddressValidator(contextMap[common.ESTB_MAC])
-		if errmac != nil {
-			xhttp.WriteXconfResponseAsText(w, 500, []byte(fmt.Sprintf("\"<h2>500 Internal Server Error</h2><div>invalid mac address: %s</div>\"", contextMap[common.ESTB_MAC])))
-			return
-		}
-
-		log.Debugf("GetEstbFirmwareSwuHandler call AddEstbFirmwareContext start ... queryParams %v", queryParams)
-		AddEstbFirmwareContext(Ws, r, contextMap, true, true, fields)
-		log.Debugf("GetEstbFirmwareSwuHandler call AddEstbFirmwareContext  ... end contextMap %v", contextMap)
-		estbFirmwareRuleBase := dataef.NewEstbFirmwareRuleBaseDefault()
-		convertedContext := sharedef.GetContextConverted(contextMap)
-		evaluationResult, _ := estbFirmwareRuleBase.Eval(contextMap, convertedContext, contextMap[common.APPLICATION_TYPE], fields)
-		explanation := GetExplanation(contextMap, evaluationResult)
-		if evaluationResult == nil || evaluationResult.Blocked || evaluationResult.FirmwareConfig == nil || evaluationResult.FirmwareConfig.Properties == nil {
-			LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
-			xhttp.WriteXconfResponseAsText(w, 404, []byte(fmt.Sprintf("\"<h2>404 NOT FOUND</h2><div>%s<div>\"", explanation)))
-		} else {
-			LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
-			firmwareConfigResponse := sharedef.CreateFirmwareConfigFacadeResponse(*evaluationResult.FirmwareConfig)
-			response, _ := util.JSONMarshal(firmwareConfigResponse)
-			xhttp.WriteXconfResponse(w, 200, response)
-		}
+		return http.StatusInternalServerError, []byte("\"eStbMac should be specified\""), nil
 	}
+	if !IsAllowedRequest(contextMap, clientProtocolHeader) {
+		return http.StatusForbidden, []byte("FORBIDDEN"), nil
+	}
+	_, errmac := util.MACAddressValidator(contextMap[common.ESTB_MAC])
+	if errmac != nil {
+		return http.StatusInternalServerError, []byte(fmt.Sprintf("\"<h2>500 Internal Server Error</h2><div>invalid mac address: %s</div>\"", contextMap[common.ESTB_MAC])), nil
+	}
+
+	log.Debugf("GetEstbFirmwareSwuHandler call AddEstbFirmwareContext start ... queryParams %v", queryParams)
+	AddEstbFirmwareContext(Ws, r, contextMap, true, true, fields)
+	log.Debugf("GetEstbFirmwareSwuHandler call AddEstbFirmwareContext  ... end contextMap %v", contextMap)
+	estbFirmwareRuleBase := dataef.NewEstbFirmwareRuleBaseDefault()
+	convertedContext := sharedef.GetContextConverted(contextMap)
+	evaluationResult, _ := estbFirmwareRuleBase.Eval(contextMap, convertedContext, contextMap[common.APPLICATION_TYPE], fields)
+	explanation := GetExplanation(contextMap, evaluationResult)
+	if evaluationResult == nil || evaluationResult.Blocked || evaluationResult.FirmwareConfig == nil || evaluationResult.FirmwareConfig.Properties == nil {
+		LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
+		return http.StatusNotFound, []byte(fmt.Sprintf("\"<h2>404 NOT FOUND</h2><div>%s<div>\"", explanation)), nil
+	}
+	LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
+	return http.StatusOK, []byte(""), evaluationResult.FirmwareConfig
 }
 
 func GetCheckMinFirmwareHandler(w http.ResponseWriter, r *http.Request) {
@@ -207,11 +214,13 @@ func GetEstbFirmwareVersionInfoPath(w http.ResponseWriter, r *http.Request) {
 	}
 
 	queryParams := r.URL.Query()
-	xconfHttp := r.Header.Get(common.XCONF_HTTP_HEADER)
 	contextMap := make(map[string]string)
 	if len(queryParams) > 0 {
 		for k, v := range queryParams {
-			contextMap[k] = strings.Join(v, ",")
+			// don't add any variation of "clientProtoco" from query params to contextMap
+			if !strings.EqualFold(k, common.CLIENT_PROTOCOL) {
+				contextMap[k] = strings.Join(v, ",")
+			}
 		}
 	}
 	if r.ContentLength != 0 {
@@ -222,11 +231,13 @@ func GetEstbFirmwareVersionInfoPath(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	contextMap[common.APPLICATION_TYPE] = mux.Vars(r)[common.APPLICATION_TYPE]
-	contextMap[common.XCONF_HTTP_HEADER] = xconfHttp
+	clientProtocolHeader := GetClientProtocolHeaderValue(r)
+	contextMap[common.XCONF_HTTP_HEADER] = clientProtocolHeader
+	AddClientProtocolToContextMap(contextMap, clientProtocolHeader)
 	GetFirstElementsInContextMap(contextMap)
 	if contextMap[common.ESTB_MAC] == "" {
 		xhttp.WriteXconfResponseAsText(w, 400, []byte("eStbMac should be specified"))
-	} else if !IsSecureConnection(Ws, contextMap) {
+	} else if !IsAllowedRequest(contextMap, clientProtocolHeader) {
 		xhttp.WriteXconfResponseAsText(w, 403, []byte("FORBIDDEN"))
 	} else {
 		AddEstbFirmwareContext(Ws, r, contextMap, true, true, fields)

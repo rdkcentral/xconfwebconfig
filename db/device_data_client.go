@@ -15,25 +15,29 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package firmware
+package db
 
-const (
-	SINGLETON_ID = "DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE"
+import (
+	"fmt"
 )
 
-type ActivationVersion struct {
-	ID                 string   `json:"id"`
-	ApplicationType    string   `json:"applicationtype"`
-	Description        string   `json:"description"`
-	Model              string   `json:"model"`
-	PartnerId          string   `json:"partnerId"`
-	RegularExpressions []string `json:"regularExpressions"`
-	FirmwareVersions   []string `json:"firmwareVersions"`
-}
+const (
+	EcmMacColumnName    = "cpe_mac"
+	PodSerialColumnName = "pod_id"
+)
 
-// NewActivationVersion constructor
-func NewActivationVersion() *ActivationVersion {
-	return &ActivationVersion{
-		RegularExpressions: []string{},
-		FirmwareVersions:   []string{}}
+// GetEcmMacFromPodTable Get ecmMacAdress from table cpe_mac using pod serialNum
+func (c *CassandraClient) GetEcmMacFromPodTable(serialNum string) (string, error) {
+	c.concurrentQueries <- true
+	defer func() { <-c.concurrentQueries }()
+
+	var ecmMac []byte
+
+	stmt := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ? LIMIT 1", EcmMacColumnName, fmt.Sprintf("%s.%s", c.DeviceKeyspace(), c.DevicePodTableName()), PodSerialColumnName)
+	err := c.Query(stmt, serialNum).Scan(&ecmMac)
+	if err != nil {
+		return "", err
+	}
+
+	return string(ecmMac), nil
 }

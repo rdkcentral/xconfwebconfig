@@ -65,6 +65,10 @@ func (dao cachedSimpleDaoMock) RefreshAll(tableName string) error {
 	return refreshAllMock(tableName)
 }
 
+func (dao cachedSimpleDaoMock) RefreshOne(tableName string, rowKey string) error {
+	return refreshOne(tableName, rowKey)
+}
+
 var getOneMock func(tableName string, rowKey string) (interface{}, error)
 var setOneMock func(tableName string, rowKey string, entity interface{}) error
 var deleteOneMock func(tableName string, rowKey string) error
@@ -73,6 +77,7 @@ var getAllAsListMock func(tableName string, maxResults int) ([]interface{}, erro
 var getAllAsMapMock func(tableName string) (map[interface{}]interface{}, error)
 var getKeysMock func(tableName string) ([]interface{}, error)
 var refreshAllMock func(tableName string) error
+var refreshOne func(tableName string, rowKey string) error
 
 func TestGetOne(t *testing.T) {
 	GetCachedSimpleDaoFunc = func() db.CachedSimpleDao {

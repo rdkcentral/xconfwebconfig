@@ -178,8 +178,8 @@ func GetExplanation(contextMap map[string]string, evaluationResult *estbfirmware
 	return explanation.String()
 }
 
-func IsSecureConnection(ws *xhttp.XconfServer, contextMap map[string]string) bool {
-	if contextMap[common.XCONF_HTTP_HEADER] != common.XCONF_HTTP_VALUE {
+func IsAllowedRequest(contextMap map[string]string, clientProtocolHeader string) bool {
+	if IsSecureConnection(clientProtocolHeader) {
 		return true
 	}
 	recoveryFirmwareVersions := Xc.EstbRecoveryFirmwareVersions
@@ -213,6 +213,8 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 		fields = log.Fields{}
 	}
 	NormalizeEstbFirmwareContext(ws, r, contextMap, usePartnerAppType, shouldAddIp)
+
+	AddGroupServiceContext(ws, contextMap, common.ESTB_MAC, fields)
 
 	// getting local sat token
 	localToken, err := xhttp.GetLocalSatToken(fields)
@@ -363,6 +365,7 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 		}
 	}
 	log.WithFields(fields).Info("EstbFirmwareService XCONF_LOG")
+	xhttp.UpdateLogCounter("EstbFirmwareService")
 }
 
 // doMetrics updates the fw penetration counts
