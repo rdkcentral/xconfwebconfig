@@ -27,6 +27,10 @@ import (
 func Decrypt(xpckeyB64 string, encryptedB64 string) string {
 	// CBC decryption
 
+	// Adapted from Go example code, which is:
+	// Copyright 2012 The Go Authors. All rights reserved.
+	// Licensed under the BSD-3 License
+
 	key, err := b64.StdEncoding.DecodeString(xpckeyB64)
 	if err != nil {
 		panic(err)
@@ -40,10 +44,6 @@ func Decrypt(xpckeyB64 string, encryptedB64 string) string {
 	if err != nil {
 		panic(err)
 	}
-
-	// Adapted from Go example code, which is:
-	// Copyright 2012 The Go Authors. All rights reserved.
-	// Licensed under the BSD-3 License
 
 	// The IV needs to be unique, but not secure. Therefore it's common to
 	// include it at the beginning of the ciphertext.
