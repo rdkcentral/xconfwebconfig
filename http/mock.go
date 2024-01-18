@@ -30,12 +30,12 @@ var (
 // mock servers are set up for all external services - SatService, DeviceService, TaggingService, AccountService
 // If a different mock response is desired for a test, use the same template below, but just define a different mockResponse
 // An example for a different mock response can be seen in http/supplementary_handler_test.go
-func (server *XconfServer) setupMocks() {
+func (server *XconfServer) SetupMocks() {
 	server.mockSatService()
 	server.mockDeviceService()
 	server.mockTagging()
 	server.mockAccountService()
-	server.mockXdas()
+	server.mockGroupService()
 }
 
 func (server *XconfServer) mockSatService() {
@@ -83,8 +83,8 @@ func (server *XconfServer) mockAccountService() {
 	server.AccountServiceConnector.SetAccountServiceHost(mockServer.URL)
 }
 
-func (server *XconfServer) mockXdas() {
-	mockResponse := []byte(`{"hasAccountServiceData": true,"serviceAccountUri": "11002299338844775566","partnerId": "unittesting"}`)
+func (server *XconfServer) mockGroupService() {
+	mockResponse := []byte(`{"hasAccountServiceData": true,"serviceAccountUri": "123456789012345","partnerId": "unittesting"}`)
 
 	// SatService mock server
 	mockServer := httptest.NewServer(

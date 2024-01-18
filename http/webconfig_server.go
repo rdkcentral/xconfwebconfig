@@ -186,8 +186,8 @@ func (s *XconfServer) TestingMiddleware(next http.Handler) http.Handler {
 
 func (s *XconfServer) NoAuthMiddleware(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		xw := s.logRequestStarts(w, r)
-		defer s.logRequestEnds(&xw, r)
+		xw := s.LogRequestStarts(w, r)
+		defer s.LogRequestEnds(&xw, r)
 		next.ServeHTTP(&xw, r)
 	}
 	return http.HandlerFunc(fn)
@@ -216,7 +216,7 @@ func getHeadersForLogAsMap(r *http.Request, notLoggedHeaders []string) map[strin
 	return loggedHeaders
 }
 
-func (s *XconfServer) logRequestStarts(w http.ResponseWriter, r *http.Request) XResponseWriter {
+func (s *XconfServer) LogRequestStarts(w http.ResponseWriter, r *http.Request) XResponseWriter {
 	remoteIp := r.RemoteAddr
 	host := r.Host
 
@@ -296,12 +296,12 @@ func (s *XconfServer) logRequestStarts(w http.ResponseWriter, r *http.Request) X
 		}
 	}
 
-	log.WithFields(copyFields).Info("request starts")
+	log.WithFields(copyFields).Debug("request starts")
 
 	return xwriter
 }
 
-func (s *XconfServer) logRequestEnds(xw *XResponseWriter, r *http.Request) {
+func (s *XconfServer) LogRequestEnds(xw *XResponseWriter, r *http.Request) {
 	tdiff := time.Since(xw.StartTime())
 	duration := tdiff.Nanoseconds() / 1000000
 
@@ -321,10 +321,8 @@ func (s *XconfServer) logRequestEnds(xw *XResponseWriter, r *http.Request) {
 	if strings.Contains(pathTemplate, "xconf/swu/{applicationType}") {
 		splPath = true
 	}
-	if splPath || statusCode >= http.StatusBadRequest { // >= 400
-		// TODO: This exposes the passwd if the response len > lowerBound but < upperBound
+	if splPath || statusCode >= http.StatusBadRequest {
 		fields["response"] = response
-		// obfuscate "password" for /xconf/swu only
 		if len(response) < responseLoggingLowerBound {
 			dict := util.Dict{}
 			err := json.Unmarshal([]byte(response), &dict)

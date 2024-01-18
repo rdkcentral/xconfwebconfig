@@ -64,6 +64,10 @@ func NewIpAddress(input string) *IpAddress {
 
 // parse() use NewIpAddress
 
+func IsValidIpAddress(input string) bool {
+	return NewIpAddress(input) != nil
+}
+
 func (a IpAddress) IsIpv6() bool {
 	return a.isIpv6
 }

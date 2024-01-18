@@ -107,6 +107,13 @@ type DatabaseClient interface {
 	GetXconfCompressedData(tableName string, rowKey string) ([]byte, error)
 	GetAllXconfCompressedDataAsMap(tableName string) map[string][]byte
 
+	// Pod table lookup estbMac from pod serialNum
+	GetEcmMacFromPodTable(string) (string, error)
+
+	//Penetration Metrics
+	GetPenetrationMetrics(macAddress string) (map[string]interface{}, error)
+	SetPenetrationMetrics(penetrationmetrics *PenetrationMetrics) error
+
 	// not found
 	IsDbNotFound(error) bool
 }

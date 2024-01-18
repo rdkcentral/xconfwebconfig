@@ -52,6 +52,8 @@ const (
 	GLOBAL_PERCENT = "GLOBAL_PERCENT"
 
 	ACTIVATION_VERSION = "ACTIVATION_VERSION"
+	KEY                = "FREE_ARG"
+	VALUE              = "FIXED_ARG"
 )
 
 var (
@@ -63,7 +65,7 @@ var (
 
 // FirmwareRule FirmwareRule4 table
 type ApplicableAction struct {
-	Type                       string               `json:"type"` // Java class name
+	Type                       string               `json:"type"`
 	ActionType                 ApplicableActionType `json:"actionType"`
 	ConfigId                   string               `json:"configId"`
 	ConfigEntries              []ConfigEntry        `json:"configEntries"` // RuleAction
@@ -211,7 +213,7 @@ type FirmwareRule struct {
 	Rule             re.Rule           `json:"rule"`
 	Type             string            `json:"type"`
 	Active           bool              `json:"active"`
-	ApplicationType  string            `json:"applicationType"`
+	ApplicationType  string            `json:"applicationType,omitempty"`
 }
 
 func (obj *FirmwareRule) Clone() (*FirmwareRule, error) {
@@ -224,8 +226,9 @@ func (obj *FirmwareRule) Clone() (*FirmwareRule, error) {
 
 func NewEmptyFirmwareRule() *FirmwareRule {
 	return &FirmwareRule{
-		Active:          true,
-		ApplicationType: shared.STB,
+		Active:           true,
+		ApplicationType:  shared.STB,
+		ApplicableAction: NewApplicableAction("", ""),
 	}
 }
 
@@ -249,10 +252,6 @@ func NewFirmwareRule(id string, name string, ruleType string, rule *re.Rule, act
 }
 
 func (r *FirmwareRule) Validate() error {
-	if !util.Contains(TemplateNames, r.Type) {
-		return fmt.Errorf("FirmwareRule's Type is invalid: %s", r.Type)
-	}
-
 	if r.ApplicableAction == nil || !IsValidApplicableActionType(r.ApplicableAction.ActionType) {
 		return errors.New("FirmwareRule's ApplicableAction is not present")
 	}
@@ -326,6 +325,11 @@ func (r *FirmwareRule) ConfigId() string {
 	return ""
 }
 
+// GetId XRule interface
+func (r *FirmwareRule) GetId() string {
+	return r.ID
+}
+
 // GetRule XRule interface
 func (r *FirmwareRule) GetRule() *re.Rule {
 	return &r.Rule
@@ -343,8 +347,6 @@ func (r *FirmwareRule) GetTemplateId() string {
 
 // GetRuleType XRule interface
 func (r *FirmwareRule) GetRuleType() string {
-	// Java  return this.getClass().getSimpleName();
-	// Java code is using class anme to return diiff rule type
 	return "FirmwareRule"
 }
 
@@ -401,6 +403,11 @@ func NewFirmwareRuleTemplateInf() interface{} {
 	}
 }
 
+// GetId XRule interface
+func (r *FirmwareRuleTemplate) GetId() string {
+	return r.ID
+}
+
 // GetRule XRule interface
 func (r *FirmwareRuleTemplate) GetRule() *re.Rule {
 	return &r.Rule
@@ -431,7 +438,6 @@ func GetRulesByRuleTypes(rules map[string][]*FirmwareRule, ruleType string) []*F
 	return rules[ruleType]
 }
 
-//  RemoveAllByRuleTypes ...  rules.removeAll(ACTIVATION_VERSION); Java8 google collection
 func RemoveAllByRuleTypes(rules map[string][]*FirmwareRule, ruleType string) {
 	delete(rules, ruleType)
 }
@@ -602,7 +608,7 @@ func GetFirmwareRuleAllAsListByApplicationType(applicationType string) (map[stri
 	return result, nil
 }
 
-func GetFirmwareRuleTemplateAllAsListDB() ([]*FirmwareRuleTemplate, error) {
+func GetFirmwareRuleTemplateAllAsListDB(actionType ApplicableActionType) ([]*FirmwareRuleTemplate, error) {
 	cm := db.GetCacheManager()
 	cacheKey := "FirmwareRuleTemplateList"
 	cacheInst := cm.ApplicationCacheGet(db.TABLE_FIRMWARE_RULE_TEMPLATE, cacheKey)
@@ -621,7 +627,9 @@ func GetFirmwareRuleTemplateAllAsListDB() ([]*FirmwareRuleTemplate, error) {
 
 	for _, rule := range rulelst {
 		trule := rule.(*FirmwareRuleTemplate)
-		result = append(result, trule)
+		if actionType == "" || trule.ApplicableAction.ActionType == actionType {
+			result = append(result, trule)
+		}
 	}
 
 	if len(result) > 0 {

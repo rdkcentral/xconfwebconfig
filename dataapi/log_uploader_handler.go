@@ -59,6 +59,7 @@ func GetLogUploaderTelemetryProfilesHandler(w http.ResponseWriter, r *http.Reque
 	dicts, err := GetTelemetryTwoProfileResponeDicts(contextMap)
 	if err != nil {
 		xhttp.Error(w, http.StatusInternalServerError, err)
+		return
 	}
 	if dicts == nil {
 		xhttp.WriteXconfResponseAsText(w, 404, []byte("\"<h2>404 NOT FOUND</h2>profiles not found\""))
@@ -69,6 +70,7 @@ func GetLogUploaderTelemetryProfilesHandler(w http.ResponseWriter, r *http.Reque
 		rbytes, err := util.JSONMarshal(resp)
 		if err != nil {
 			xhttp.Error(w, http.StatusInternalServerError, err)
+			return
 		}
 		xhttp.WriteResponseBytes(w, rbytes, http.StatusOK)
 	}

@@ -20,10 +20,11 @@ package shared
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
-
+	"xconfwebconfig/common"
 	"xconfwebconfig/db"
 	"xconfwebconfig/util"
 
@@ -38,6 +39,13 @@ const (
 	ALL      = "all"
 )
 
+// AppSettings table object
+type AppSetting struct {
+	ID      string      `json:"id"`
+	Updated int64       `json:"updated"`
+	Value   interface{} `json:"value"`
+}
+
 func isValid(at string) bool {
 	if at == STB || at == XHOME || at == RDKCLOUD || at == SKY {
 		return true
@@ -46,6 +54,10 @@ func isValid(at string) bool {
 }
 
 func ValidateApplicationType(applicationType string) error {
+	if applicationType == "" {
+		return common.NewRemoteError(http.StatusBadRequest, "ApplicationType is empty")
+	}
+
 	if applicationType != "" && !isValid(applicationType) {
 		return fmt.Errorf("ApplicationType %s is not valid", applicationType)
 	}
@@ -282,4 +294,17 @@ type StringListWrapper struct {
 
 func NewStringListWrapper(list []string) *StringListWrapper {
 	return &StringListWrapper{List: list}
+}
+
+func (obj *AppSetting) Clone() (*AppSetting, error) {
+	cloneObj, err := util.Copy(obj)
+	if err != nil {
+		return nil, err
+	}
+	return cloneObj.(*AppSetting), nil
+}
+
+// NewAppSettingInf constructor
+func NewAppSettingInf() interface{} {
+	return &AppSetting{}
 }

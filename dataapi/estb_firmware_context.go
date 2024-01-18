@@ -178,8 +178,8 @@ func GetExplanation(contextMap map[string]string, evaluationResult *estbfirmware
 	return explanation.String()
 }
 
-func IsSecureConnection(ws *xhttp.XconfServer, contextMap map[string]string) bool {
-	if contextMap[common.XCONF_HTTP_HEADER] != common.XCONF_HTTP_VALUE {
+func IsAllowedRequest(contextMap map[string]string, clientProtocolHeader string) bool {
+	if IsSecureConnection(clientProtocolHeader) {
 		return true
 	}
 	recoveryFirmwareVersions := Xc.EstbRecoveryFirmwareVersions
@@ -363,6 +363,7 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 		}
 	}
 	log.WithFields(fields).Info("EstbFirmwareService XCONF_LOG")
+	xhttp.UpdateLogCounter("EstbFirmwareService")
 }
 
 // doMetrics updates the fw penetration counts

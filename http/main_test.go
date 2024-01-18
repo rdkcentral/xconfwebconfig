@@ -61,6 +61,11 @@ func TestMain(m *testing.M) {
 		os.Setenv("SAT_CLIENT_SECRET", "bar")
 	}
 
+	ssrKeys := os.Getenv("SSR_KEYS")
+	if len(ssrKeys) == 0 {
+		os.Setenv("SSR_KEYS", "test-key-1;test-key-2;test-key3")
+	}
+
 	var err error
 	sc, err = common.NewServerConfig(testConfigFile)
 	if err != nil {

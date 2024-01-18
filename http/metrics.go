@@ -39,6 +39,7 @@ type AppMetrics struct {
 	responseSize   *prometheus.HistogramVec
 	requestSize    *prometheus.HistogramVec
 	fwCounts       *prometheus.CounterVec
+	logCounter     *prometheus.CounterVec
 }
 
 var metrics *AppMetrics
@@ -106,11 +107,18 @@ func NewMetrics() *AppMetrics {
 			},
 			[]string{"app"},
 		),
+		logCounter: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "log_counter",
+				Help: "A counter for total number of logs.",
+			},
+			[]string{"app", "logType"}, // app name, log type
+		),
 	}
 	prometheus.MustRegister(metrics.inFlight, metrics.counter, metrics.duration,
 		metrics.extAPICounts, metrics.extAPIDuration,
 		metrics.responseSize, metrics.requestSize,
-		metrics.fwCounts)
+		metrics.fwCounts, metrics.logCounter)
 	return metrics
 }
 
@@ -175,4 +183,14 @@ func UpdateFirmwarePenetrationCounts(partner string, model string, version strin
 	}
 	vals := prometheus.Labels{"partner": partner, "model": model, "fw_version": version}
 	metrics.fwCounts.With(vals).Inc()
+}
+
+// updateLogCounter updates count for new logs
+func UpdateLogCounter(logType string) {
+	if metrics == nil {
+		// Metrics may not be initialized in tests, or disabled by a config flag
+		return
+	}
+	vals := prometheus.Labels{"app": AppName(), "logType": logType}
+	metrics.logCounter.With(vals).Inc()
 }

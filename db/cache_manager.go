@@ -71,7 +71,7 @@ func (t *CacheRefreshTask) Run() {
 					}
 				} else {
 					// load only changed data
-					err := GetCacheManager().SyncChanges(t.lastRefreshedTimestamp, now)
+					_, err := GetCacheManager().SyncChanges(t.lastRefreshedTimestamp, now, true)
 					if err == nil {
 						t.lastRefreshedTimestamp = now
 						t.refreshAttemptsLeft = cacheManager.Settings.retryCountUntilFullRefresh
@@ -402,7 +402,7 @@ func (cm CacheManager) Refresh(tableName string) error {
 
 // SyncChanges Updates changes for given time-window defined by
 // start (lower bound, inclusive) and end (upper bound, exclusive)
-func (cm CacheManager) SyncChanges(startTime time.Time, endTime time.Time) error {
+func (cm CacheManager) SyncChanges(startTime time.Time, endTime time.Time, apply bool) (changedList []interface{}, err error) {
 	startTS := util.GetTimestamp(startTime)
 	currentRowKey := startTS - (startTS % int64(cm.Settings.changedKeysTimeWindowSize))
 
@@ -411,7 +411,7 @@ func (cm CacheManager) SyncChanges(startTime time.Time, endTime time.Time) error
 
 	startUuid, err := util.UUIDFromTime(startTS, 0, 0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ranges := make(map[int64]*RangeInfo)
@@ -424,15 +424,19 @@ func (cm CacheManager) SyncChanges(startTime time.Time, endTime time.Time) error
 
 	// Load all changes from DB
 	log.Debugf("sync cache, getting changed keys [%v - %v]: %v", startTS, endTS, buildLogForRanges(ranges))
-	changedList, err := cm.loadChanges(ranges)
+	changedList, err = cm.loadChanges(ranges)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Apply changes to cache
 	err = cm.applyChanges(changedList)
+	if apply {
+		log.Debugf("sync cache, getting changed keys [%v - %v]: %v", startTS, endTS, buildLogForRanges(ranges))
+		err = cm.applyChanges(changedList)
+	}
 
-	return err
+	return changedList, err
 }
 
 func (cm CacheManager) loadChanges(ranges map[int64]*RangeInfo) ([]interface{}, error) {
@@ -524,6 +528,15 @@ func (cm CacheManager) applyChanges(changedDataList []interface{}) error {
 	}
 
 	return nil
+}
+
+// Write changed data to XconfChangedKeys4 table asynchronously
+func (cm CacheManager) WriteCacheLog(tableName string, changedKey string, operation OperationType) {
+	if cache, err := GetCacheManager().getCache(tableName); err == nil {
+		cm.writeCacheLog(tableName, changedKey, operation, int32(cache.Size()))
+	} else {
+		log.Errorf("failed to write cache changed log: %v", err)
+	}
 }
 
 // Write changed data to XconfChangedKeys4 table async

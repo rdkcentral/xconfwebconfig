@@ -25,13 +25,13 @@ import (
 	"sort"
 	"strconv"
 
+	"xconfwebconfig/common"
 	"xconfwebconfig/db"
 	"xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
 
-// WhitelistProperty in WhitelistProperty.java
 type WhitelistProperty struct {
 	Key                string `json:"key,omitempty"`
 	Value              string `json:"value,omitempty"`
@@ -76,7 +76,6 @@ func (w *WhitelistProperty) toString() string {
 		"}"
 }
 
-// PercentRange in PercentRange.java
 type PercentRange struct {
 	StartRange float64
 	EndRange   float64
@@ -87,7 +86,6 @@ func NewPercentRange() *PercentRange {
 	return &PercentRange{}
 }
 
-// FeatureLegacy in FeatureLegacy.java
 type FeatureLegacy struct {
 	ID                 string            `json:"id"`
 	Name               string            `json:"name"`
@@ -124,6 +122,31 @@ func (obj *Feature) Clone() (*Feature, error) {
 		return nil, err
 	}
 	return cloneObj.(*Feature), nil
+}
+
+func (obj *Feature) CreateFeatureEntity() *FeatureEntity {
+	if obj == nil {
+		return nil
+	}
+	return &FeatureEntity{
+		ID:                 obj.ID,
+		Name:               obj.Name,
+		FeatureName:        obj.FeatureName,
+		FeatureInstance:    obj.FeatureName,
+		ApplicationType:    obj.ApplicationType,
+		ConfigData:         obj.ConfigData,
+		EffectiveImmediate: obj.EffectiveImmediate,
+		Enable:             obj.Enable,
+		Whitelisted:        obj.Whitelisted,
+		WhitelistProperty:  obj.WhitelistProperty,
+	}
+}
+
+func (pr1 *PercentRange) Equals(pr2 *PercentRange) bool {
+	if pr1.StartRange == pr2.StartRange && pr1.EndRange == pr2.EndRange {
+		return true
+	}
+	return false
 }
 
 type FeatureResponse map[string]interface{}
@@ -263,7 +286,6 @@ func (f *Feature) ToString() string {
 		"}"
 }
 
-/// FeatureControl in FeatureControl.java
 type FeatureControl struct {
 	//set(FeatureResponse) should be defined as map[FeatureResponse]bool as golang set.
 	//but FeatureResponse is not comparable because it has map inside
@@ -310,6 +332,119 @@ func GetFeatureList() []*Feature {
 		cm.ApplicationCacheSet(db.TABLE_XCONF_FEATURE, cacheKey, all)
 	}
 	return all
+}
+
+// API response object for Feature.
+// Note that FeatureInstance attribute is the same as FeatureName and
+// only used when importing/exporting a Feature.
+type FeatureEntity struct {
+	ID                 string             `json:"id"`
+	Name               string             `json:"name"`
+	EffectiveImmediate bool               `json:"effectiveImmediate"`
+	Enable             bool               `json:"enable"`
+	Whitelisted        bool               `json:"whitelisted"`
+	ConfigData         map[string]string  `json:"configData"`
+	WhitelistProperty  *WhitelistProperty `json:"whitelistProperty,omitempty"`
+	ApplicationType    string             `json:"applicationType"`
+	FeatureName        string             `json:"featureName"`
+	FeatureInstance    string             `json:"featureInstance"`
+}
+
+func (obj *FeatureEntity) CreateFeature() *Feature {
+	if obj == nil {
+		return nil
+	}
+	feature := &Feature{
+		ID:                 obj.ID,
+		Name:               obj.Name,
+		FeatureName:        obj.FeatureName,
+		ApplicationType:    obj.ApplicationType,
+		ConfigData:         obj.ConfigData,
+		EffectiveImmediate: obj.EffectiveImmediate,
+		Enable:             obj.Enable,
+		Whitelisted:        obj.Whitelisted,
+		WhitelistProperty:  obj.WhitelistProperty,
+	}
+	if util.IsBlank(feature.FeatureName) {
+		feature.FeatureName = obj.FeatureInstance
+	}
+	return feature
+}
+
+func (featureEntity *FeatureEntity) UnmarshalJSON(data []byte) error {
+
+	var f interface{}
+	err := json.Unmarshal(data, &f)
+	if err != nil {
+		return err
+	}
+
+	feature := f.(map[string]interface{})
+	if id, ok := feature["id"].(string); ok {
+		featureEntity.ID = id
+	}
+	if name, ok := feature["name"].(string); ok {
+		featureEntity.Name = name
+	}
+	if featureName, ok := feature["featureName"].(string); ok {
+		featureEntity.FeatureName = featureName
+	}
+	if featureInstance, ok := feature["featureInstance"].(string); ok {
+		featureEntity.FeatureInstance = featureInstance
+	}
+	if applicationType, ok := feature[common.APPLICATION_TYPE].(string); ok && applicationType != "" {
+		featureEntity.ApplicationType = applicationType
+	} else {
+		featureEntity.ApplicationType = "stb"
+	}
+	featureEntity.ConfigData = map[string]string{}
+	if configDataInterface, ok := feature["configData"]; ok {
+		if configData, ok := configDataInterface.(map[string]interface{}); ok {
+			for key, value := range configData {
+				if v, ok := value.(string); ok {
+					featureEntity.ConfigData[key] = v
+				}
+			}
+		}
+	}
+	if effectiveImmediate, ok := feature["effectiveImmediate"].(bool); ok {
+		featureEntity.EffectiveImmediate = effectiveImmediate
+	}
+	if enable, ok := feature["enable"].(bool); ok {
+		featureEntity.Enable = enable
+	}
+	if whitelisted, ok := feature["whitelisted"].(bool); ok {
+		featureEntity.Whitelisted = whitelisted
+	}
+	if whitelistPropertyInterface, ok := feature["whitelistProperty"]; ok {
+		if whitelistProperty, ok := whitelistPropertyInterface.(map[string]interface{}); ok {
+			key := ""
+			value := ""
+			namespacedListType := ""
+			typeName := ""
+			if k, ok := whitelistProperty["key"].(string); ok {
+				key = k
+			}
+			if v, ok := whitelistProperty["value"].(string); ok {
+				value = v
+			}
+			if n, ok := whitelistProperty["namespacedListType"].(string); ok {
+				namespacedListType = n
+			}
+			if t, ok := whitelistProperty["typeName"].(string); ok {
+				typeName = t
+			}
+			whitelistProperty := &WhitelistProperty{
+				Key:                key,
+				Value:              value,
+				NamespacedListType: namespacedListType,
+				TypeName:           typeName,
+			}
+			featureEntity.WhitelistProperty = whitelistProperty
+		}
+	}
+
+	return nil
 }
 
 func GetFeatureRuleList() []*FeatureRule {

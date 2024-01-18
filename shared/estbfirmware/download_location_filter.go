@@ -18,6 +18,7 @@
 package estbfirmware
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -26,6 +27,8 @@ import (
 	"xconfwebconfig/rulesengine"
 	"xconfwebconfig/shared"
 	"xconfwebconfig/shared/firmware"
+	"xconfwebconfig/shared/logupload"
+	"xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -83,6 +86,68 @@ func NewEmptyDownloadLocationRoundRobinFilterValue() *DownloadLocationRoundRobin
 		Type:            RoundRobinFilterClass,
 		ApplicationType: shared.STB,
 	}
+}
+
+func (obj *DownloadLocationRoundRobinFilterValue) Validate() error {
+	if obj.Type != RoundRobinFilterClass {
+		return errors.New("Type is invalid")
+	}
+
+	if !strings.HasSuffix(obj.ID, ROUND_ROBIN_FILTER_SINGLETON_ID) {
+		return errors.New("Id is invalid")
+	}
+
+	if !logupload.IsValidUrl(obj.HttpFullUrlLocation) {
+		return errors.New("Location URL is not valid")
+	}
+
+	ipv6InIpv4List := false
+	percentage := 0.0
+	ipSet := util.Set{}
+	for _, location := range obj.Locations {
+		ip := shared.NewIpAddress(location.LocationIp)
+		if !ipv6InIpv4List && ip != nil && ip.IsIpv6() {
+			ipv6InIpv4List = true
+		}
+		if location.Percentage < 0 {
+			return errors.New("Percentage cannot be negative")
+		}
+		percentage += location.Percentage
+		ipSet.Add(location.LocationIp)
+	}
+
+	ipv4InIpv6List := false
+	ipv6Percentage := 0.0
+	ipv6Set := util.Set{}
+	for _, location := range obj.Ipv6locations {
+		ip := shared.NewIpAddress(location.LocationIp)
+		if !ipv4InIpv6List && ip != nil && !ip.IsIpv6() {
+			ipv4InIpv6List = true
+		}
+		if location.Percentage < 0 {
+			return errors.New("Percentage cannot be negative")
+		}
+		ipv6Percentage += location.Percentage
+		ipv6Set.Add(location.LocationIp)
+	}
+
+	if ipv4InIpv6List || ipv6InIpv4List {
+		return errors.New("IP address has an invalid version")
+	}
+
+	if len(ipSet) != len(obj.Locations) || len(ipv6Set) != len(obj.Ipv6locations) {
+		return errors.New("Locations are duplicated")
+	}
+
+	if int(percentage) != 100 {
+		return errors.New("Summary IPv4 percentage should be 100")
+	}
+
+	if int(ipv6Percentage) != 0 && int(ipv6Percentage) != 100 {
+		return errors.New("Summary IPv6 percentage should be 100")
+	}
+
+	return nil
 }
 
 func (d *DownloadLocationRoundRobinFilterValue) GetDownloadLocations() []string {

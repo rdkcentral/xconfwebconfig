@@ -268,7 +268,7 @@ func (c *ConvertedContext) CreateCapabilitiesList() []Capabilities {
 		case "SUPPORTSFULLHTTPURL":
 			capList = append(capList, SupportsFullHttpUrl)
 		default:
-			log.Warn(fmt.Sprintf("Unknown capability will be ignored: %s", strCap))
+			log.Debug(fmt.Sprintf("Unknown capability will be ignored: %s", strCap))
 		}
 	}
 	return capList
@@ -376,6 +376,13 @@ func (c *ConvertedContext) SetVodIdConverted(vodId int64) {
 
 func (c *ConvertedContext) GetXconfHttpHeaderConverted() string {
 	return c.XconfHttpHeader
+}
+
+func (c *ConvertedContext) IsXconfHttpHeaderSecureConnection() bool {
+	if c.XconfHttpHeader == common.XCONF_HTTPS_VALUE || c.XconfHttpHeader == common.XCONF_MTLS_VALUE || c.XconfHttpHeader == common.XCONF_MTLS_RECOVERY_VALUE {
+		return true
+	}
+	return false
 }
 
 func (c *ConvertedContext) SetXconfHttpHeaderConverted(xconfHttpHeader string) {
@@ -606,7 +613,7 @@ func (c *ConvertedContext) SetXconfHttpHeader(xconfHttpHeader string) {
 func (c *ConvertedContext) GetTime() *time.Time {
 	stime := c.getContextValue(common.TIME)
 	if stime != "" {
-		// java datetiime format  DateTimeFormat.forPattern("M/d/yyyy H:mm");
+		// DateTimeFormat.forPattern("M/d/yyyy H:mm");
 		// GO "01/02/2006 15:04" as time pkg
 		t, err := time.Parse(DATE_TIME_SEC_FORMATTER, stime)
 		if err == nil {

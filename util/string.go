@@ -129,15 +129,17 @@ func IsUnknownValue(param string) bool {
 }
 
 // MACAddressValidator method is to validate MAC address
-// '''
+// ”'
 // Validate inputs are:
-// 	11-11-11-11-11-11
-// 	11 11 11 11 11 11
-// 	11:11:11:11:11:11
-// 	11111111111
+//
+//	11-11-11-11-11-11
+//	11 11 11 11 11 11
+//	11:11:11:11:11:11
+//	11111111111
+//
 // :param value: A String
 // :return: A String, upper case mac address, AABBCCDDEEFF
-// '''
+// ”'
 func MACAddressValidator(macAddress string) (bool, error) {
 
 	// Replace all dash, space or colon from MAC address

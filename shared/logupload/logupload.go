@@ -19,6 +19,7 @@ package logupload
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"xconfwebconfig/db"
@@ -40,6 +41,8 @@ const (
 	HTTPS                = "HTTPS"
 	S3                   = "S3"
 )
+
+var urlRe = regexp.MustCompile(`^[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$`)
 
 const (
 	EstbIp            string = "estbIP"
@@ -203,6 +206,11 @@ func NewDCMGenericRuleInf() interface{} {
 
 type DCMFormula struct {
 	Formula DCMGenericRule `json:"formula"`
+}
+
+// GetId XRule interface
+func (r *DCMGenericRule) GetId() string {
+	return r.ID
 }
 
 // GetRule XRule interface

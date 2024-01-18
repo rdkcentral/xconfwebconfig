@@ -67,6 +67,13 @@ func NewSettingProfilesInf() interface{} {
 	return &SettingProfiles{}
 }
 
+type FormulaWithSettings struct {
+	Formula           *DCMGenericRule    `json:"formula"`
+	DeviceSettings    *DeviceSettings    `json:"deviceSettings"`
+	LogUpLoadSettings *LogUploadSettings `json:"logUploadSettings"`
+	VodSettings       *VodSettings       `json:"vodSettings"`
+}
+
 // VodSettings table
 type VodSettings struct {
 	ID              string            `json:"id"`
@@ -117,6 +124,11 @@ func (r *SettingRule) GetApplicationType() string {
 	return "stb"
 }
 
+// GetId XRule interface
+func (r *SettingRule) GetId() string {
+	return r.ID
+}
+
 // GetRule XRule interface
 func (r *SettingRule) GetRule() *re.Rule {
 	return &r.Rule
@@ -147,7 +159,6 @@ const (
 )
 
 type Settings struct {
-	//java: Set<String> ruleIDs
 	RuleIDs                           map[string]bool
 	SchedulerType                     string
 	GroupName                         string
@@ -459,7 +470,7 @@ func GetOneDeviceSettings(id string) *DeviceSettings {
 	var deviceSettings *DeviceSettings
 	deviceSettingsInst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_DEVICE_SETTINGS, id)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no deviceSettings found for Id: %s", id))
+		log.Debug(fmt.Sprintf("no deviceSettings found for Id: %s", id))
 		return nil
 	}
 	deviceSettings = deviceSettingsInst.(*DeviceSettings)
@@ -470,7 +481,7 @@ func GetOneLogUploadSettings(id string) *LogUploadSettings {
 	var logUploadSettings *LogUploadSettings
 	logUploadSettingsInst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_LOG_UPLOAD_SETTINGS, id)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no logUploadSettings found for Id: %s", id))
+		log.Debug(fmt.Sprintf("no logUploadSettings found for Id: %s", id))
 		return nil
 	}
 	logUploadSettings = logUploadSettingsInst.(*LogUploadSettings)
@@ -506,7 +517,7 @@ func GetOneVodSettings(id string) *VodSettings {
 	var vodSettings *VodSettings
 	vodSettingsInst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_VOD_SETTINGS, id)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no vodSettings found for Id: %s", id))
+		log.Debug(fmt.Sprintf("no vodSettings found for Id: %s", id))
 		return nil
 	}
 	vodSettings = vodSettingsInst.(*VodSettings)

@@ -19,7 +19,9 @@ package http
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"xconfwebconfig/common"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"
@@ -27,6 +29,7 @@ import (
 
 const (
 	accountServiceName = "account_service"
+	getAccountPath     = "%s/account/%s"
 )
 
 type AccountServiceConnector struct {
@@ -35,13 +38,26 @@ type AccountServiceConnector struct {
 }
 
 type AccountServiceDevices struct {
-	Id                       string                   `json:"id"`
-	AccountServiceDeviceData AccountServiceDeviceData `json:"data"`
+	Id         string     `json:"id"`
+	DeviceData DeviceData `json:"data"`
 }
 
-type AccountServiceDeviceData struct {
+type DeviceData struct {
 	Partner           string `json:"partner"`
 	ServiceAccountUri string `json:"serviceAccountId"`
+}
+
+type Account struct {
+	Id          string      `json:"id"`
+	AccountData AccountData `json:"data"`
+}
+
+type AccountData struct {
+	AccountAttributes AccountAttributes `json:"attributes"`
+}
+
+type AccountAttributes struct {
+	TimeZone string `json:"timeZone"`
 }
 
 func NewAccountServiceConnector(conf *configuration.Config, tlsConfig *tls.Config) *AccountServiceConnector {
@@ -60,6 +76,24 @@ func (c *AccountServiceConnector) AccountServiceHost() string {
 
 func (c *AccountServiceConnector) SetAccountServiceHost(host string) {
 	c.host = host
+}
+
+func (c *AccountServiceConnector) GetAccountData(serviceAccountId string, token string, fields log.Fields) (Account, error) {
+	url := fmt.Sprintf(getAccountPath, c.AccountServiceHost(), serviceAccountId)
+	headers := map[string]string{
+		common.HeaderAuthorization: fmt.Sprintf("Bearer %s", token),
+		common.HeaderUserAgent:     common.HeaderXconfDataService,
+	}
+	var account Account
+	rbytes, err := c.DoWithRetries("GET", url, headers, nil, fields, accountServiceName)
+	if err != nil {
+		return account, err
+	}
+	err = json.Unmarshal(rbytes, &account)
+	if err != nil {
+		return account, err
+	}
+	return account, nil
 }
 
 func (c *AccountServiceConnector) GetDevices(macKey string, macValue string, token string, fields log.Fields) (AccountServiceDevices, error) {

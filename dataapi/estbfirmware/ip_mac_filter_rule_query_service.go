@@ -29,6 +29,7 @@ import (
 	"xconfwebconfig/shared"
 	sharedef "xconfwebconfig/shared/estbfirmware"
 	sharedfw "xconfwebconfig/shared/firmware"
+	util "xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -213,6 +214,140 @@ func getEnvModelPercentage(filter sharedef.PercentFilterValue, name string) *sha
 }
 
 type MacRuleService struct {
+}
+
+func (m *MacRuleService) GetFirmwareMacRules(applicationType string) []*sharedfw.FirmwareRule {
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDB()
+	if err != nil {
+		log.Error(fmt.Sprintf("GetRulesWithMacCondition: %v", err))
+		return []*sharedfw.FirmwareRule{}
+	}
+	result := []*sharedfw.FirmwareRule{}
+	for _, firmwareRule := range insts {
+		if firmwareRule.ApplicationType != applicationType {
+			continue
+		}
+
+		if firmwareRule.ApplicableAction == nil || firmwareRule.ApplicableAction.ActionType != sharedfw.RULE {
+			continue
+		}
+		if !re.IsExistConditionByFreeArgName(firmwareRule.Rule, common.ESTB_MAC) {
+			continue
+		}
+		result = append(result, firmwareRule)
+	}
+	return result
+}
+
+func (m *MacRuleService) GetByApplicationType(applicationType string) []*sharedef.MacRuleBean {
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDB()
+	if err != nil {
+		log.Error(fmt.Sprintf("GetByApplicationType: %v", err))
+		return []*sharedef.MacRuleBean{}
+	}
+	macRuleBeanIdSet := make(map[string]bool)
+	macRuleBeanNameSet := make(map[string]bool)
+	result := []*sharedef.MacRuleBean{}
+	for _, frule := range insts {
+		if frule.ApplicationType != applicationType {
+			continue
+		}
+
+		if frule.ApplicableAction == nil || frule.ApplicableAction.ActionType != sharedfw.RULE {
+			continue
+		}
+		if frule.Type != sharedfw.MAC_RULE {
+
+			continue
+		}
+		macRuleBean := convertFirmwareRuleToMacRuleBean(frule)
+		_, idExists := macRuleBeanIdSet[macRuleBean.Id]
+		if !idExists {
+			macRuleBeanIdSet[macRuleBean.Id] = true
+		}
+		_, nameExists := macRuleBeanNameSet[strings.ToLower(macRuleBean.Name)]
+		if !nameExists {
+			macRuleBeanNameSet[strings.ToLower(macRuleBean.Name)] = true
+		}
+		if !idExists && !nameExists {
+			result = append(result, macRuleBean)
+		}
+	}
+	return result
+}
+
+func convertFirmwareRuleSearchResultToMacRuleBean(firmwareRule *sharedfw.FirmwareRule, macListId *string, macs *[]string) *sharedef.MacRuleBean {
+	macRuleBean := convertFirmwareRuleToMacRuleBean(firmwareRule)
+	if macListId != nil {
+		macRuleBean.MacListRef = *macListId
+	} else {
+		macRuleBean.MacListRef = ""
+	}
+	macRuleBean.MacList = macs
+	return macRuleBean
+}
+
+func GetNamespacedListById(typeName string, id string) *shared.GenericNamespacedList {
+	nl, err := shared.GetGenericNamedListOneDB(id)
+	if err != nil {
+		log.Error(fmt.Sprintf("GetNamespacedListById: %v", err))
+		return nil
+	}
+	if nl.TypeName != typeName {
+		return nil
+	}
+	return nl
+}
+
+func (m *MacRuleService) SearchMacRules(macPart string, applicationType string) []*sharedef.MacRuleBean {
+	macPart = util.RemoveNonAlphabeticSymbols(macPart)
+	firmwareMacRules := m.GetFirmwareMacRules(applicationType)
+	searchResult := []*sharedef.MacRuleBean{}
+	for _, firmwareMacRule := range firmwareMacRules {
+		macAddressesToSearch := []string{}
+		var macListId *string
+		var matchedFirmwareRule *sharedfw.FirmwareRule
+
+		conditions := re.FlattenRule(firmwareMacRule.Rule)
+		for _, condition := range conditions {
+			if re.ConditionHasEmptyElements(condition) {
+				continue
+			}
+			if common.ESTB_MAC == condition.GetCondition().GetFreeArg().Name {
+				fixedArg := condition.GetCondition().GetFixedArg()
+				if fixedArg.IsStringValue() && re.StandardOperationInList == condition.GetCondition().Operation {
+					macList := GetNamespacedListById(shared.MAC_LIST, fixedArg.GetValue().(string))
+					if macList != nil && isExistMacAddressInList(&macList.Data, macPart) && matchedFirmwareRule == nil {
+						matchedFirmwareRule = firmwareMacRule
+						macListId = &macList.ID
+					}
+				} else if fixedArg.IsStringValue() && re.StandardOperationIs == condition.GetCondition().Operation {
+					macAddressesToSearch = append(macAddressesToSearch, fixedArg.GetValue().(string))
+				} else if fixedArg.IsCollectionValue() && re.StandardOperationIn == condition.GetCondition().Operation {
+					macAddressesToSearch = append(macAddressesToSearch, fixedArg.GetValue().([]string)...)
+				}
+				if matchedFirmwareRule == nil && isExistMacAddressInList(&macAddressesToSearch, macPart) {
+					matchedFirmwareRule = firmwareMacRule
+				}
+
+				if matchedFirmwareRule != nil {
+					searchResult = append(searchResult, convertFirmwareRuleSearchResultToMacRuleBean(matchedFirmwareRule, macListId, &macAddressesToSearch))
+					break
+				}
+			}
+		}
+	}
+	return searchResult
+}
+
+func isExistMacAddressInList(macAddresses *[]string, macPart string) bool {
+	for _, macAddress := range *macAddresses {
+		macAddress = strings.Replace(macAddress, ":", "", -1)
+		if strings.Contains(macAddress, macPart) {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *MacRuleService) GetRulesWithMacCondition(applicationType string) []*sharedef.MacRuleBean {

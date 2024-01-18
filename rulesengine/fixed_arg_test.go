@@ -29,15 +29,15 @@ func TestFixedArgsEquality(t *testing.T) {
 		`{
 			"bean": {
 				"value": {
-					"java.lang.String": "B0:DA:F9:DF:6A:69"
+					"java.lang.String": "AA:AA:AA:AA:AA:AA"
 				}
 			}
 		}`,
 		`{
 			"collection": {
 				"value": [
-				  "TG3482G",
-				  "TG3482"
+				  "TG1234",
+				  "TG1234"
 				]
 			  }		
 		}`,

@@ -82,6 +82,30 @@ const (
 	SupportsFullHttpUrl = "supportsFullHttpUrl"
 )
 
+type Expression struct {
+	TargetedModelIds []string               `json:"targetedModelIds"`
+	EnvironmentId    string                 `json:"environmentId,omitempty"`
+	ModelId          string                 `json:"modelId,omitempty"`
+	IpAddressGroup   *shared.IpAddressGroup `json:"ipAddressGroup,omitempty"`
+}
+
+type FirmwareConfigForMacRuleBeanResponse struct {
+	ID                       string            `json:"id"`
+	Updated                  int64             `json:"updated,omitempty"`
+	Description              string            `json:"description"`
+	SupportedModelIds        []string          `json:"supportedModelIds"`
+	FirmwareFilename         string            `json:"firmwareFilename"`
+	FirmwareVersion          string            `json:"firmwareVersion"`
+	ApplicationType          string            `json:"applicationType,omitempty"`
+	FirmwareDownloadProtocol string            `json:"firmwareDownloadProtocol,omitempty"`
+	FirmwareLocation         string            `json:"firmwareLocation,omitempty"`
+	Ipv6FirmwareLocation     string            `json:"ipv6FirmwareLocation,omitempty"`
+	UpgradeDelay             int64             `json:"upgradeDelay,omitempty"`
+	RebootImmediately        bool              `json:"rebootImmediately,omitempty"`
+	MandatoryUpdate          bool              `json:"-"`
+	Properties               map[string]string `json:"properties,omitempty"`
+}
+
 // FirmwareConfig table
 type FirmwareConfig struct {
 	ID                       string            `json:"id"`
@@ -98,6 +122,50 @@ type FirmwareConfig struct {
 	RebootImmediately        bool              `json:"rebootImmediately"`
 	MandatoryUpdate          bool              `json:"mandatoryUpdate"`
 	Properties               map[string]string `json:"properties"`
+}
+
+type MacRuleBeanResponse struct {
+	Id               string                                `json:"id,omitempty"`
+	Name             string                                `json:"name,omitempty"`
+	MacAddresses     string                                `json:"macAddresses,omitempty"`
+	MacListRef       string                                `json:"macListRef,omitempty"`
+	FirmwareConfig   *FirmwareConfigForMacRuleBeanResponse `json:"firmwareConfig"`
+	TargetedModelIds *[]string                             `json:"targetedModelIds,omitempty"`
+	MacList          *[]string                             `json:"macList,omitempty"`
+}
+
+func MacRuleBeanToMacRuleBeanResponse(macRuleBean *MacRuleBean) *MacRuleBeanResponse {
+	response := MacRuleBeanResponse{}
+	response.Id = macRuleBean.Id
+	response.Name = macRuleBean.Name
+	response.MacAddresses = macRuleBean.MacAddresses
+	response.MacListRef = macRuleBean.MacListRef
+	response.TargetedModelIds = macRuleBean.TargetedModelIds
+	response.MacList = macRuleBean.MacList
+	response.FirmwareConfig = nil
+	if macRuleBean.FirmwareConfig != nil {
+		response.FirmwareConfig = FirmwareConfigToFirmwareConfigForMacRuleBeanResponse(macRuleBean.FirmwareConfig)
+	}
+	return &response
+}
+
+func FirmwareConfigToFirmwareConfigForMacRuleBeanResponse(firmwareConfig *FirmwareConfig) *FirmwareConfigForMacRuleBeanResponse {
+	response := FirmwareConfigForMacRuleBeanResponse{}
+	response.ID = firmwareConfig.ID
+	response.Updated = firmwareConfig.Updated
+	response.Description = firmwareConfig.Description
+	response.SupportedModelIds = firmwareConfig.SupportedModelIds
+	response.FirmwareFilename = firmwareConfig.FirmwareFilename
+	response.FirmwareVersion = firmwareConfig.FirmwareVersion
+	response.ApplicationType = firmwareConfig.ApplicationType
+	response.FirmwareDownloadProtocol = firmwareConfig.FirmwareDownloadProtocol
+	response.FirmwareLocation = firmwareConfig.FirmwareLocation
+	response.Ipv6FirmwareLocation = firmwareConfig.Ipv6FirmwareLocation
+	response.UpgradeDelay = firmwareConfig.UpgradeDelay
+	response.RebootImmediately = firmwareConfig.RebootImmediately
+	response.MandatoryUpdate = firmwareConfig.MandatoryUpdate
+	response.Properties = firmwareConfig.Properties
+	return &response
 }
 
 func (obj *FirmwareConfig) Clone() (*FirmwareConfig, error) {
@@ -436,7 +504,7 @@ func (m *ModelFirmwareConfiguration) ToString() string {
 
 }
 
-//IpRuleBean ...
+// IpRuleBean ...
 type IpRuleBean struct {
 	Id string
 
@@ -447,8 +515,9 @@ type IpRuleBean struct {
 	IpAddressGroup *shared.IpAddressGroup
 
 	EnvironmentId string
-
-	ModelId string
+	ModelId       string
+	Expression    *Expression
+	Noop          bool
 }
 
 // NewFirmwareConfigFacade ...
@@ -636,7 +705,7 @@ func GetFirmwareVersion(id string) string {
 	return fc.FirmwareVersion
 }
 
-//MacRuleBean ...
+// MacRuleBean ...
 type MacRuleBean struct {
 	Id string
 

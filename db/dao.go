@@ -53,6 +53,24 @@ type SimpleDao interface {
 	GetAllAsList(tableName string, maxResults int) ([]interface{}, error)
 	GetAllAsMap(tableName string, maxResults int) (map[string]interface{}, error)
 	GetKeys(tableName string) []string
+	GetAllAsMapRaw(tableName string, maxResults int) (map[string]json.RawMessage, error)
+}
+
+// GetAllAsMap get a map of all Xconf records as JSON string
+func (sd simpleDaoImpl) GetAllAsMapRaw(tableName string, maxResults int) (map[string]json.RawMessage, error) {
+	var result = make(map[string]json.RawMessage)
+
+	if _, err := GetTableInfo(tableName); err != nil {
+		return nil, err
+	}
+
+	// Get data from DB as a map of key and raw JSON []byte
+	dataMap := GetDatabaseClient().GetAllXconfDataAsMap(tableName, maxResults)
+	for key, jsonData := range dataMap {
+		result[key] = json.RawMessage(jsonData)
+	}
+
+	return result, nil
 }
 
 type simpleDaoImpl struct{}

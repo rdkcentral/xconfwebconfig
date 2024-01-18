@@ -41,7 +41,7 @@ func TestFeatureRuleMarshaling(t *testing.T) {
             "fixedArg": {
                 "bean": {
                     "value": {
-                        "java.lang.String": "34:1F:E4:B7:5E:D0"
+                        "java.lang.String": "AA:AA:AA:AA:AA:AA"
                     }
                 }
             },

@@ -24,16 +24,9 @@ import (
 )
 
 func TestSet(t *testing.T) {
-	s1 := Set{}
-	s1.Add("red")
-	s1.Add("orange")
-	s1.Add("yellow")
-	s1.Add("yellow")
-	s1.Add("red")
-	s1.Add("red")
-	s1.Add("red")
-	s1.Add("green")
+	s1 := NewSet("red", "orange", "yellow", "yellow", "red", "red", "red", "green")
 	assert.Equal(t, len(s1), 4)
+	assert.Assert(t, s1.Contains("red"))
 
 	s2 := Set{}
 	s2.Add("green")

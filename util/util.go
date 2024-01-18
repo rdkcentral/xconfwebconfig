@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -55,6 +56,14 @@ func Copy(obj interface{}) (interface{}, error) {
 // Return timestamp in milliseconds
 func GetTimestamp(t time.Time) int64 {
 	return t.UnixNano() / int64(time.Millisecond)
+}
+
+func RemoveNonAlphabeticSymbols(macAddress string) string {
+	macAddress = strings.Replace(macAddress, ":", "", -1)
+	macAddress = strings.Replace(macAddress, "-", "", -1)
+	macAddress = strings.Replace(macAddress, "\\.", "", -1)
+	macAddress = strings.ToUpper(macAddress)
+	return strings.TrimSpace(macAddress)
 }
 
 // UUIDFromTime gocql method implementation
@@ -93,9 +102,9 @@ func UUIDFromTime(timestamp int64, node int64, clockSeq uint32) (gocql.UUID, err
 }
 
 /*
-	JSONMarshal is used to marshal struct to string Without escaping special character like &, <, >
+JSONMarshal is used to marshal struct to string Without escaping special character like &, <, >
 
-	Note: JSONMarshal will terminate each value with a newline
+Note: JSONMarshal will terminate each value with a newline
 */
 func JSONMarshal(t interface{}) ([]byte, error) {
 	buffer := &bytes.Buffer{}

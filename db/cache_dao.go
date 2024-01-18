@@ -54,6 +54,7 @@ type CachedSimpleDao interface {
 	GetAllAsMap(tableName string) (map[interface{}]interface{}, error)
 	GetKeys(tableName string) ([]interface{}, error)
 	RefreshAll(tableName string) error
+	RefreshOne(tableName string, rowKey string) error
 }
 
 type cachedSimpleDaoImpl struct{}
@@ -87,6 +88,37 @@ func (csd cachedSimpleDaoImpl) GetOne(tableName string, rowKey string) (interfac
 		return nil, err
 	}
 	return cloneObj, nil
+}
+
+func (csd cachedSimpleDaoImpl) RefreshOne(tableName string, rowKey string) error {
+	tableInfo, err := GetTableInfo(tableName)
+	if err != nil {
+		return err
+	}
+
+	cacheInfo, err := GetCacheManager().getCacheInfo(tableName)
+	if err != nil {
+		return err
+	}
+	cache := cacheInfo.cache
+
+	// First, invalidate the entry in the cache then reload from DB
+	cache.Invalidate(rowKey)
+
+	var entry interface{}
+	if tableInfo.IsCompressAndSplit() {
+		entry, err = GetCompressingDataDao().GetOne(tableName, rowKey)
+	} else {
+		entry, err = GetSimpleDao().GetOne(tableName, rowKey)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	cache.Put(rowKey, entry)
+
+	return nil
 }
 
 // GetOne get one Xconf record from cache if exists and skips loading from DB.

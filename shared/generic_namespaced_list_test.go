@@ -24,7 +24,7 @@ import (
 )
 
 func createGenericNamespacedList(data ...string) *GenericNamespacedList {
-	gnlist := NewEmptyGenericNamespacedList(IP_LIST)
+	gnlist := NewEmptyGenericNamespacedList()
 	return gnlist
 }
 

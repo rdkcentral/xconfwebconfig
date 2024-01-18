@@ -60,14 +60,13 @@ func (e *EvaluationResult) AddAppliedFilters(filter interface{}) {
 
 // DownloadLocationRoundRobinFilterFilter ...
 // @return true if filter is applied, false otherwise
-//
 func DownloadLocationRoundRobinFilterFilter(firmwareConfig *coreef.FirmwareConfigFacade, filterValue *coreef.DownloadLocationRoundRobinFilterValue, context *coreef.ConvertedContext) bool {
 	supportsFullHttpUrl := context.IsSupportsFullHttpUrl()
 	firmwareConfig.SetStringValue(coreef.FIRMWARE_DOWNLOAD_PROTOCOL, "http")
 	firmwareConfig.SetFirmwareDownloadProtocol("http")
 	if len(filterValue.HttpLocation) != 0 && len(filterValue.HttpFullUrlLocation) != 0 {
 		secureConnection := false
-		if len(context.GetXconfHttpHeaderConverted()) == 0 {
+		if context.IsXconfHttpHeaderSecureConnection() {
 			secureConnection = true
 		}
 		if supportsFullHttpUrl {
@@ -131,7 +130,6 @@ func DownloadLocationRoundRobinFilterSetupIPv4Location(firmwareConfig *coreef.Fi
 }
 
 func DownloadLocationRoundRobinFilterContainsVersion(firmwareVersions string, contextVersion string) bool {
-	//todo java using regexe "\s+"
 	split := strings.Split(firmwareVersions, " ")
 	for _, s := range split {
 		if contextVersion == s {

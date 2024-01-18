@@ -27,6 +27,7 @@ var (
 	NotFound          = fmt.Errorf("Not found")
 	NotFirmwareConfig = fmt.Errorf("Not FirmwareCofig")
 	NotFirmwareRule   = fmt.Errorf("Not FirmwareRule")
+	Forbidden         = fmt.Errorf("Forbidden")
 )
 
 type Http400Error struct {
@@ -60,6 +61,10 @@ type RemoteHttpError struct {
 
 func (e RemoteHttpError) Error() string {
 	return fmt.Sprintf("Http%v %v", e.StatusCode, e.Message)
+}
+
+func NewRemoteError(status int, message string) error {
+	return RemoteHttpError{StatusCode: status, Message: message}
 }
 
 var (

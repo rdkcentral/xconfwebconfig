@@ -24,10 +24,23 @@ const (
 )
 
 const (
-	XCONF_HTTP_HEADER       = "HA-Haproxy-xconf-http"
-	XCONF_HTTP_VALUE        = "xconf-http"
-	X_FORWARDED_FOR_HEADER  = "X-Forwarded-For"
-	HA_FORWARDED_FOR_HEADER = "HA-Forwarded-For"
+	X_CONF_FIRMWARE_DOWNLOAD_SERVER = "test_DownloadServer"
+	CDN_DIRECT                      = "cdn_direct"
+)
+
+const (
+	XCONF_HTTP_HEADER             = "HA-Haproxy-xconf-http"
+	XCONF_HTTP_VALUE              = "xconf-http"
+	XCONF_HTTPS_VALUE             = "xconf-https"
+	XCONF_MTLS_VALUE              = "xconf-mtls"
+	XCONF_MTLS_RECOVERY_VALUE     = "xconf-mtls-recovery"
+	HTTP_CLIENT_PROTOCOL          = "http"
+	HTTPS_CLIENT_PROTOCOL         = "https"
+	MTLS_CLIENT_PROTOCOL          = "mtls"
+	MTLS_RECOVERY_CLIENT_PROTOCOL = "mtls-recovery"
+	CLIENT_PROTOCOL               = "clientProtocol"
+	X_FORWARDED_FOR_HEADER        = "X-Forwarded-For"
+	HA_FORWARDED_FOR_HEADER       = "HA-Forwarded-For"
 
 	HeaderAuthorization    = "Authorization"
 	HeaderUserAgent        = "User-Agent"

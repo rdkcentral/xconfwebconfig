@@ -71,7 +71,8 @@ func ContainsAny(collection1 []string, collection2 []string) bool {
 }
 
 // TODO keep it for backward compatibility in "webconfig" for now
-//      plan to remove it later
+//
+//	plan to remove it later
 func ContainsInt(data []int, x int) bool {
 	for _, d := range data {
 		if d == x {

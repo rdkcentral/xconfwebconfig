@@ -23,12 +23,12 @@ import (
 )
 
 type RebootImmediatelyFilter struct {
-	IpAddressGroup *shared.IpAddressGroup `json:"ipAddressGroup" xml:"ipAddressGroup"`
-	Environments   []string               `json:"environments" xml:"environments"`
-	Models         []string               `json:"models" xml:"models"`
-	MacAddress     string                 `json:"macAddresses" xml:"macAddresses"`
-	Id             string                 `json:"id" xml:"id"`
-	Name           string                 `json:"name" xml:"name"`
+	IpAddressGroup []*shared.IpAddressGroup `json:"ipAddressGroup" xml:"ipAddressGroup"`
+	Environments   []string                 `json:"environments" xml:"environments"`
+	Models         []string                 `json:"models" xml:"models"`
+	MacAddress     string                   `json:"macAddresses" xml:"macAddresses"`
+	Id             string                   `json:"id" xml:"id"`
+	Name           string                   `json:"name" xml:"name"`
 }
 
 func RebootImmediatelyFiltersByApplicationType(applicationType string) ([]*RebootImmediatelyFilter, error) {

@@ -38,6 +38,7 @@ type Rule struct {
 
 // XRule is ...
 type XRule interface {
+	GetId() string
 	GetRule() *Rule
 	GetName() string
 	GetTemplateId() string
