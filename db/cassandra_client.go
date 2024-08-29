@@ -76,8 +76,8 @@ type PenetrationMetrics struct {
 }
 
 func NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraClient, error) {
-	isIamBasedAccessEnabled := conf.GetBoolean("xconfwebconfig.database.iam_based_access_enabled")
-	if isIamBasedAccessEnabled {
+	isAwsKeyspaceEnabled := conf.GetBoolean("xconfwebconfig.database.aws_keyspace_enabled")
+	if isAwsKeyspaceEnabled {
 		return awsKeyspaceClient(conf, testOnly)
 	} else {
 		return cassandraClient(conf, testOnly)

@@ -45,25 +45,32 @@ func awsKeyspaceClient(conf *configuration.Config, testOnly bool) (*CassandraCli
 		return nil, err
 	}
 
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(awsRegion)},
-	)
-	if err != nil {
-		log.Error(err.Error())
-		return nil, err
-	}
-
-	value, err := sess.Config.Credentials.Get()
-	if err != nil {
-		log.Error(err.Error())
-		return nil, err
-	}
-
 	var auth sigv4.AwsAuthenticator = sigv4.NewAwsAuthenticator()
 	auth.Region = awsRegion
-	auth.AccessKeyId = value.AccessKeyID
-	auth.SecretAccessKey = value.SecretAccessKey
-	auth.SessionToken = value.SessionToken
+
+	isRoleBasedAccessEnabled := conf.GetBoolean("xconfwebconfig.database.role_based_access_enabled")
+	if isRoleBasedAccessEnabled {
+		sess, err := session.NewSession(&aws.Config{
+			Region: aws.String(awsRegion)},
+		)
+		if err != nil {
+			log.Error(err.Error())
+			return nil, err
+		}
+
+		value, err := sess.Config.Credentials.Get()
+		if err != nil {
+			log.Error(err.Error())
+			return nil, err
+		}
+
+		auth.AccessKeyId = value.AccessKeyID
+		auth.SecretAccessKey = value.SecretAccessKey
+		auth.SessionToken = value.SessionToken
+	} else {
+		auth.AccessKeyId = conf.GetString("xconfwebconfig.database.access_key_id")
+		auth.SecretAccessKey = conf.GetString("xconfwebconfig.database.secret_access_key")
+	}
 	cluster.Authenticator = auth
 
 	awsKeySpaceCaPath := conf.GetString("xconfwebconfig.database.aws_keyspace_ca_path")
