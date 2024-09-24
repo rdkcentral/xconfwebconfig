@@ -117,24 +117,6 @@ func AddContextFromTaggingService(ws *xhttp.XconfServer, contextMap map[string]s
 	}
 }
 
-func AddGroupServiceContext(ws *xhttp.XconfServer, contextMap map[string]string, macKeyName string, fields log.Fields) {
-	if Xc.EnableGroupService {
-		if Xc.GroupServiceModelSet.Contains(strings.ToUpper(contextMap[common.MODEL])) {
-			log.WithFields(fields).Debugf("Getting groups from Group Service for mac=%s, model=%s.", contextMap[macKeyName], contextMap[common.MODEL])
-			// remove colons before calling Group Service
-			macAddress := util.AlphaNumericMacAddress(contextMap[macKeyName])
-			cpeGroups, err := ws.GroupServiceConnector.GetCpeGroups(macAddress, fields)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Debugf("Error getting groups from Group Service for mac=%s, model=%s.", contextMap[macKeyName], contextMap[common.MODEL])
-				return
-			}
-			for _, group := range cpeGroups {
-				contextMap[group] = ""
-			}
-		}
-	}
-}
-
 func GetPartnerFromAccountServiceByHostMac(ws *xhttp.XconfServer, macAddress string, satToken string, vargs ...log.Fields) string {
 	var fields log.Fields
 	if len(vargs) > 0 {
