@@ -364,8 +364,7 @@ func ConvertFirmwareRuleToMacRuleBeanWrapper(firmwareRule *firmware.FirmwareRule
 			} else if re.StandardOperationIs == condition.GetOperation() && condition.GetFixedArg().IsStringValue() {
 				value := condition.GetFixedArg().GetValue().(string)
 				if util.IsValidMacAddress(value) {
-					ar := []string{}
-					ar[0] = value
+					ar := []string{value}
 					macRuleBean.MacList = &ar
 				}
 			}

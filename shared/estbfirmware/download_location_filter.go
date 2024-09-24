@@ -85,6 +85,8 @@ func NewEmptyDownloadLocationRoundRobinFilterValue() *DownloadLocationRoundRobin
 		ID:              ROUND_ROBIN_FILTER_SINGLETON_ID,
 		Type:            RoundRobinFilterClass,
 		ApplicationType: shared.STB,
+		Locations:       []Location{},
+		Ipv6locations:   []Location{},
 	}
 }
 
@@ -206,8 +208,20 @@ func GetDefaultDownloadLocationRoundRobinFilterValOneDB() (*DownloadLocationRoun
 }
 
 func CreateDownloadLocationRoundRobinFilterValOneDB(dl *DownloadLocationRoundRobinFilterValue) error {
+
+	dl.Updated = util.GetTimestamp()
+
+	/*
+		DownloadLocationRoundRobinFilterValue is a subtype of SingletonFilterValue and it is the object
+		type that is in the cache; therefore we need to wrap it in a SingletonFilterValue object.
+	*/
+	sfv := &SingletonFilterValue{
+		ID:                                    dl.ID,
+		DownloadLocationRoundRobinFilterValue: dl,
+	}
+
 	// create record in DB
-	return db.GetCachedSimpleDao().SetOne(db.TABLE_SINGLETON_FILTER_VALUE, dl.ID, dl)
+	return db.GetCachedSimpleDao().SetOne(db.TABLE_SINGLETON_FILTER_VALUE, sfv.ID, sfv)
 }
 
 func NewEmptyDownloadLocationFilter() *DownloadLocationFilter {

@@ -214,6 +214,8 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	}
 	NormalizeEstbFirmwareContext(ws, r, contextMap, usePartnerAppType, shouldAddIp)
 
+	AddGroupServiceContext(ws, contextMap, common.ESTB_MAC, fields)
+
 	// getting local sat token
 	localToken, err := xhttp.GetLocalSatToken(fields)
 	if err != nil {

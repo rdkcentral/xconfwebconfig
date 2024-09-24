@@ -30,12 +30,12 @@ import (
 
 // EvaluationResult ...
 type EvaluationResult struct {
-	MatchedRule        *firmware.FirmwareRule
-	AppliedFilters     []interface{}
-	FirmwareConfig     *coreef.FirmwareConfigFacade
-	Description        string
-	Blocked            bool
-	AppliedVersionInfo map[string]string
+	MatchedRule        *firmware.FirmwareRule       `json:"matchedRule,omitempty"`
+	AppliedFilters     []interface{}                `json:"appliedFilters,omitempty"`
+	FirmwareConfig     *coreef.FirmwareConfigFacade `json:"firmwareConfig"`
+	Description        string                       `json:"description,omitempty"`
+	Blocked            bool                         `json:"blocked,omitempty"`
+	AppliedVersionInfo map[string]string            `json:"appliedVersionInfo,omitempty"`
 }
 
 func NewEvaluationResult() *EvaluationResult {

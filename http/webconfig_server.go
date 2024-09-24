@@ -62,6 +62,7 @@ type XconfServer struct {
 	*DeviceServiceConnector
 	*AccountServiceConnector
 	*TaggingConnector
+	*GroupServiceConnector
 	tlsConfig        *tls.Config
 	notLoggedHeaders []string
 	metricsEnabled   bool
@@ -158,6 +159,7 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, dc db.DatabaseClient
 		AccountServiceConnector: NewAccountServiceConnector(conf, tlsConfig),
 		DeviceServiceConnector:  NewDeviceServiceConnector(conf, tlsConfig),
 		TaggingConnector:        NewTaggingConnector(conf, tlsConfig),
+		GroupServiceConnector:   NewGroupServiceConnector(conf, tlsConfig),
 		tlsConfig:               tlsConfig,
 		notLoggedHeaders:        notLoggedHeaders,
 		metricsEnabled:          metricsEnabled,

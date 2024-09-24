@@ -46,9 +46,9 @@ func TestMain(m *testing.M) {
 		testConfigFile = "../config/sample_xconfwebconfig.conf"
 	}
 
-	xpcKey := os.Getenv("XPC_KEY")
+	xpcKey := os.Getenv("SAT_KEY")
 	if len(xpcKey) == 0 {
-		os.Setenv("XPC_KEY", "dGVzdFhwY0tleQ==")
+		os.Setenv("SAT_KEY", "dGVzdFhwY0tleQ==")
 	}
 
 	sid := os.Getenv("SAT_CLIENT_ID")

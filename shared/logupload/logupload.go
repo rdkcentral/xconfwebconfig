@@ -18,6 +18,7 @@
 package logupload
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -155,15 +156,15 @@ func NewLogFileListInf() interface{} {
 }
 
 type Schedule struct {
-	Type              string `json:"type"`
-	Expression        string `json:"expression"`
-	TimeZone          string `json:"timeZone"`
-	ExpressionL1      string `json:"expressionL1"`
-	ExpressionL2      string `json:"expressionL2"`
-	ExpressionL3      string `json:"expressionL3"`
-	StartDate         string `json:"startDate"`
-	EndDate           string `json:"endDate"`
-	TimeWindowMinutes int    `json:"timeWindowMinutes"`
+	Type              string      `json:"type"`
+	Expression        string      `json:"expression"`
+	TimeZone          string      `json:"timeZone"`
+	ExpressionL1      string      `json:"expressionL1"`
+	ExpressionL2      string      `json:"expressionL2"`
+	ExpressionL3      string      `json:"expressionL3"`
+	StartDate         string      `json:"startDate"`
+	EndDate           string      `json:"endDate"`
+	TimeWindowMinutes json.Number `json:"timeWindowMinutes"`
 }
 
 type ConfigurationServiceURL struct {

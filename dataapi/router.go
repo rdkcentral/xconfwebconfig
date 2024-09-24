@@ -160,6 +160,12 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		appTypes = append(appTypes, strings.ToLower(v))
 	}
 
+	groupServiceModelList := strings.Split(conf.GetString("xconfwebconfig.xconf.group_service_model_list"), ";")
+	groupsSet := util.NewSet()
+	for _, model := range groupServiceModelList {
+		groupsSet.Add(strings.ToUpper(model))
+	}
+
 	xc := &XconfConfigs{
 		DeriveAppTypeFromPartnerId:   conf.GetBoolean("xconfwebconfig.xconf.derive_application_type_from_partner_id"),
 		PartnerApplicationTypes:      appTypes,
@@ -168,6 +174,8 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		EnableAccountService:         conf.GetBoolean("xconfwebconfig.xconf.enable_account_service"),
 		EnableTaggingService:         conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service"),
 		EnableTaggingServiceRFC:      conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service_rfc"),
+		EnableGroupService:           conf.GetBoolean("xconfwebconfig.xconf.enable_group_service"),
+		GroupServiceModelSet:         groupsSet,
 		EnableCdnDirect:              conf.GetBoolean("xconfwebconfig.xconf.enable_cdn_direct"),
 		ReturnAccountId:              conf.GetBoolean("xconfwebconfig.xconf.return_account_id"),
 		ReturnAccountHash:            conf.GetBoolean("xconfwebconfig.xconf.return_account_hash"),
