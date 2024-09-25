@@ -304,7 +304,6 @@ func (e *EstbFirmwareRuleBase) IsInWhitelist(convertedContext *coreef.ConvertedC
 	if len(whitelist) == 0 {
 		return false
 	}
-
 	return e.ruleProcessorFactory.RuleProcessor().Evaluate(coreef.NewRuleFactory().NewIpFilter(whitelist), convertedContext.GetProperties(), log.Fields{})
 }
 
