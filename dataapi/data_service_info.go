@@ -33,7 +33,9 @@ import (
 func GetInfoRefreshAllHandler(w http.ResponseWriter, r *http.Request) {
 	failedToRefreshTables := db.GetCacheManager().RefreshAll()
 	if len(failedToRefreshTables) == 0 {
-		xhttp.WriteOkResponse(w, r, nil)
+		stats := db.GetCacheManager().GetStatistics()
+		response, _ := util.JSONMarshal(stats.CacheMap)
+		xhttp.WriteXconfResponse(w, http.StatusOK, response)
 	} else {
 		xhttp.WriteXconfResponse(w, 404, []byte(fmt.Sprintf("\"Couldn't refresh caches for tables: %s\"", strings.Join(failedToRefreshTables, ", "))))
 	}
@@ -43,9 +45,14 @@ func GetInfoRefreshHandler(w http.ResponseWriter, r *http.Request) {
 	tableName := mux.Vars(r)[common.TABLE_NAME]
 	err := db.GetCacheManager().Refresh(tableName)
 	if err == nil {
-		xhttp.WriteOkResponse(w, r, nil)
+		if stats, err := db.GetCacheManager().GetCacheStats(tableName); err == nil {
+			response, _ := util.JSONMarshal(stats)
+			xhttp.WriteXconfResponse(w, http.StatusOK, response)
+		} else {
+			xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(err.Error()))
+		}
 	} else {
-		xhttp.WriteXconfResponse(w, 404, []byte(fmt.Sprintf("\"Not found table definition: %s\"", tableName)))
+		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(err.Error()))
 	}
 }
 

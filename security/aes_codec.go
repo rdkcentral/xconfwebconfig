@@ -76,7 +76,7 @@ func NewAesCodec() *AesCodec {
 	for _, line := range envs {
 		if len(line) > 8 {
 			prefix := line[:8]
-			if prefix == "XPC_KEY=" {
+			if prefix == "SAT_KEY=" {
 				xpckeyB64 = line[8:]
 				break
 			}
@@ -85,7 +85,7 @@ func NewAesCodec() *AesCodec {
 	}
 
 	if xpckeyB64 == "" {
-		panic(fmt.Errorf("missing env XPC_KEY"))
+		panic(fmt.Errorf("missing env SAT_KEY"))
 	}
 
 	key, err := b64.StdEncoding.DecodeString(xpckeyB64)

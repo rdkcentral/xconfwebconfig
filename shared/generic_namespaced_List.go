@@ -83,10 +83,25 @@ func (obj *GenericNamespacedList) Clone() (*GenericNamespacedList, error) {
 func (obj *GenericNamespacedList) Validate() error {
 	matched, _ := regexp.MatchString("^[-a-zA-Z0-9_.' ]+$", obj.ID)
 	if !matched {
-		return errors.New("Name is invalid")
+		return errors.New("name is invalid")
 	}
 
-	return ValidateListData(obj.TypeName, obj.Data)
+	if !IsValidType(obj.TypeName) {
+		return fmt.Errorf("type %s is invalid", obj.TypeName)
+	}
+	itemsSet := util.Set{}
+	itemsSet.Add(obj.Data...)
+	obj.Data = itemsSet.ToSlice()
+
+	if err := ValidateListData(obj.TypeName, obj.Data); err != nil {
+		return err
+	}
+
+	if err := obj.ValidateDataIntersection(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func ValidateListData(typeName string, listData []string) error {

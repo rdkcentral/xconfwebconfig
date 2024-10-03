@@ -120,7 +120,8 @@ func (l *LogUploadRuleBase) GetSettings(id string) *logupload.Settings {
 			settings.TimeZoneMode = logupload.UTC
 		}
 		settings.ScheduleCron = checkSchedule.Expression
-		settings.ScheduleDurationMinutes = checkSchedule.TimeWindowMinutes
+		twm, _ := checkSchedule.TimeWindowMinutes.Int64()
+		settings.ScheduleDurationMinutes = int(twm)
 		settings.LusName = logUploadSettings.Name
 		settings.LusNumberOfDay = logUploadSettings.NumberOfDays
 		uploadRepositoryId := logUploadSettings.UploadRepositoryID
@@ -182,7 +183,8 @@ func (l *LogUploadRuleBase) GetSettings(id string) *logupload.Settings {
 		settings.LusScheduleCronL1 = uploadSchedule.ExpressionL1
 		settings.LusScheduleCronL2 = uploadSchedule.ExpressionL2
 		settings.LusScheduleCronL3 = uploadSchedule.ExpressionL3
-		settings.LusScheduleDurationMinutes = uploadSchedule.TimeWindowMinutes
+		twm1, _ := uploadSchedule.TimeWindowMinutes.Int64()
+		settings.LusScheduleDurationMinutes = int(twm1)
 		settings.LusTimeZoneMode = uploadSchedule.TimeZone
 		settings.SchedulerType = uploadSchedule.Type
 	}

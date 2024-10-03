@@ -159,7 +159,7 @@ const (
 )
 
 type Settings struct {
-	RuleIDs                           map[string]bool
+	RuleIDs                           map[string]string
 	SchedulerType                     string
 	GroupName                         string
 	CheckOnReboot                     bool
@@ -203,7 +203,7 @@ type Settings struct {
 func NewSettings(logFileLenth int) *Settings {
 	var newSettings *Settings
 	newSettings = new(Settings)
-	newSettings.RuleIDs = make(map[string]bool)
+	newSettings.RuleIDs = make(map[string]string)
 	newSettings.SrmIPList = make(map[string]string)
 	newSettings.EponSettings = make(map[string]string)
 	newSettings.PartnerSettings = make(map[string]string)

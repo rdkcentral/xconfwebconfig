@@ -44,6 +44,11 @@ func UtcOffsetTimestamp(sec int) time.Time {
 	return UtcCurrentTimestamp().Add(time.Duration(sec) * time.Second)
 }
 
+// UtcTimeInNano - return current time in nano in UTC timezone
+func UtcTimeInNano() int64 {
+	return UtcCurrentTimestamp().UnixNano()
+}
+
 func Copy(obj interface{}) (interface{}, error) {
 	// Create a deep copy of the object
 	cloneObj, err := copy.Copy(obj)
@@ -53,9 +58,15 @@ func Copy(obj interface{}) (interface{}, error) {
 	return cloneObj, nil
 }
 
-// Return timestamp in milliseconds
-func GetTimestamp(t time.Time) int64 {
-	return t.UnixNano() / int64(time.Millisecond)
+// GetTimestamp - return current timestamp in Millisecond in UTC timezone or convert specified time to Millisecond
+func GetTimestamp(args ...time.Time) int64 {
+	var unixNano int64
+	if args == nil {
+		unixNano = UtcTimeInNano()
+	} else {
+		unixNano = args[0].UnixNano()
+	}
+	return unixNano / int64(time.Millisecond)
 }
 
 func RemoveNonAlphabeticSymbols(macAddress string) string {

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"xconfwebconfig/shared"
 	"xconfwebconfig/util"
 )
 
@@ -95,4 +96,23 @@ func (sfv *SingletonFilterValue) UnmarshalJSON(bytes []byte) error {
 	}
 
 	return nil
+}
+
+// MarshalJSON custom marshal to handle different subclass of SingletonFilterValue
+func (sfv *SingletonFilterValue) MarshalJSON() ([]byte, error) {
+	// Unmarshal the subtype
+	if sfv.PercentFilterValue != nil && sfv.PercentFilterValue.ID != "" {
+		return json.Marshal(sfv.PercentFilterValue)
+	} else if sfv.DownloadLocationRoundRobinFilterValue != nil && sfv.DownloadLocationRoundRobinFilterValue.ID != "" {
+		return json.Marshal(sfv.DownloadLocationRoundRobinFilterValue)
+	} else {
+		return nil, fmt.Errorf("Invalid SingletonFilterValue: %v", sfv)
+	}
+}
+
+func GetRoundRobinIdByApplication(applicationType string) string {
+	if shared.STB == applicationType {
+		return ROUND_ROBIN_FILTER_SINGLETON_ID
+	}
+	return fmt.Sprintf("%s_%s", strings.ToUpper(applicationType), ROUND_ROBIN_FILTER_SINGLETON_ID)
 }
