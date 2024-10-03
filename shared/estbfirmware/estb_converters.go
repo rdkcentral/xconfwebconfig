@@ -218,7 +218,7 @@ func ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule *firmware.Firm
 }
 
 func ConvertFirmwareRuleToPercentageBean(firmwareRule *firmware.FirmwareRule) *PercentageBean {
-	bean := &PercentageBean{}
+	bean := NewPercentageBean()
 	ParseEnvModelRule(bean, firmwareRule)
 	if firmwareRule.ApplicableAction != nil {
 		parseRuleAction(bean, firmwareRule.ApplicableAction)
@@ -259,6 +259,9 @@ func getOptionalRule(optionalRule *re.Rule, ruleToAdd *re.Rule) *re.Rule {
 
 	if optionalRule == nil {
 		result := re.Copy(*ruleToAdd)
+		if result.IsCompoundPartsEmpty() {
+			result.SetRelation("")
+		}
 		return &result
 	}
 
@@ -298,7 +301,7 @@ func parseRuleAction(bean *PercentageBean, action *firmware.ApplicableAction) {
 }
 
 func ConvertIntoPercentRange(configEntries []firmware.ConfigEntry) []*firmware.ConfigEntry {
-	var result []*firmware.ConfigEntry
+	var result = make([]*firmware.ConfigEntry, 0)
 	var prevPercentEnd float64 = 0
 
 	for _, configEntry := range configEntries {
