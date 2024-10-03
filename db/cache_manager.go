@@ -128,6 +128,7 @@ type CacheStats struct {
 	DaoRefreshTime time.Time     `json:"daoRefreshTime"`
 	CacheSize      int           `json:"cacheSize"`
 	RequestCount   uint64        `json:"requestCount"`
+	NonAbsentCount int           `json:"nonAbsentCount"`
 	EvictionCount  uint64        `json:"evictionCount"`
 	HitRate        float64       `json:"hitRate"`
 	MissRate       float64       `json:"missRate"`
@@ -236,6 +237,42 @@ func GetCacheManager() CacheManager {
 	})
 
 	return cacheManager
+}
+
+func (cm CacheManager) GetCacheStats(tableName string) (*CacheStats, error) {
+	if err := cacheManager.updateCacheStats(tableName); err != nil {
+		return nil, err
+	}
+	return cm.cacheMap[tableName].Stats, nil
+}
+
+func (cm CacheManager) updateCacheStats(tableName string) error {
+	cacheInfo := cm.cacheMap[tableName]
+	if cacheInfo.cache == nil {
+		return fmt.Errorf("cache not found or configured for table '%v'", tableName)
+	}
+
+	// Get current cache stats
+	stats := cache.Stats{}
+	cacheInfo.cache.Stats(&stats)
+
+	cacheInfo.Stats.CacheSize = cacheInfo.cache.Size()
+	cacheInfo.Stats.RequestCount = stats.RequestCount()
+	cacheInfo.Stats.EvictionCount = stats.EvictionCount
+	cacheInfo.Stats.HitRate = stats.HitRate()
+	cacheInfo.Stats.MissRate = stats.MissRate()
+	cacheInfo.Stats.TotalLoadTime = stats.TotalLoadTime
+
+	nonAbsentCount := 0
+	values := cacheInfo.cache.GetAllValues()
+	for _, v := range values {
+		if v != nil {
+			nonAbsentCount++
+		}
+	}
+	cacheInfo.Stats.NonAbsentCount = nonAbsentCount
+
+	return nil
 }
 
 // GetStatistics returns cache statistics

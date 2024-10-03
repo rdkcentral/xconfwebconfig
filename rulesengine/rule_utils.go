@@ -127,16 +127,16 @@ func (r *Rule) IsEmpty() bool {
 	return false
 }
 
-func EqualComplexRules(rule1 Rule, rule2 Rule) bool {
+func EqualComplexRules(rule1 *Rule, rule2 *Rule) bool {
 	if rule1.IsEmpty() && rule2.IsEmpty() {
 		return true
 	}
-	if &rule1 == nil || &rule2 == nil {
+	if rule1 == nil || rule2 == nil {
 		return false
 	}
 	result := false
-	flattenedRule1 := FlattenRule(rule1)
-	flattenedRule2 := FlattenRule(rule2)
+	flattenedRule1 := FlattenRule(*rule1)
+	flattenedRule2 := FlattenRule(*rule2)
 	if len(flattenedRule1) != len(flattenedRule2) {
 		return false
 	}
@@ -276,9 +276,9 @@ func OrRules(base Rule, compound Rule) Rule {
 }
 
 func addRelatedCompound(base Rule, compound Rule, relation string) Rule {
-	if base.GetCondition() == nil {
-		return compound
-	}
+	// if base.GetCondition() == nil {
+	// 	return compound
+	// }
 
 	var result Rule
 

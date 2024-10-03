@@ -20,11 +20,7 @@ CREATE KEYSPACE IF NOT EXISTS "ApplicationsDiscoveryDataService" WITH replicatio
 
 USE "ApplicationsDiscoveryDataService";
 
-CREATE TABLE "ApprovedChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
-
-CREATE TABLE "Change" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
-
-CREATE TABLE "ConfigurationServiceURLs" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "AppSettings" (key text,column1 text,value blob,PRIMARY KEY ((key), column1));
 
 CREATE TABLE "DcmRule" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
@@ -34,8 +30,6 @@ CREATE TABLE "Environment" (key text,column1 text,value blob,PRIMARY KEY ((key),
 
 CREATE TABLE "FeatureControlRule2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE "FeatureSet" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
-
 CREATE TABLE "FirmwareConfig" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
 CREATE TABLE "FirmwareRule4" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
@@ -43,10 +37,6 @@ CREATE TABLE "FirmwareRule4" (key text,column1 text,value blob,PRIMARY KEY ((key
 CREATE TABLE "FirmwareRuleTemplate" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
 CREATE TABLE "GenericXconfNamedList" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
-
-CREATE TABLE "IndexedLogFiles" (key text,column1 text,column2 text,value blob,PRIMARY KEY ((key), column1, column2)) WITH COMPACT STORAGE;
-
-CREATE TABLE "IpAddressGroupExtended" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
 CREATE TABLE "LogFile" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
@@ -82,10 +72,14 @@ CREATE TABLE "XconfChange" (key text,column1 text,value blob,PRIMARY KEY ((key),
 
 CREATE TABLE "XconfFeature" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE "XconfNamedList" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
-
 CREATE TABLE "XconfChangedKeys4" ( key bigint, columnName timeuuid, value blob, PRIMARY KEY (key, columnName) ) WITH COMPACT STORAGE;
 
 CREATE TABLE "TelemetryTwoProfiles" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
 CREATE TABLE "TelemetryTwoRules" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+
+CREATE TABLE IF NOT EXISTS "XconfTelemetryTwoChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1));
+
+CREATE TABLE IF NOT EXISTS "XconfApprovedTelemetryTwoChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1));
+
+CREATE TABLE "PenetrationMetrics" (estb_mac text,partner text,model text,fw_version text,fw_reported_version text,fw_additional_version_info text,fw_applied_rule text,rfc_applied_rules text,rfc_features text,rfc_ts timestamp,fw_ts timestamp,time_zone text,account_id text,env text,application_type text,experience text, PRIMARY KEY (estb_mac)) WITH COMPACT STORAGE; 

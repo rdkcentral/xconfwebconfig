@@ -16,76 +16,66 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-CREATE TABLE IF NOT EXISTS "ApprovedChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+ CREATE TABLE IF NOT EXISTS "AppSettings" (key text,column1 text,value blob,PRIMARY KEY ((key), column1));
 
-CREATE TABLE IF NOT EXISTS "Change" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "DcmRule" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "ConfigurationServiceURLs" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "DeviceSettings2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "DcmRule" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "Environment" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "DeviceSettings2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "FeatureControlRule2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "Environment" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "FirmwareConfig" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "FeatureControlRule2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "FirmwareRule4" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "FeatureSet" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "FirmwareRuleTemplate" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "FirmwareConfig" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "GenericXconfNamedList" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "FirmwareRule4" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "LogFile" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "FirmwareRuleTemplate" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "LogFileList" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "GenericXconfNamedList" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "LogFilesGroups" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "IndexedLogFiles" (key text,column1 text,column2 text,value blob,PRIMARY KEY ((key), column1, column2)) WITH COMPACT STORAGE;
+CREATE TABLE "LogUploadSettings2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "IpAddressGroupExtended" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "Logs2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "LogFile" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "Model" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "LogFileList" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "PermanentTelemetry" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "LogFilesGroups" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "SettingProfiles" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "LogUploadSettings2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "SettingRules" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "Logs2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "SingletonFilterValue" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "Model" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "Telemetry" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "PermanentTelemetry" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "TelemetryRules" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "SettingProfiles" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "UploadRepository" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "SettingRules" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "VodSettings2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "SingletonFilterValue" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "XconfApprovedChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "Telemetry" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "XconfChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "TelemetryRules" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "XconfFeature" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "UploadRepository" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "XconfChangedKeys4" ( key bigint, columnName timeuuid, value blob, PRIMARY KEY (key, columnName) ) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "VodSettings2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "TelemetryTwoProfiles" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "XconfApprovedChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "TelemetryTwoRules" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
 
-CREATE TABLE IF NOT EXISTS "XconfChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "XconfTelemetryTwoChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1));
 
-CREATE TABLE IF NOT EXISTS "XconfFeature" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "XconfApprovedTelemetryTwoChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1));
 
-CREATE TABLE IF NOT EXISTS "XconfNamedList" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
-
-CREATE TABLE IF NOT EXISTS "XconfChangedKeys4" ( key bigint, columnName timeuuid, value blob, PRIMARY KEY (key, columnName) ) WITH COMPACT STORAGE;
-
-CREATE TABLE IF NOT EXISTS "TelemetryTwoProfiles" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
-
-CREATE TABLE IF NOT EXISTS "TelemetryTwoRules" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
-
-CREATE TABLE IF NOT EXISTS "XconfTelemetryTwoChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
-
-CREATE TABLE IF NOT EXISTS "XconfApprovedTelemetryTwoChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE "PenetrationMetrics" (estb_mac text,partner text,model text,fw_version text,fw_reported_version text,fw_additional_version_info text,fw_applied_rule text,rfc_applied_rules text,rfc_features text,rfc_ts timestamp,fw_ts timestamp,time_zone text,account_id text,env text,application_type text,experience text, PRIMARY KEY (estb_mac)) WITH COMPACT STORAGE; 

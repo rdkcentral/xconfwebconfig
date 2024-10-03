@@ -145,7 +145,9 @@ type PercentageBean struct {
 
 func NewPercentageBean() *PercentageBean {
 	return &PercentageBean{
-		ApplicationType: shared.STB,
+		ApplicationType:  shared.STB,
+		FirmwareVersions: make([]string, 0),
+		Distributions:    make([]*firmware.ConfigEntry, 0),
 	}
 }
 
@@ -264,7 +266,7 @@ func (p *PercentageBean) ValidateAll(beans []*PercentageBean) error {
 			return fmt.Errorf("This name %s is already used", p.Name)
 		}
 		if strings.EqualFold(p.Environment, bean.Environment) && strings.EqualFold(p.Model, bean.Model) &&
-			re.EqualComplexRules(*p.OptionalConditions, *bean.OptionalConditions) {
+			re.EqualComplexRules(p.OptionalConditions, bean.OptionalConditions) {
 			var ruleStr string
 			if p.OptionalConditions != nil {
 				ruleStr = p.OptionalConditions.String()

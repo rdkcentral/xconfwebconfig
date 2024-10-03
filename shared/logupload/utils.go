@@ -57,7 +57,7 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 			log.Debug("This request has " + strconv.Itoa(randomPercentage) + " percentage number, which is greater then " + strconv.Itoa(rule.Percentage) + ". Log upload settings will NOT be returned.")
 			output.CopyLusSetting(settings, false)
 		}
-		output.RuleIDs[rule.ID] = true
+		output.RuleIDs[rule.ID] = rule.Name
 		log.WithFields(fields).Info("SettingsUtil Received attributes from device: " + rule.ToStringOnlyBaseProperties() + "  Applied rule for Log Upload Settings: ") //+ this.toString())
 
 		//if timeWindow is 0 then return non-random cron expression.
@@ -106,7 +106,7 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 	}
 	if len(output.VodSettingsName) < 1 && len(settings.VodSettingsName) > 0 {
 		output.CopyVodSettings(settings)
-		output.RuleIDs[rule.ID] = true
+		output.RuleIDs[rule.ID] = rule.Name
 		log.WithFields(fields).Info("SettingsUtil Received attributes from device: " + rule.ToStringOnlyBaseProperties() + "  Applied rule for VOD settings.")
 	}
 	return output

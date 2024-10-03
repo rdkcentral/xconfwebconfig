@@ -227,7 +227,7 @@ func (obj *FirmwareConfig) ValidateName() error {
 	}
 
 	for _, config := range list {
-		if config != nil && strings.EqualFold(config.Description, obj.Description) {
+		if config != nil && strings.EqualFold(config.Description, obj.Description) && obj.ID != config.ID {
 			return errors.New("This description is already used")
 		}
 	}
@@ -401,6 +401,8 @@ func (fcf *FirmwareConfigFacade) MarshalJSON() ([]byte, error) {
 	 * And also empty values and blank strings.
 	 */
 	fields := []string{
+		common.ID,
+		common.DESCRIPTION,
 		common.FIRMWARE_DOWNLOAD_PROTOCOL,
 		common.FIRMWARE_FILENAME,
 		common.FIRMWARE_LOCATION,
@@ -408,7 +410,9 @@ func (fcf *FirmwareConfigFacade) MarshalJSON() ([]byte, error) {
 		common.IPV6_FIRMWARE_LOCATION,
 		common.UPGRADE_DELAY,
 		common.REBOOT_IMMEDIATELY,
+		common.SUPPORTED_MODEL_IDS,
 		common.MANDATORY_UPDATE,
+		common.UPDATED,
 	}
 
 	buffer := bytes.NewBufferString("{")
