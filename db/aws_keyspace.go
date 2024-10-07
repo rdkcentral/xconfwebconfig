@@ -58,15 +58,19 @@ func awsKeyspaceClient(conf *configuration.Config, testOnly bool) (*CassandraCli
 			return nil, err
 		}
 
-		value, err := sess.Config.Credentials.Get()
-		if err != nil {
-			log.Error(err.Error())
-			return nil, err
-		}
+		// Set up the callback to refresh credentials
+		auth.CredentialsCallback = func() (sigv4.SigV4Credentials, error) {
+			creds, err := sess.Config.Credentials.Get()
+			if err != nil {
+				return sigv4.SigV4Credentials{}, err
+			}
 
-		auth.AccessKeyId = value.AccessKeyID
-		auth.SecretAccessKey = value.SecretAccessKey
-		auth.SessionToken = value.SessionToken
+			return sigv4.SigV4Credentials{
+				AccessKeyId:     creds.AccessKeyID,
+				SecretAccessKey: creds.SecretAccessKey,
+				SessionToken:    creds.SessionToken,
+			}, nil
+		}
 	} else {
 		auth.AccessKeyId = conf.GetString("xconfwebconfig.database.access_key_id")
 		auth.SecretAccessKey = conf.GetString("xconfwebconfig.database.secret_access_key")
