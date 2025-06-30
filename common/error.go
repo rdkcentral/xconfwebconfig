@@ -20,6 +20,7 @@ package common
 import (
 	"errors"
 	"fmt"
+	"net/http"
 )
 
 var (
@@ -67,12 +68,37 @@ func NewRemoteError(status int, message string) error {
 	return RemoteHttpError{StatusCode: status, Message: message}
 }
 
+var XconfErrorType = &RemoteHttpErrorAS{}
+
+type RemoteHttpErrorAS struct {
+	StatusCode int
+	Message    string
+}
+
+func (e RemoteHttpErrorAS) Error() string {
+	return e.Message
+}
+
+func NewRemoteErrorAS(status int, message string) error {
+	return RemoteHttpErrorAS{StatusCode: status, Message: message}
+}
+
 var (
 	Http400ErrorType    = &Http400Error{}
 	Http404ErrorType    = &Http404Error{}
 	Http500ErrorType    = &Http500Error{}
 	RemoteHttpErrorType = &RemoteHttpError{}
 )
+
+func GetXconfErrorStatusCode(err error) int {
+	if err == nil {
+		return http.StatusOK
+	}
+	if errors.As(err, XconfErrorType) {
+		return err.(RemoteHttpErrorAS).StatusCode
+	}
+	return http.StatusInternalServerError
+}
 
 func UnwrapAll(wrappedErr error) error {
 	err := wrappedErr

@@ -28,12 +28,12 @@ const (
 
 // GetEcmMacFromPodTable Get ecmMacAdress from table cpe_mac using pod serialNum
 func (c *CassandraClient) GetEcmMacFromPodTable(serialNum string) (string, error) {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var ecmMac []byte
 
-	stmt := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ? LIMIT 1", EcmMacColumnName, fmt.Sprintf("%s.%s", c.DeviceKeyspace(), c.DevicePodTableName()), PodSerialColumnName)
+	stmt := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ? LIMIT 1", EcmMacColumnName, fmt.Sprintf("%s.%s", c.GetDeviceKeyspace(), c.GetDevicePodTableName()), PodSerialColumnName)
 	err := c.Query(stmt, serialNum).Scan(&ecmMac)
 	if err != nil {
 		return "", err

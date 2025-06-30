@@ -23,7 +23,6 @@ import (
 	"strconv"
 
 	"xconfwebconfig/common"
-	owcommon "xconfwebconfig/common"
 	dcmlogupload "xconfwebconfig/dataapi/dcm/logupload"
 	"xconfwebconfig/dataapi/dcm/settings"
 	"xconfwebconfig/dataapi/dcm/telemetry"
@@ -50,28 +49,34 @@ func GetLogUploaderTelemetryProfilesHandler(w http.ResponseWriter, r *http.Reque
 	if xw, ok := w.(*xhttp.XResponseWriter); ok {
 		fields = xw.Audit()
 	} else {
-		xhttp.Error(w, http.StatusInternalServerError, owcommon.NotOK)
+		xhttp.Error(w, http.StatusInternalServerError, common.NotOK)
 		return
 	}
 
 	contextMap, _ := GetContextMapAndSettingTypes(r)
 	AddLogUploaderContext(Ws, r, contextMap, false, fields)
-	dicts, err := GetTelemetryTwoProfileResponeDicts(contextMap)
+	AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, true, fields)
+	evaluationResult, err := GetTelemetryTwoProfileResponeDicts(contextMap, fields)
 	if err != nil {
 		xhttp.Error(w, http.StatusInternalServerError, err)
 		return
 	}
-	if dicts == nil {
+	if evaluationResult != nil && evaluationResult.RulesMatched == false {
 		xhttp.WriteXconfResponseAsText(w, 404, []byte("\"<h2>404 NOT FOUND</h2>profiles not found\""))
 	} else {
+		log.WithFields(fields).Debug("LogUploaderService TelemetryTwo AppliedRules")
 		resp := util.Dict{
-			"profiles": dicts,
+			"profiles": evaluationResult.ProfilesData,
 		}
 		rbytes, err := util.JSONMarshal(resp)
 		if err != nil {
 			xhttp.Error(w, http.StatusInternalServerError, err)
 			return
 		}
+		//log the hash of the t2 response in the hash field, so we can get idea of how many unique responses we have for t2
+		t2Hash := util.GetCRC32HashValue(string(rbytes))
+		fields["hash"] = t2Hash
+		log.WithFields(common.FilterLogFields(fields)).Info("LogUploaderService TelemetryTwoProfiles Response")
 		xhttp.WriteResponseBytes(w, rbytes, http.StatusOK)
 	}
 }
@@ -105,7 +110,7 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 	if xw, ok := w.(*xhttp.XResponseWriter); ok {
 		fields = xw.Audit()
 	} else {
-		xhttp.Error(w, http.StatusInternalServerError, owcommon.NotOK)
+		xhttp.Error(w, http.StatusInternalServerError, common.NotOK)
 		return
 	}
 	// audit_id-included logging example
@@ -113,7 +118,9 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 	// log.WithFields(fields).Debug("sample debug message")
 
 	contextMap, settingTypes := GetContextMapAndSettingTypes(r)
+	fields[common.ESTB_MAC_ADDRESS] = contextMap[common.ESTB_MAC_ADDRESS]
 	AddLogUploaderContext(Ws, r, contextMap, true, fields)
+	AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, false, fields)
 	checkNow, err := strconv.ParseBool(contextMap[common.CHECK_NOW])
 	if err == nil && checkNow {
 		telemetryProfileService := telemetry.NewTelemetryProfileService()
@@ -125,12 +132,14 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 			xhttp.WriteXconfResponse(w, 200, response)
 		}
 	} else {
+		clientProtocol := GetClientProtocolHeaderValue(r)
+		AddClientProtocolToContextMap(contextMap, clientProtocol)
 		logUploadRuleBase := dcmlogupload.NewLogUploadRuleBase()
 		result := logUploadRuleBase.Eval(contextMap, fields)
 		var telemetryRule *logupload.TelemetryRule
 		if result != nil {
 			telemetryProfileService := telemetry.NewTelemetryProfileService()
-			telemetryRule := telemetryProfileService.GetTelemetryRuleForContext(contextMap)
+			telemetryRule = telemetryProfileService.GetTelemetryRuleForContext(contextMap)
 			permanentTelemetryProfile := telemetryProfileService.GetPermanentProfileByTelemetryRule(telemetryRule)
 			if permanentTelemetryProfile != nil {
 				cloneObj, err := permanentTelemetryProfile.Clone()
@@ -177,6 +186,23 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 		if result == nil {
 			xhttp.WriteXconfResponseAsText(w, 404, []byte("\"<h2>404 NOT FOUND</h2><div>settings not found</div>\""))
 		} else {
+			deviceInfo := map[string]string{
+				xhttp.SECURITY_TOKEN_ESTB_MAC:        contextMap[common.ESTB_MAC_ADDRESS],
+				xhttp.SECURITY_TOKEN_ESTB_IP:         contextMap[common.ESTB_IP],
+				xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
+			}
+			if !util.IsBlank(contextMap[common.MODEL]) {
+				deviceInfo[xhttp.SECURITY_TOKEN_MODEL] = contextMap[common.MODEL]
+			}
+			if !util.IsBlank(contextMap[common.PARTNER_ID]) {
+				deviceInfo[xhttp.SECURITY_TOKEN_PARTNER] = contextMap[common.PARTNER_ID]
+			}
+
+			if !util.IsBlank(result.LusUploadRepositoryURL) {
+				result.LusUploadRepositoryURL = Ws.LogUploadSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, result.LusUploadRepositoryURL, fields)
+			} else if !util.IsBlank(result.LusUploadRepositoryURLNew) {
+				result.LusUploadRepositoryURLNew = Ws.LogUploadSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, result.LusUploadRepositoryURLNew, fields)
+			}
 			LogResultSettings(result, telemetryRule, settingRules, fields)
 			settingsResponse := logupload.CreateSettingsResponseObject(result)
 			response, _ := util.JSONMarshal(settingsResponse)

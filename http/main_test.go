@@ -41,14 +41,9 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 }
 
 func TestMain(m *testing.M) {
-	testConfigFile = "/app/xconfwebconfig/xconfwebconfig.conf"
+	testConfigFile = "/app/ossxconfds/ossxconfds.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
-		testConfigFile = "../config/sample_xconfwebconfig.conf"
-	}
-
-	xpcKey := os.Getenv("SAT_KEY")
-	if len(xpcKey) == 0 {
-		os.Setenv("SAT_KEY", "dGVzdFhwY0tleQ==")
+		testConfigFile = "../config/sample_ossxconfds.conf"
 	}
 
 	sid := os.Getenv("SAT_CLIENT_ID")
@@ -61,9 +56,24 @@ func TestMain(m *testing.M) {
 		os.Setenv("SAT_CLIENT_SECRET", "bar")
 	}
 
-	ssrKeys := os.Getenv("SSR_KEYS")
+	ssrKeys := os.Getenv("X1_SSR_KEYS")
 	if len(ssrKeys) == 0 {
-		os.Setenv("SSR_KEYS", "test-key-1;test-key-2;test-key3")
+		os.Setenv("X1_SSR_KEYS", "test-key-1;test-key-2;test-key3")
+	}
+
+	securityTokenKey := os.Getenv("SECURITY_TOKEN_KEY")
+	if len(securityTokenKey) == 0 {
+		os.Setenv("SECURITY_TOKEN_KEY", "dGVzdC1jMDctZDBkMS00MTBiLTg5Y2EtNmM1NWY1ZTU=")
+	}
+
+	awsS3SsecKey := os.Getenv("AWS_S3_SSEC_KEY")
+	if len(awsS3SsecKey) == 0 {
+		os.Setenv("AWS_S3_SSEC_KEY", "testAwsS3SsecKey")
+	}
+
+	md5AwsS3SsecKey := os.Getenv("MD5_AWS_S3_SSEC_KEY")
+	if len(md5AwsS3SsecKey) == 0 {
+		os.Setenv("MD5_AWS_S3_SSEC_KEY", "testMd5AwsS3SsecKey")
 	}
 
 	var err error
@@ -72,6 +82,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks()
 	InitSatTokenManager(server)
 
 	err = server.SetUp()
@@ -87,6 +98,9 @@ func TestMain(m *testing.M) {
 	log.SetOutput(ioutil.Discard)
 
 	returnCode := m.Run()
+
+	// tear down
+	// _ = suite.TearDown()
 
 	os.Exit(returnCode)
 }

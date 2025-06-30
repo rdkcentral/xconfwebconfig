@@ -49,6 +49,18 @@ type EstbFirmwareRuleBase struct {
 	driStateIdentifiers  string
 }
 
+func (e *EstbFirmwareRuleBase) SetruleProcessorFactory(ruleProcessorFactory *re.RuleProcessorFactory) {
+	e.ruleProcessorFactory = ruleProcessorFactory
+}
+
+func (e *EstbFirmwareRuleBase) SetdriAlwaysReply(driAlwaysReply bool) {
+	e.driAlwaysReply = driAlwaysReply
+}
+
+func (e *EstbFirmwareRuleBase) SetdriStateIdentifiers(driStateIdentifiers string) {
+	e.driStateIdentifiers = driStateIdentifiers
+}
+
 // NewEstbFirmwareRuleBaseDefault ...
 func NewEstbFirmwareRuleBaseDefault() *EstbFirmwareRuleBase {
 	return NewEstbFirmwareRuleBase(true, "P-DRI,B-DRI")
@@ -65,6 +77,7 @@ func NewEstbFirmwareRuleBase(driAlwaysReply bool, driStateIdentifiers string) *E
 
 // Eval ... the main entry poinit to the module
 func (e *EstbFirmwareRuleBase) Eval(ctx map[string]string, convertedContext *coreef.ConvertedContext, applicationType string, fields log.Fields) (*EvaluationResult, error) {
+	fields = common.FilterLogFields(fields)
 	start := time.Now()
 	_ = start
 	// log.WithFields(fields).Debugf("EstbFirmwareRuleBase.Eval Start ... : context %v and applicationType %s", ctx, applicationType)
@@ -91,7 +104,7 @@ func (e *EstbFirmwareRuleBase) Eval(ctx map[string]string, convertedContext *cor
 	matchedRule := e.FindMatchedRule(rules, corefw.RULE_TEMPLATE, convertedContext.GetProperties(), bypassFilters, fields)
 	if matchedRule == nil {
 		fields["context"] = ctx
-		log.WithFields(fields).Info("EstbFirmwareRuleBase no rules matched")
+		log.WithFields(fields).Debug("EstbFirmwareRuleBase no rules matched")
 		result.Description = "No rules matched"
 		// log.WithFields(fields).Debugf("EstbFirmwareRuleBase.Eval ... End %s: context %v and applicationType %s, finish in %v", result.Description, ctx, applicationType, time.Since(start))
 		return result, nil
@@ -122,14 +135,14 @@ func (e *EstbFirmwareRuleBase) Eval(ctx map[string]string, convertedContext *cor
 			result.AppliedVersionInfo[FIRMWARE_SOURCE] = matchedRule.Type
 		}
 	} else if !matchedRule.IsNoop() {
-		log.WithFields(fields).Info(fmt.Sprintf("EstbFirmwareRuleBase output is blocked by distribution percent in  %v", matchedRule.ApplicableAction))
+		log.WithFields(fields).Debug(fmt.Sprintf("EstbFirmwareRuleBase output is blocked by distribution percent in %v", matchedRule.ApplicableAction))
 		result.Blocked = true
 		result.AddAppliedFilters(matchedRule.ApplicableAction)
 		result.Description = "output is blocked by distribution percent in rule action"
 		// log.WithFields(fields).Debugf("EstbFirmwareRuleBase.Eval ... End %s: context %v and applicationType %s, finish in %v", result.Description, ctx, applicationType, time.Since(start))
 		return result, nil
 	} else {
-		log.WithFields(fields).Info(fmt.Sprintf("EstbFirmwareRuleBase rule %s : %s is noop: %s ", matchedRule.Type, matchedRule.Name, matchedRule.ID))
+		log.WithFields(fields).Debug(fmt.Sprintf("EstbFirmwareRuleBase rule %s : %s is noop: %s ", matchedRule.Type, matchedRule.Name, matchedRule.ID))
 		result.Description = fmt.Sprintf("rule is noop: %s " + matchedRule.ID)
 		// log.WithFields(fields).Debugf("EstbFirmwareRuleBase.Eval ... End %s: context %v and applicationType %s, finish in %v", result.Description, ctx, applicationType, time.Since(start))
 		return result, nil
@@ -142,7 +155,7 @@ func (e *EstbFirmwareRuleBase) Eval(ctx map[string]string, convertedContext *cor
 
 	if e.driAlwaysReply {
 		funcStartTime = time.Now()
-		blocked = e.checkForDRIState(ctx, firmwareConfig, blocked)
+		blocked = e.CheckForDRIState(ctx, firmwareConfig, blocked)
 		// log.WithFields(fields).Debugf("EstbFirmwareRuleBase.Eval ... e.checkForDRIState End: finish in %v", time.Since(funcStartTime))
 	}
 
@@ -199,7 +212,7 @@ func (e *EstbFirmwareRuleBase) FindMatchedRules(rules map[string][]*corefw.Firmw
 
 		if firmware.ENV_MODEL_RULE == ruleType || firmware.ACTIVATION_VERSION == ruleType {
 			// sortedRules = sortByConditionsSize(firmwareRules)
-			sortByConditionsSize(firmwareRules)
+			SortByConditionsSize(firmwareRules)
 		}
 
 		// log.Debugf("length of ruletype %s: %d ", ruleType, len(firmwareRules))
@@ -294,7 +307,7 @@ func (e *EstbFirmwareRuleBase) GetBoundConfigId(ctx map[string]string, converted
 	ruleAction := firmwareRule.ApplicableAction
 
 	if (firmware.ENV_MODEL_RULE != firmwareRule.GetTemplateId()) || !ruleAction.Active || e.IsInWhitelist(convertedContext, ruleAction.Whitelist) {
-		return e.extractAnyPresentConfig(ruleAction)
+		return e.ExtractAnyPresentConfig(ruleAction)
 	}
 
 	return e.ExtractConfigFromAction(convertedContext, ruleAction, appliedVersionInfo)
@@ -307,16 +320,18 @@ func (e *EstbFirmwareRuleBase) IsInWhitelist(convertedContext *coreef.ConvertedC
 	return e.ruleProcessorFactory.RuleProcessor().Evaluate(coreef.NewRuleFactory().NewIpFilter(whitelist), convertedContext.GetProperties(), log.Fields{})
 }
 
-func (e *EstbFirmwareRuleBase) extractAnyPresentConfig(ruleAction *corefw.ApplicableAction) string {
+func (e *EstbFirmwareRuleBase) ExtractAnyPresentConfig(ruleAction *corefw.ApplicableAction) string {
 	if ruleAction.ConfigEntries != nil && len(ruleAction.ConfigEntries) > 0 {
 		for _, configEntry := range ruleAction.ConfigEntries {
-			return configEntry.ConfigId
+			if !configEntry.IsPaused {
+				return configEntry.ConfigId
+			}
 		}
 	}
 	return ruleAction.ConfigId
 }
 
-func sortByConditionsSize(rules []*corefw.FirmwareRule) {
+func SortByConditionsSize(rules []*corefw.FirmwareRule) {
 	// firmwareRules := make([]*corefw.FirmwareRule, len(rules))
 	// copy(firmwareRules, rules)
 	// assume need to match one with more conditions
@@ -359,7 +374,7 @@ func (e *EstbFirmwareRuleBase) ExtractConfigFromAction(context *coreef.Converted
 				return ruleAction.ConfigId
 			}
 		}
-		return e.extractAnyPresentConfig(ruleAction)
+		return e.ExtractAnyPresentConfig(ruleAction)
 	}
 
 	config, _ := coreef.GetFirmwareConfigOneDB(ruleAction.ConfigId)
@@ -373,20 +388,27 @@ func (e *EstbFirmwareRuleBase) ExtractConfigFromAction(context *coreef.Converted
 
 	if ruleAction.ConfigEntries != nil && len(ruleAction.ConfigEntries) > 0 {
 		var currentPercent float64 = 0
-		source := e.getSource(context, ruleAction)
-		qtdsource := fmt.Sprintf(`"%v"`, source)
+		source := e.GetSource(context, ruleAction)
 		for _, entry := range ruleAction.ConfigEntries {
 			percentage := entry.Percentage
 			startPercentRange := entry.StartPercentRange
 			endPercentRange := entry.EndPercentRange
 			if startPercentRange >= 0 && endPercentRange >= 0 {
-				if !re.FitsPercent(qtdsource, startPercentRange) && re.FitsPercent(qtdsource, endPercentRange) {
+				if !re.FitsPercent(source, startPercentRange) && re.FitsPercent(source, endPercentRange) {
+					if entry.IsPaused {
+						appliedVersionInfo[FIRMWARE_SOURCE] = "MultipleVersionDistribution,isPaused"
+						return ""
+					}
 					appliedVersionInfo[FIRMWARE_SOURCE] = "MultipleVersionDistribution"
 					return entry.ConfigId
 				}
 			} else if percentage > 0 {
 				currentPercent += percentage
-				if re.FitsPercent(qtdsource, currentPercent) {
+				if re.FitsPercent(source, currentPercent) {
+					appliedVersionInfo[FIRMWARE_SOURCE] = "MultipleVersionDistribution,isPaused"
+					if entry.IsPaused {
+						return ""
+					}
 					appliedVersionInfo[FIRMWARE_SOURCE] = "MultipleVersionDistribution"
 					return entry.ConfigId
 				}
@@ -396,7 +418,7 @@ func (e *EstbFirmwareRuleBase) ExtractConfigFromAction(context *coreef.Converted
 	return ruleAction.ConfigId
 }
 
-func (e *EstbFirmwareRuleBase) getSource(context *coreef.ConvertedContext, ruleAction *corefw.ApplicableAction) interface{} {
+func (e *EstbFirmwareRuleBase) GetSource(context *coreef.ConvertedContext, ruleAction *corefw.ApplicableAction) interface{} {
 	if ruleAction.UseAccountPercentage {
 		return context.GetAccountIdConverted()
 	}
@@ -438,13 +460,13 @@ func (e *EstbFirmwareRuleBase) ApplyMatchedFilters(
 			matchedActivationVersion = true
 			isPresent := corefw.HasFirmwareVersion(action.GetFirmwareVersions(), firmwareVersion)
 			versionExs := action.GetFirmwareVersionRegExs()
-			if isPresent || len(versionExs) > 0 && e.matchFirmwareVersionRegEx(versionExs, firmwareVersion) {
-				e.applyDefinePropertiesFilter(template, firmwareRule, action, mapinst, evaluationResult)
+			if isPresent || len(versionExs) > 0 && e.MatchFirmwareVersionRegEx(versionExs, firmwareVersion) {
+				e.ApplyDefinePropertiesFilter(template, firmwareRule, action, mapinst, evaluationResult)
 			} else {
 				mapinst[coreef.REBOOT_IMMEDIATELY] = true
 			}
 		} else if firmware.ACTIVATION_VERSION != template.ID {
-			e.applyDefinePropertiesFilter(template, firmwareRule, action, mapinst, evaluationResult)
+			e.ApplyDefinePropertiesFilter(template, firmwareRule, action, mapinst, evaluationResult)
 			if len(action.ByPassFilters) > 0 {
 				for _, f := range action.ByPassFilters {
 					bypassFilters[f] = struct{}{}
@@ -457,21 +479,21 @@ func (e *EstbFirmwareRuleBase) ApplyMatchedFilters(
 	return mapinst
 }
 
-func (e *EstbFirmwareRuleBase) applyDefinePropertiesFilter(
+func (e *EstbFirmwareRuleBase) ApplyDefinePropertiesFilter(
 	template *corefw.FirmwareRuleTemplate,
 	firmwareRule *corefw.FirmwareRule,
 	action *corefw.ApplicableAction,
 	properties map[string]interface{},
 	evaluationResult *EvaluationResult) {
 
-	for k, v := range e.convertProperties(template, action.Properties) {
+	for k, v := range e.ConvertProperties(template, action.Properties) {
 		properties[k] = v
 	}
 
 	evaluationResult.AddAppliedFilters(firmwareRule)
 }
 
-func (e *EstbFirmwareRuleBase) matchFirmwareVersionRegEx(regExs []string, firmwareVersion string) bool {
+func (e *EstbFirmwareRuleBase) MatchFirmwareVersionRegEx(regExs []string, firmwareVersion string) bool {
 	for _, regEx := range regExs {
 		matched, err := regexp.MatchString(regEx, firmwareVersion)
 		if err == nil && matched {
@@ -482,13 +504,13 @@ func (e *EstbFirmwareRuleBase) matchFirmwareVersionRegEx(regExs []string, firmwa
 }
 
 // convertProperties ... using the DefinePropertiesTemplateAction value overwrite default config values
-func (e *EstbFirmwareRuleBase) convertProperties(template *corefw.FirmwareRuleTemplate, properties map[string]string) map[string]interface{} {
+func (e *EstbFirmwareRuleBase) ConvertProperties(template *corefw.FirmwareRuleTemplate, properties map[string]string) map[string]interface{} {
 	converted := map[string]interface{}{}
 	templateAction := template.ApplicableAction
 	templateProperties := templateAction.Properties
 	for key, value := range properties {
 		if propertyValue, isPresent := templateProperties[key]; isPresent {
-			valueObject, _ := e.convertBasedOnValidationType(propertyValue.ValidationTypes, value)
+			valueObject, _ := e.ConvertBasedOnValidationType(propertyValue.ValidationTypes, value)
 			converted[key] = valueObject
 		} else {
 			converted[key] = value
@@ -499,7 +521,7 @@ func (e *EstbFirmwareRuleBase) convertProperties(template *corefw.FirmwareRuleTe
 	return converted
 }
 
-func (e *EstbFirmwareRuleBase) convertBasedOnValidationType(validationTypes []corefw.ValidationType, value string) (interface{}, error) {
+func (e *EstbFirmwareRuleBase) ConvertBasedOnValidationType(validationTypes []corefw.ValidationType, value string) (interface{}, error) {
 	if validationTypes != nil && len(validationTypes) == 1 {
 		switch validationTypes[0] {
 		case corefw.NUMBER, corefw.PERCENT, corefw.PORT:
@@ -575,7 +597,7 @@ func (e *EstbFirmwareRuleBase) DoFilters(ctx map[string]string, convertedContext
 	return false
 }
 
-func (e *EstbFirmwareRuleBase) checkForDRIState(ctx map[string]string, config *coreef.FirmwareConfigFacade, blocked bool) bool {
+func (e *EstbFirmwareRuleBase) CheckForDRIState(ctx map[string]string, config *coreef.FirmwareConfigFacade, blocked bool) bool {
 	if len(e.driStateIdentifiers) == 0 || len(ctx[common.FIRMWARE_VERSION]) == 0 {
 		return blocked
 	}
@@ -673,7 +695,11 @@ func (e *EstbFirmwareRuleBase) GetBseConfiguration(address *shared.IpAddress) (*
 
 	for _, firmwareRule := range rulelst {
 		if firmware.IP_RULE == firmwareRule.Type && !firmwareRule.IsNoop() && firmwareRule.ApplicationType == shared.STB {
-			ipRuleBean := coreef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule)
+			ipRuleBean, err := coreef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule)
+			if err != nil {
+				log.Error(fmt.Sprintf("GetBseConfiguration failed to convert firmware rule to bean: %v", err))
+				return nil, err
+			}
 			firmwareConfig := ipRuleBean.FirmwareConfig
 			if ipRuleBean.IpAddressGroup != nil && ipRuleBean.IpAddressGroup.IsInRange(address.GetAddress()) && firmwareConfig != nil {
 				modelConfig := coreef.NewModelFirmwareConfiguration(ipRuleBean.ModelId, firmwareConfig.FirmwareFilename, firmwareConfig.FirmwareVersion)
@@ -701,15 +727,15 @@ func (e *EstbFirmwareRuleBase) GetBseConfiguration(address *shared.IpAddress) (*
 
 	for _, firmwareRule := range rulelst {
 		if firmware.DOWNLOAD_LOCATION_FILTER == firmwareRule.Type {
-			if e.isIpAddressInRange(firmwareRule.Rule, address) {
-				e.setupLocations(firmwareRule, config)
+			if e.IsIpAddressInRange(firmwareRule.Rule, address) {
+				e.SetupLocations(firmwareRule, config)
 			}
 		}
 	}
 	return config, nil
 }
 
-func (e *EstbFirmwareRuleBase) setupLocations(firmwareRule *corefw.FirmwareRule, config *coreef.BseConfiguration) {
+func (e *EstbFirmwareRuleBase) SetupLocations(firmwareRule *corefw.FirmwareRule, config *coreef.BseConfiguration) {
 	action := firmwareRule.ApplicableAction
 	location := action.Properties[common.FIRMWARE_LOCATION]
 	ipv6Location := action.Properties[common.IPV6_FIRMWARE_LOCATION]
@@ -736,7 +762,7 @@ func (e *EstbFirmwareRuleBase) setupLocations(firmwareRule *corefw.FirmwareRule,
 	}
 }
 
-func (e *EstbFirmwareRuleBase) isIpAddressInRange(rule re.Rule, address *shared.IpAddress) bool {
+func (e *EstbFirmwareRuleBase) IsIpAddressInRange(rule re.Rule, address *shared.IpAddress) bool {
 	for _, condition := range re.ToConditions(&rule) {
 		fixedArg := condition.GetFixedArg()
 		if fixedArg == nil || fixedArg.GetValue() == nil || !coreef.RuleFactoryIP.Equals(condition.GetFreeArg()) {
@@ -745,10 +771,10 @@ func (e *EstbFirmwareRuleBase) isIpAddressInRange(rule re.Rule, address *shared.
 		op := condition.GetOperation()
 		value := fixedArg.GetValue()
 		if re.StandardOperationIs == op && value != nil {
-			return isIpInRange(value.(string), *address)
+			return IsIpInRange(value.(string), *address)
 		} else if re.StandardOperationIn == op {
 			for _, ipAddressStr := range value.([]string) {
-				if isIpInRange(ipAddressStr, *address) {
+				if IsIpInRange(ipAddressStr, *address) {
 					return true
 				}
 			}
@@ -760,7 +786,7 @@ func (e *EstbFirmwareRuleBase) isIpAddressInRange(rule re.Rule, address *shared.
 			}
 			if ipList != nil {
 				for _, ipListItem := range ipList.Data {
-					if isIpInRange(ipListItem, *address) {
+					if IsIpInRange(ipListItem, *address) {
 						return true
 					}
 				}
@@ -772,7 +798,7 @@ func (e *EstbFirmwareRuleBase) isIpAddressInRange(rule re.Rule, address *shared.
 }
 
 // TODO need to adjust
-func isIpInRange(ipAddressStr string, addressToCheck shared.IpAddress) bool {
+func IsIpInRange(ipAddressStr string, addressToCheck shared.IpAddress) bool {
 	ipAddress := shared.NewIpAddress(ipAddressStr)
 	if ipAddress == nil {
 		log.Error(fmt.Sprintf("Exception: addressInWhichNeedToCheck %s addressToCheck %v", ipAddressStr, addressToCheck))

@@ -28,7 +28,7 @@ import (
 )
 
 func TestFitsPercent(t *testing.T) {
-	cpeMac := "ABCDEF012345"
+	cpeMac := "7A:86:0A:C2:6D:7B" // 22.1976%
 	isFit := FitsPercent(cpeMac, float64(22.2))
 	t.Logf("isFit=%v\n", isFit)
 	assert.Assert(t, isFit)
@@ -39,7 +39,7 @@ func TestFitsPercent(t *testing.T) {
 }
 
 func TestFitsStartAndEndPercent1(t *testing.T) {
-	cpeMac := "04:02:10:00:00:01"
+	cpeMac := "C2:4B:03:3C:8D:8C" // 84.9997%
 	isFit1 := FitsPercent(cpeMac, float64(50))
 	t.Logf("isFit1=%v\n", isFit1)
 	assert.Assert(t, !isFit1)
@@ -51,7 +51,7 @@ func TestFitsStartAndEndPercent1(t *testing.T) {
 }
 
 func TestFitsStartAndEndPercent2(t *testing.T) {
-	cpeMac := "04:02:10:00:00:01"
+	cpeMac := "4E:53:C6:5B:28:F9" // 89.998%
 	isFit1 := FitsPercent(cpeMac, float64(80))
 	t.Logf("isFit1=%v\n", isFit1)
 	assert.Assert(t, !isFit1)

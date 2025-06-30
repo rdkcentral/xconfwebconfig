@@ -24,18 +24,18 @@ import (
 )
 
 var (
-	RuleFactoryMAC               = re.NewFreeArg("STRING", common.ESTB_MAC)
-	RuleFactoryIP                = re.NewFreeArg("STRING", common.IP_ADDRESS)
-	RuleFactoryVERSION           = re.NewFreeArg("STRING", common.FIRMWARE_VERSION)
-	RuleFactoryENV               = re.NewFreeArg("STRING", common.ENV)
-	RuleFactoryMODEL             = re.NewFreeArg("STRING", common.MODEL)
-	RuleFactoryFIRMWARE_VERSION  = re.NewFreeArg("STRING", common.FIRMWARE_VERSION)
-	RuleFactoryREGEX             = re.NewFreeArg("STRING", common.FIRMWARE_VERSION)
-	RuleFactoryMATCHED_RULE_TYPE = re.NewFreeArg("STRING", common.MATCHED_RULE_TYPE)
-	RuleFactoryTIME_ZONE         = re.NewFreeArg("STRING", common.TIME_ZONE) // may be "UTC"
-	RuleFactoryTIME              = re.NewFreeArg("TIME", common.TIME)
-	RuleFactoryLOCAL_TIME        = re.NewFreeArg("STRING", common.TIME)
-
+	RuleFactoryMAC                  = re.NewFreeArg("STRING", common.ESTB_MAC)
+	RuleFactoryIP                   = re.NewFreeArg("STRING", common.IP_ADDRESS)
+	RuleFactoryVERSION              = re.NewFreeArg("STRING", common.FIRMWARE_VERSION)
+	RuleFactoryENV                  = re.NewFreeArg("STRING", common.ENV)
+	RuleFactoryMODEL                = re.NewFreeArg("STRING", common.MODEL)
+	RuleFactoryFIRMWARE_VERSION     = re.NewFreeArg("STRING", common.FIRMWARE_VERSION)
+	RuleFactoryREGEX                = re.NewFreeArg("STRING", common.FIRMWARE_VERSION)
+	RuleFactoryMATCHED_RULE_TYPE    = re.NewFreeArg("STRING", common.MATCHED_RULE_TYPE)
+	RuleFactoryTIME_ZONE            = re.NewFreeArg("STRING", common.TIME_ZONE) // may be "UTC"
+	RuleFactoryTIME                 = re.NewFreeArg("TIME", common.TIME)
+	RuleFactoryLOCAL_TIME           = re.NewFreeArg("STRING", common.TIME)
+	RuleFactoryCERT_EXPIRY_DURATION = re.NewFreeArg("LONG", common.CERT_EXPIRY_DURATION)
 	// required for TimeFilter. it must be added after rules matching
 	RuleFactoryFIRMWARE_DOWNLOAD_PROTOCOL = re.NewFreeArg("STRING", common.DOWNLOAD_PROTOCOL) // tftp or http
 	RuleFactoryREBOOT_DECOUPLED           = re.NewFreeArg("ANY", common.REBOOT_DECOUPLED)
@@ -164,7 +164,7 @@ func createGlobalPercentFilter(percent float64, ipList string, isTemplate bool) 
 
 // NewEnvModelRule
 func (f *RuleFactory) NewEnvModelRule(env string, model string) re.Rule {
-	envModelRule := re.NewEmptyRule()
+	//envModelRule := re.NewEmptyRule()
 
 	envRule := re.Rule{}
 	envRule.SetCondition(re.NewCondition(RuleFactoryENV, re.StandardOperationIs, re.NewFixedArg(env)))
@@ -172,10 +172,12 @@ func (f *RuleFactory) NewEnvModelRule(env string, model string) re.Rule {
 	modelRule := re.Rule{}
 	modelRule.SetCondition(re.NewCondition(RuleFactoryMODEL, re.StandardOperationIs, re.NewFixedArg(model)))
 
-	envModelRule.AddCompoundPart(envRule)
-	envModelRule.AddCompoundPart(modelRule)
+	// envModelRule.AddCompoundPart(envRule)
+	// envModelRule.AddCompoundPart(modelRule)
 
-	return *envModelRule
+	// return *envModelRule
+	envModelRule := re.AndRules(envRule, modelRule)
+	return envModelRule
 }
 
 // NewModelRule
@@ -337,7 +339,7 @@ func (f *RuleFactory) NewIpFilter(listName string) *re.Rule {
 }
 
 // NewGlobalPercentFilter
-func (f *RuleFactory) NewGlobalPercentFilter(percent float32, ipList string) *re.Rule {
+func (f *RuleFactory) NewGlobalPercentFilter(percent float64, ipList string) *re.Rule {
 	excludedRules := []string{"ENV_MODEL_RULE", "MIN_CHECK_RULE", "IV_RULE"}
 	rule := re.Rule{}
 	rule.SetCondition(re.NewCondition(RuleFactoryMATCHED_RULE_TYPE, re.StandardOperationIn, re.NewFixedArg(excludedRules)))
@@ -349,7 +351,7 @@ func (f *RuleFactory) NewGlobalPercentFilter(percent float32, ipList string) *re
 	if ipList != "" {
 		rule2 := re.Rule{}
 		rule2.SetCondition(re.NewCondition(RuleFactoryIP, RuleFactoryIN_LIST, re.NewFixedArg(ipList)))
-		rule = re.AndRules(rule, rule1)
+		rule = re.AndRules(rule, rule2)
 
 	}
 	return &rule

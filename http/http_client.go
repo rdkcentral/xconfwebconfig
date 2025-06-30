@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"xconfwebconfig/common"
-	"xconfwebconfig/util"
 
 	"github.com/go-akka/configuration"
 	"github.com/google/uuid"
@@ -39,6 +38,7 @@ import (
 const (
 	defaultConnectTimeout      = 30
 	defaultReadTimeout         = 30
+	defaultMaxIdleConns        = 0
 	defaultMaxIdleConnsPerHost = 100
 	defaultKeepaliveTimeout    = 30
 	defaultRetries             = 3
@@ -62,6 +62,9 @@ func NewHttpClient(conf *configuration.Config, serviceName string, tlsConfig *tl
 	confKey = fmt.Sprintf("xconfwebconfig.%v.read_timeout_in_secs", serviceName)
 	readTimeout := int(conf.GetInt32(confKey, defaultReadTimeout))
 
+	confKey = fmt.Sprintf("xconfwebconfig.%v.max_idle_conns", serviceName)
+	maxIdleConns := int(conf.GetInt32(confKey, defaultMaxIdleConns))
+
 	confKey = fmt.Sprintf("xconfwebconfig.%v.max_idle_conns_per_host", serviceName)
 	maxIdleConnsPerHost := int(conf.GetInt32(confKey, defaultMaxIdleConnsPerHost))
 
@@ -81,7 +84,7 @@ func NewHttpClient(conf *configuration.Config, serviceName string, tlsConfig *tl
 					Timeout:   time.Duration(connectTimeout) * time.Second,
 					KeepAlive: time.Duration(keepaliveTimeout) * time.Second,
 				}).DialContext,
-				MaxIdleConns:          0,
+				MaxIdleConns:          maxIdleConns,
 				MaxIdleConnsPerHost:   maxIdleConnsPerHost,
 				IdleConnTimeout:       time.Duration(keepaliveTimeout) * time.Second,
 				TLSHandshakeTimeout:   10 * time.Second,
@@ -103,6 +106,12 @@ func NewHttpClient(conf *configuration.Config, serviceName string, tlsConfig *tl
 // Returns: response body as bytes, any err, whether a retry is useful or not, and the status code
 func (c *HttpClient) Do(method string, url string, headers map[string]string, bbytes []byte, baseFields log.Fields, loggerName string, retry int) ([]byte, error, bool, int) {
 	// verify a response is received
+	var respMoracideTagsFound bool
+	defer func(found *bool) {
+		if !*found {
+			log.Debugf("http_client: no moracide tags in response")
+		}
+	}(&respMoracideTagsFound)
 
 	// statusCode is used in metrics
 	statusCode := http.StatusInternalServerError // Default status to return
@@ -112,10 +121,12 @@ func (c *HttpClient) Do(method string, url string, headers map[string]string, bb
 	switch method {
 	case "GET":
 		req, err = http.NewRequest(method, url, nil)
-	case "POST", "PATCH":
-		req, err = http.NewRequest(method, url, bytes.NewReader(bbytes))
-	case "DELETE":
-		req, err = http.NewRequest(method, url, nil)
+	case "POST", "PATCH", "DELETE":
+		if len(bbytes) > 0 {
+			req, err = http.NewRequest(method, url, bytes.NewReader(bbytes))
+		} else {
+			req, err = http.NewRequest(method, url, nil)
+		}
 	default:
 		return nil, fmt.Errorf("method=%v", method), false, statusCode
 	}
@@ -124,6 +135,7 @@ func (c *HttpClient) Do(method string, url string, headers map[string]string, bb
 		return nil, err, true, statusCode
 	}
 
+	c.addMoracideTags(headers, baseFields)
 	logHeaders := map[string]string{}
 	for k, v := range headers {
 		req.Header.Set(k, v)
@@ -134,7 +146,7 @@ func (c *HttpClient) Do(method string, url string, headers map[string]string, bb
 		}
 	}
 
-	tfields := util.CopyLogFields(baseFields)
+	tfields := common.FilterLogFields(baseFields)
 	tfields["logger"] = loggerName
 
 	urlKey := fmt.Sprintf("%v_url", loggerName)
@@ -150,7 +162,7 @@ func (c *HttpClient) Do(method string, url string, headers map[string]string, bb
 	if len(bbytes) > 0 {
 		tfields[bodyKey] = string(bbytes)
 	}
-	fields := util.CopyLogFields(tfields)
+	fields := common.CopyLogFields(tfields)
 
 	var startMessage string
 	if retry > 0 {
@@ -181,6 +193,10 @@ func (c *HttpClient) Do(method string, url string, headers map[string]string, bb
 
 	errorKey := fmt.Sprintf("%v_error", loggerName)
 
+	if res != nil {
+		respMoracideTagsFound = c.addMoracideTagsFromResponse(res.Header, baseFields)
+	}
+
 	if err != nil {
 		fields[errorKey] = err.Error()
 		log.WithFields(fields).Info(endMessage)
@@ -202,7 +218,7 @@ func (c *HttpClient) Do(method string, url string, headers map[string]string, bb
 	}
 
 	var rbody string
-	if loggerName == Ws.SatServiceConnector.name && res.StatusCode == http.StatusOK {
+	if loggerName == Ws.SatServiceConnector.SatServiceName() && res.StatusCode == http.StatusOK {
 		rbody = "****"
 	} else if loggerName == "xpc" && strings.HasSuffix(url, "/api/v1/common/sat") && res.StatusCode == http.StatusOK {
 		rbody = "****"
@@ -242,7 +258,7 @@ func (c *HttpClient) Do(method string, url string, headers map[string]string, bb
 
 func (c *HttpClient) DoWithRetries(method string, url string, inHeaders map[string]string, bbytes []byte, fields log.Fields, loggerName string) ([]byte, error) {
 	var traceId string
-	if itf, ok := fields["trace_id"]; ok {
+	if itf, ok := fields["xmoney_trace_id"]; ok {
 		traceId = itf.(string)
 	}
 	if len(traceId) == 0 {
@@ -283,10 +299,46 @@ func (c *HttpClient) DoWithRetries(method string, url string, inHeaders map[stri
 		}
 	}
 
-	updateExternalAPIMetrics(statusCode, method, loggerName, startTimeForAllRetries)
+	if Ws.metricsEnabled && Ws.AppMetrics != nil {
+		Ws.AppMetrics.UpdateExternalAPIMetrics(loggerName, method, statusCode, startTimeForAllRetries)
+	}
 
 	if err != nil {
 		return rbytes, err
 	}
 	return rbytes, nil
+}
+
+// addMoracideTags - if ctx has a moracide tag as a header, add it to the headers
+// Also add traceparent, tracestate headers
+func (c *HttpClient) addMoracideTags(header map[string]string, fields log.Fields) {
+	if itf, ok := fields["out_traceparent"]; ok {
+		if ss, ok := itf.(string); ok {
+			if len(ss) > 0 {
+				header[common.HeaderTraceparent] = ss
+			}
+		}
+	}
+	if itf, ok := fields["out_tracestate"]; ok {
+		if ss, ok := itf.(string); ok {
+			if len(ss) > 0 {
+				header[common.HeaderTracestate] = ss
+			}
+		}
+	}
+
+	moracide := common.FieldsGetString(fields, "req_moracide_tag")
+	if len(moracide) > 0 {
+		header[common.HeaderMoracide] = moracide
+	}
+}
+
+func (c *HttpClient) addMoracideTagsFromResponse(header http.Header, fields log.Fields) bool {
+	var respMoracideTagsFound bool
+	moracide := header.Get(common.HeaderMoracide)
+	if len(moracide) > 0 {
+		fields["resp_moracide_tag"] = moracide
+		respMoracideTagsFound = true
+	}
+	return respMoracideTagsFound
 }

@@ -18,7 +18,6 @@
 package rulesengine
 
 import (
-	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -90,8 +89,6 @@ func (f *RuleProcessorFactory) RuleProcessor() *RuleProcessor {
 }
 
 func evalRange(freeArgValue string, fixedArgValueItf interface{}) bool {
-	quotedFreeArgValue := fmt.Sprintf(`"%v"`, freeArgValue)
-
 	fixedArgValue, ok := fixedArgValueItf.(string)
 	if !ok {
 		return false
@@ -110,5 +107,5 @@ func evalRange(freeArgValue string, fixedArgValueItf interface{}) bool {
 	if err != nil || highRange <= 0 {
 		return false
 	}
-	return !FitsPercent(quotedFreeArgValue, lowRange) && FitsPercent(quotedFreeArgValue, highRange)
+	return !FitsPercent(freeArgValue, lowRange) && FitsPercent(freeArgValue, highRange)
 }

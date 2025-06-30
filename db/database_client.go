@@ -20,6 +20,7 @@ package db
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 var dbClient DatabaseClient
@@ -101,7 +102,6 @@ type DatabaseClient interface {
 	DeleteXconfDataTwoKeys(tableName string, rowKey string, key2FieldName string, key2 interface{}) error
 	GetAllXconfTwoKeys(tableName string, key2FieldName string) []TwoKeys
 	GetAllXconfKey2s(tableName string, rowKey string, key2FieldName string) []interface{}
-
 	// Xconf compressed data
 	SetXconfCompressedData(tableName string, rowKey string, values [][]byte, ttl int) error
 	GetXconfCompressedData(tableName string, rowKey string) ([]byte, error)
@@ -116,4 +116,20 @@ type DatabaseClient interface {
 
 	// not found
 	IsDbNotFound(error) bool
+
+	//Penetration Metrics
+	SetFwPenetrationMetrics(*FwPenetrationMetrics) error
+	GetFwPenetrationMetrics(string) (*FwPenetrationMetrics, error)
+	SetRfcPenetrationMetrics(*RfcPenetrationMetrics) error
+	GetRfcPenetrationMetrics(string) (*RfcPenetrationMetrics, error)
+	UpdateFwPenetrationMetrics(map[string]string) error
+	GetEstbIp(string) (string, error)
+
+	SetRecookingStatus(module string, partitionId string, state int) error
+	GetRecookingStatus(module string, partitionId string) (int, time.Time, error)
+	CheckFinalRecookingStatus(module string) (bool, time.Time, error)
+
+	////XPC precook reference data
+	SetPrecookDataInXPC(RfcPrecookHash string, RfcPrecookPayload []byte) error
+	GetPrecookDataFromXPC(RfcPrecookHash string) ([]byte, string, error)
 }

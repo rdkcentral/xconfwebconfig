@@ -69,6 +69,7 @@ const (
 	TABLE_LOGS               = "Logs2"
 	TABLE_XCONF_CHANGED_KEYS = "XconfChangedKeys4"
 	TABLE_APP_SETTINGS       = "AppSettings"
+	TABLE_TAG                = "Tag"
 )
 
 var AllTables = []string{
@@ -105,6 +106,7 @@ var AllTables = []string{
 	TABLE_GENERIC_NS_LIST,
 	TABLE_LOGS,
 	TABLE_XCONF_CHANGED_KEYS,
+	TABLE_TAG,
 }
 
 // Two possible values for Key2FieldName
@@ -211,4 +213,5 @@ var xconfDaoIdMap = map[string]int32{
 	TABLE_LOG_FILES_GROUPS:       -867320790,
 	TABLE_NS_LIST:                1409490260,
 	TABLE_APP_SETTINGS:           1,
+	TABLE_TAG:                    1698455800,
 }

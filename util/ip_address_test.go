@@ -23,6 +23,7 @@ import (
 
 	"xconfwebconfig/common"
 
+	log "github.com/sirupsen/logrus"
 	"gotest.tools/assert"
 )
 
@@ -34,31 +35,31 @@ func TestGetIpAddress(t *testing.T) {
 	req, _ := http.NewRequest("GET", "www.test.com", nil)
 
 	// test no ipAddress
-	ipAddress := GetIpAddress(req, "")
+	ipAddress := GetIpAddress(req, "", log.Fields{})
 	assert.Equal(t, ipAddress, "0.0.0.0")
 
 	// test invalid ipAddress
-	ipAddress = GetIpAddress(req, "192.0.2")
+	ipAddress = GetIpAddress(req, "192.0.2", log.Fields{})
 	// assert.Equal(t, ipAddress, "0.0.0.0")
 	assert.Equal(t, ipAddress, "192.0.2")
 
 	// test remote ipAddress
 	req.RemoteAddr = remoteIpAddress
-	ipAddress = GetIpAddress(req, "")
+	ipAddress = GetIpAddress(req, "", log.Fields{})
 	assert.Equal(t, ipAddress, remoteIpAddress)
 
 	// test ipAddress in header
 	req.Header.Set(common.X_FORWARDED_FOR_HEADER, headerIpAddress)
-	ipAddress = GetIpAddress(req, "")
+	ipAddress = GetIpAddress(req, "", log.Fields{})
 	assert.Equal(t, ipAddress, headerIpAddress)
 
 	req.Header.Del(common.X_FORWARDED_FOR_HEADER)
 	req.Header.Set(common.HA_FORWARDED_FOR_HEADER, remoteIpAddress)
-	ipAddress = GetIpAddress(req, "")
+	ipAddress = GetIpAddress(req, "", log.Fields{})
 	assert.Equal(t, ipAddress, remoteIpAddress)
 
 	// test param ipAddress
-	ipAddress = GetIpAddress(req, paramIpAddress)
+	ipAddress = GetIpAddress(req, paramIpAddress, log.Fields{})
 	assert.Equal(t, ipAddress, paramIpAddress)
 }
 

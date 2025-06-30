@@ -15,13 +15,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-GOARCH := amd64
-GOOS := $(shell uname -s | tr "[:upper:]" "[:lower:]")
-
+GOARCH = $(shell go env GOARCH)
+GOOS = $(shell go env GOOS)
 BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 # must be "Version", NOT "VERSION" to be consistent with xpc jenkins env
 Version ?= $(shell git log -1 --pretty=format:"%h")
 BUILDTIME := $(shell date -u +"%F_%T_%Z")
+GRAVBIN := xconfwebconfig-grav
 
 all: build
 
@@ -45,3 +45,7 @@ clean: ## Remove temporary files
 
 release:
 	go build -v -ldflags="-X xconfwebconfig/common.BinaryBranch=${BRANCH} -X xconfwebconfig/common.BinaryVersion=${Version} -X xconfwebconfig/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfwebconfig-${GOOS}-${GOARCH} main.go
+
+grav:
+	@echo "Building Graviton binaries"
+	export GOOS=linux ; export GOARCH=arm64 ; export CGO_ENABLED=0 ; go build -v -ldflags="-X ${REPO}/common.BinaryBranch=${BRANCH} -X ${REPO}/common.BinaryVersion=${Version} -X ${REPO}/common.BinaryBuildTime=${BUILDTIME}" -o bin/${GRAVBIN} main.go

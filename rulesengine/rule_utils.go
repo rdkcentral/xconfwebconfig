@@ -40,12 +40,26 @@ type ruleCount struct {
 	count int
 }
 
+type conditionCount struct {
+	condition Condition
+	count     int
+}
+
+func contains(carray []conditionCount, cond Condition) int {
+	for i, c := range carray {
+		if cond.Equals(&c.condition) {
+			return i
+		}
+	}
+	return -1
+}
+
 func FitsPercent(itf interface{}, percent float64) bool {
 	var bbytes []byte
 
 	switch ty := itf.(type) {
 	case string:
-		bbytes = []byte(ty)
+		bbytes = []byte(fmt.Sprintf(`"%v"`, ty))
 	case int64:
 		bbytes = make([]byte, 8)
 		binary.LittleEndian.PutUint64(bbytes, uint64(ty))
@@ -380,7 +394,7 @@ func IsExistConditionByFreeArgAndFixedArg(rule *Rule, freeArg string, fixedArg s
 	return isExist
 }
 
-func IsExistPartOfSearchValueInFixedArgs(fixedArgs Collection, searchValue string) bool {
+func IsExistPartOfSearchValueInFixedArgs(fixedArgs *Collection, searchValue string) bool {
 	for _, fixedArg := range fixedArgs.Value {
 		if strings.Contains(strings.ToLower(fixedArg), strings.ToLower(searchValue)) {
 			return true
@@ -586,7 +600,7 @@ func ChangeFixedArgToNewValue(oldFixedArgValue string, newFixedArgValue string, 
 		if condition.Operation == operation && condition.FixedArg != nil && condition.FixedArg.IsStringValue() {
 			fixedArgValue := condition.FixedArg.GetValue().(string)
 			if fixedArgValue == oldFixedArgValue {
-				condition.FixedArg.Bean.Value.JLString = newFixedArgValue
+				condition.FixedArg.Bean.Value.JLString = &newFixedArgValue
 				isChanged = true
 			}
 		}
@@ -648,14 +662,23 @@ func getDuplicateNonCompoundRules(nonCompoundRules []Rule) (result []Rule) {
 	return result
 }
 
-func NormalizeConditions(rule *Rule) {
+func NormalizeConditions(rule *Rule) error {
+	if rule == nil {
+		return nil
+	}
 	conditions := ToConditions(rule)
 	for _, condition := range conditions {
-		NormalizeCondition(condition)
+		if err := NormalizeCondition(condition); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func NormalizeCondition(condition *Condition) {
+func NormalizeCondition(condition *Condition) error {
+	if condition == nil {
+		return nil
+	}
 	freeArg := condition.FreeArg
 	if freeArg != nil {
 		freeArg.Name = strings.Trim(freeArg.Name, " ")
@@ -666,43 +689,69 @@ func NormalizeCondition(condition *Condition) {
 		normalizeFixedArgValue(fixedArg, freeArg, condition.Operation)
 	}
 
-	normalizeMacAddress(condition)
+	if err := normalizeMacAddress(condition); err != nil {
+		return err
+	}
 	normalizePartnerId(condition)
+	return nil
 }
 
 func normalizeFixedArgValue(fixedArg *FixedArg, freeArg *FreeArg, operation string) {
+	if fixedArg == nil || freeArg == nil {
+		return
+	}
 	if fixedArg.IsCollectionValue() {
 		for i, value := range fixedArg.Collection.Value {
 			normalizedValue := strings.Trim(value, " ")
 			fixedArg.Collection.Value[i] = modifyFixedArgDependingOnFreeArgAndOperation(normalizedValue, freeArg, operation)
 		}
-	} else if len(fixedArg.Bean.Value.JLString) > 0 {
-		normalizedValue := strings.Trim(fixedArg.Bean.Value.JLString, " ")
-		fixedArg.Bean.Value.JLString = modifyFixedArgDependingOnFreeArgAndOperation(normalizedValue, freeArg, operation)
+	} else if fixedArg.IsStringValue() {
+		normalizedValue := strings.Trim(*fixedArg.Bean.Value.JLString, " ")
+		var tmp = modifyFixedArgDependingOnFreeArgAndOperation(normalizedValue, freeArg, operation)
+		fixedArg.Bean.Value.JLString = &tmp
 	}
 }
 
-func normalizeMacAddress(condition *Condition) {
+func normalizeMacAddress(condition *Condition) error {
+	if condition == nil {
+		return nil
+	}
 	macAddressNames := []string{common.ESTB_MAC, common.ECM_MAC, common.ECM_MAC_ADDRESS, common.ESTB_MAC_ADDRESS}
 	if condition.FixedArg != nil && condition.FixedArg.GetValue() != nil &&
 		condition.FreeArg != nil && util.Contains(macAddressNames, condition.FreeArg.Name) {
 		if StandardOperationIs == condition.Operation || StandardOperationLike == condition.Operation {
-			normalizedMac := util.NormalizeMacAddress(condition.FixedArg.Bean.Value.JLString)
-			condition.FixedArg.Bean.Value.JLString = normalizedMac
+			if condition.FixedArg.IsStringValue() {
+				rawVal := *condition.FixedArg.Bean.Value.JLString
+				normalizedMac, err := util.ValidateAndNormalizeMacAddress(rawVal)
+				if err != nil {
+					return common.NewRemoteError(http.StatusBadRequest, "Invalid Mac Address:"+rawVal)
+				}
+				condition.FixedArg.Bean.Value.JLString = &normalizedMac
+			}
 		} else if StandardOperationIn == condition.Operation {
 			for i, value := range condition.FixedArg.Collection.Value {
-				normalizedMac := util.NormalizeMacAddress(value)
+				normalizedMac, err := util.ValidateAndNormalizeMacAddress(value)
+				if err != nil {
+					return common.NewRemoteError(http.StatusBadRequest, "Invalid Mac Address:"+value)
+				}
 				condition.FixedArg.Collection.Value[i] = normalizedMac
 			}
 		}
 	}
+	return nil
 }
 
 func normalizePartnerId(condition *Condition) {
+	if condition == nil {
+		return
+	}
 	if condition.FixedArg != nil && condition.FixedArg.GetValue() != nil &&
 		condition.FreeArg != nil && condition.FreeArg.Name == common.PARTNER_ID {
 		if StandardOperationIs == condition.Operation {
-			condition.FixedArg.Bean.Value.JLString = strings.ToUpper(condition.FixedArg.Bean.Value.JLString)
+			if condition.FixedArg.IsStringValue() {
+				var tmp = strings.ToUpper(*condition.FixedArg.Bean.Value.JLString)
+				condition.FixedArg.Bean.Value.JLString = &tmp
+			}
 		} else if StandardOperationIn == condition.Operation {
 			for i, value := range condition.FixedArg.Collection.Value {
 				condition.FixedArg.Collection.Value[i] = strings.ToUpper(value)
@@ -729,16 +778,19 @@ func isMacAddressFreeArgByOperation(freeArg *FreeArg, operation string) bool {
 }
 
 func GetDuplicateConditionsBetweenOR(rule Rule) (result []Condition) {
+	if &rule == nil {
+		return result
+	}
 	rules := FlattenRule(rule)
 	split := []Condition{}
 	for _, one := range rules {
 		if RelationOr == one.Relation {
-			result = append(result, GetDuplicateConditions(split)...)
+			result = append(result, GetDuplicateConditionsForAdmin(split)...)
 			split = []Condition{}
 		}
 		split = append(split, *one.Condition)
 	}
-	result = append(result, GetDuplicateConditions(split)...)
+	result = append(result, GetDuplicateConditionsForAdmin(split)...)
 	return result
 }
 
@@ -760,5 +812,26 @@ func GetDuplicateConditions(conditions []Condition) (result []Condition) {
 		}
 	}
 
+	return result
+}
+
+func GetDuplicateConditionsForAdmin(conditions []Condition) (result []Condition) {
+	condCounts := []conditionCount{}
+	for _, cond := range conditions {
+		pos := contains(condCounts, cond)
+		if pos != -1 {
+			condCounts[pos].count++
+		} else {
+			temp := conditionCount{}
+			temp.count = 1
+			temp.condition = cond
+			condCounts = append(condCounts, temp)
+		}
+	}
+	for _, c := range condCounts {
+		if c.count != 1 {
+			result = append(result, c.condition)
+		}
+	}
 	return result
 }

@@ -31,14 +31,13 @@ import (
 	b64 "encoding/base64"
 	"fmt"
 	"io"
-	"os"
 )
 
 /*
 ## DESCRIPTION
 % ENCRYPTION:
 
-xpc does not encrypt only the text.
+we does not encrypt only the text.
 we first generate a sha1 digest
 
 digest = digest(iv, plaintext)
@@ -69,29 +68,12 @@ type AesCodec struct {
 // for controlled testing only
 // var staticIv []byte{111, 114, 219, 23, 120, 151, 157, 32, 117, 31, 98, 99, 106, 3, 169, 224}
 
-func NewAesCodec() *AesCodec {
-	xpckeyB64 := ""
-
-	envs := os.Environ()
-	for _, line := range envs {
-		if len(line) > 8 {
-			prefix := line[:8]
-			if prefix == "SAT_KEY=" {
-				xpckeyB64 = line[8:]
-				break
-			}
-		}
-		// fmt.Println(v)
-	}
-
-	if xpckeyB64 == "" {
-		panic(fmt.Errorf("missing env SAT_KEY"))
-	}
-
-	key, err := b64.StdEncoding.DecodeString(xpckeyB64)
+func NewAesCodec(keyB64 string) *AesCodec {
+	key, err := b64.StdEncoding.DecodeString(keyB64)
 	if err != nil {
 		panic(err)
 	}
+
 	return &AesCodec{
 		key: key,
 	}
@@ -206,6 +188,56 @@ func (c *AesCodec) Encrypt(plaintextstr string) (string, error) {
 	// be secure.
 
 	return b64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func (c *AesCodec) EncryptWithoutPadding(plaintextstr string) (string, error) {
+	ct, err := aes.NewCipher(c.key)
+	if err != nil {
+		return "", err
+	}
+
+	gcm, err := cipher.NewGCM(ct)
+	if err != nil {
+		return "", err
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+
+	ciphertext := gcm.Seal(nonce, nonce, []byte(plaintextstr), nil)
+
+	return b64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func (c *AesCodec) DecryptWithoutPadding(encryptedB64 string) (string, error) {
+	ciphertext, err := b64.StdEncoding.DecodeString(encryptedB64)
+	if err != nil {
+		return "", err
+	}
+
+	ct, err := aes.NewCipher(c.key)
+	if err != nil {
+		return "", err
+	}
+
+	gcm, err := cipher.NewGCM(ct)
+	if err != nil {
+		return "", err
+	}
+
+	nonceSize := gcm.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return "", err
+	}
+
+	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return "", err
+	}
+	return string(plaintext), nil
 }
 
 func Padding(ciphertext []byte, blockSize int) []byte {

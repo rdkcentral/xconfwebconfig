@@ -19,8 +19,6 @@ package util
 
 import (
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Dict map[string]interface{}
@@ -107,14 +105,6 @@ func (d Dict) Copy() Dict {
 		newd[k] = v
 	}
 	return newd
-}
-
-func CopyLogFields(src log.Fields) log.Fields {
-	fields := log.Fields{}
-	for k, v := range src {
-		fields[k] = v
-	}
-	return fields
 }
 
 func (d Dict) SelectByKeys(names ...string) Dict {

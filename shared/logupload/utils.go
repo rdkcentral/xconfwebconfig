@@ -46,6 +46,10 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 		output.LusScheduleCronL2 = ""
 		output.LusScheduleCronL3 = ""
 
+		// The randomization below is used for load balancing purposes and to control the gradual rollout
+		// of log upload settings to devices. This ensures that not all devices attempt to upload logs
+		// simultaneously, which would potentially overwhelm the servers.
+		// NOTE: This randomization is NOT suitable for security or cryptographic purposes.
 		var lusSettingsCopied = false
 		var randomPercentage = util.RandomPercentage()
 		if randomPercentage <= rule.Percentage {
@@ -58,7 +62,7 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 			output.CopyLusSetting(settings, false)
 		}
 		output.RuleIDs[rule.ID] = rule.Name
-		log.WithFields(fields).Info("SettingsUtil Received attributes from device: " + rule.ToStringOnlyBaseProperties() + "  Applied rule for Log Upload Settings: ") //+ this.toString())
+		log.WithFields(common.FilterLogFields(fields)).Info("SettingsUtil Received attributes from device: " + rule.ToStringOnlyBaseProperties() + "  Applied rule for Log Upload Settings: ") //+ this.toString())
 
 		//if timeWindow is 0 then return non-random cron expression.
 		//Randomize getSettings request time cron expression.This shall return random cron expression for each request, with in the range of initial cron and time window.
@@ -71,11 +75,15 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 		if len(randomCronExp) > 0 {
 			output.LusScheduleCron = randomCronExp
 		}
-		p1 := rule.PercentageL1
-		p2 := rule.PercentageL2
-		p3 := rule.PercentageL3
+		p1, _ := rule.PercentageL1.Int64()
+		p2, _ := rule.PercentageL2.Int64()
+		p3, _ := rule.PercentageL3.Int64()
+		// Secondary randomization for distributing devices among different log upload schedule levels.
+		// This implements a tiered distribution system where different percentages of devices
+		// get assigned to different upload schedules (L1, L2, L3).
+		// Again, this randomization is for load balancing and NOT for security purposes.
 		randomPercentage = util.RandomPercentage()
-		if randomPercentage <= p1 {
+		if randomPercentage <= int(p1) {
 			lusScheduleCron := settings.LusScheduleCronL1
 			randomCron := randomizeCronIfNecessary(lusScheduleCron, settings.LusScheduleDurationMinutes, isDayRandomized, context, output.LusTimeZoneMode, "logUploadCronL1", fields)
 			if len(randomCron) > 0 {
@@ -83,7 +91,7 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 			} else {
 				output.LusScheduleCronL1 = lusScheduleCron
 			}
-		} else if randomPercentage <= p1+p2 {
+		} else if randomPercentage <= int(p1+p2) {
 			lusScheduleCron := settings.LusScheduleCronL2
 			randomCron := randomizeCronIfNecessary(lusScheduleCron, settings.LusScheduleDurationMinutes, isDayRandomized, context, output.LusTimeZoneMode, "logUploadCronL2", fields)
 			if len(randomCron) > 0 {
@@ -91,7 +99,7 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 			} else {
 				output.LusScheduleCronL2 = lusScheduleCron
 			}
-		} else if randomPercentage <= p1+p2+p3 {
+		} else if randomPercentage <= int(p1+p2+p3) {
 			lusScheduleCron := settings.LusScheduleCronL3
 			randomCron := randomizeCronIfNecessary(lusScheduleCron, settings.LusScheduleDurationMinutes, isDayRandomized, context, output.LusTimeZoneMode, "logUploadCronL3", fields)
 			if len(randomCron) > 0 {
@@ -100,14 +108,14 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 				output.LusScheduleCronL3 = lusScheduleCron
 			}
 		}
-		if !lusSettingsCopied && randomPercentage <= p1+p2+p3 {
+		if !lusSettingsCopied && randomPercentage <= int(p1+p2+p3) {
 			output.CopyLusSetting(settings, true)
 		}
 	}
 	if len(output.VodSettingsName) < 1 && len(settings.VodSettingsName) > 0 {
 		output.CopyVodSettings(settings)
 		output.RuleIDs[rule.ID] = rule.Name
-		log.WithFields(fields).Info("SettingsUtil Received attributes from device: " + rule.ToStringOnlyBaseProperties() + "  Applied rule for VOD settings.")
+		log.WithFields(common.FilterLogFields(fields)).Info("SettingsUtil Received attributes from device: " + rule.ToStringOnlyBaseProperties() + "  Applied rule for VOD settings.")
 	}
 	return output
 }

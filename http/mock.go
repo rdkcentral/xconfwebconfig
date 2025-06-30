@@ -36,6 +36,7 @@ func (server *XconfServer) SetupMocks() {
 	server.mockTagging()
 	server.mockAccountService()
 	server.mockGroupService()
+	server.mockGroupServiceSync()
 }
 
 func (server *XconfServer) mockSatService() {
@@ -84,13 +85,21 @@ func (server *XconfServer) mockAccountService() {
 }
 
 func (server *XconfServer) mockGroupService() {
-	mockResponse := []byte(`{"hasAccountServiceData": true,"serviceAccountUri": "123456789012345","partnerId": "unittesting"}`)
-
-	// SatService mock server
+	// GroupService mock server
 	mockServer := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write(mockResponse)
+			w.Write([]byte(mockEmptyResponse))
 		}))
-	server.SetSatServiceHost(mockServer.URL)
+	server.GroupServiceConnector.SetGroupServiceHost(mockServer.URL)
+}
+
+func (server *XconfServer) mockGroupServiceSync() {
+	// GroupServiceSync mock server
+	mockServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(mockEmptyResponse))
+		}))
+	server.GroupServiceSyncConnector.SetGroupServiceSyncHost(mockServer.URL)
 }

@@ -117,6 +117,8 @@ type ConfigEntry struct {
 	Percentage        float64 `json:"percentage"`
 	StartPercentRange float64 `json:"startPercentRange"`
 	EndPercentRange   float64 `json:"endPercentRange"`
+	IsPaused          bool    `json:"isPaused"`
+	IsCanaryDisabled  bool    `json:"isCanaryDisabled"`
 }
 
 func NewConfigEntry(configId string, startPercentRange float64, endPercentRange float64) *ConfigEntry {
@@ -136,7 +138,8 @@ func (c *ConfigEntry) Equals(configEntry *ConfigEntry) bool {
 		c.ConfigId == configEntry.ConfigId &&
 		c.Percentage == configEntry.Percentage &&
 		c.StartPercentRange == configEntry.StartPercentRange &&
-		c.EndPercentRange == configEntry.EndPercentRange
+		c.EndPercentRange == configEntry.EndPercentRange &&
+		c.IsPaused == c.IsPaused
 }
 
 func (c *ConfigEntry) CompareTo(configEntry *ConfigEntry) int {

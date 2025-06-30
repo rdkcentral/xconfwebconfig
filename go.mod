@@ -17,46 +17,63 @@
 //
 module xconfwebconfig
 
-go 1.17
+go 1.23.0
+
+toolchain go1.23.3
 
 require (
 	github.com/Comcast/goburrow-cache v1.0.2
 	github.com/aead/siphash v1.0.1
-	github.com/agrison/go-commons-lang v0.0.0-20200208220349-58e9fcb95174
+	github.com/agrison/go-commons-lang v0.0.0-20230627184709-5cc85301fd96
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82
 	github.com/go-akka/configuration v0.0.0-20200606091224-a002c0330665
-	github.com/gocql/gocql v0.0.0-20210129204804-4364a4b9cfdd
-	github.com/golang/snappy v0.0.3
-	github.com/google/go-cmp v0.5.2
-	github.com/google/uuid v1.1.1
-	github.com/gorilla/mux v1.7.0
+	github.com/gocql/gocql v1.6.0
+	github.com/golang/snappy v0.0.4
+	github.com/google/uuid v1.6.0
+	github.com/gorilla/mux v1.7.4
 	github.com/mitchellh/copystructure v1.2.0
-	github.com/prometheus/client_golang v1.0.0
-	github.com/sirupsen/logrus v1.8.1
+	github.com/prometheus/client_golang v1.18.0
+	github.com/sirupsen/logrus v1.9.3
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/zenazn/pkcs7pad v0.0.0-20170308005700-253a5b1f0e03
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	google.golang.org/protobuf v1.23.0
+	go.opentelemetry.io/otel v1.27.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.27.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.27.0
+	go.opentelemetry.io/otel/sdk v1.27.0
+	go.opentelemetry.io/otel/trace v1.27.0
+	golang.org/x/crypto v0.36.0
+	google.golang.org/protobuf v1.34.1
 	gotest.tools v2.2.0+incompatible
 )
 
 require (
-	github.com/beorn7/perks v1.0.0 // indirect
-	github.com/golang/protobuf v1.4.0 // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/go-logr/logr v1.4.1 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
-	github.com/kr/pretty v0.2.0 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
-	github.com/prometheus/common v0.4.1 // indirect
-	github.com/prometheus/procfs v0.0.2 // indirect
-	github.com/stretchr/testify v1.6.1 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/prometheus/client_model v0.5.0 // indirect
+	github.com/prometheus/common v0.45.0 // indirect
+	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
-	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f // indirect
-	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
-	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.27.0 // indirect
+	go.opentelemetry.io/otel/metric v1.27.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.2.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240520151616-dc85e6b867a5 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240515191416-fc5f0ca64291 // indirect
+	google.golang.org/grpc v1.64.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 )

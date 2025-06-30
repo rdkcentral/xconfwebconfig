@@ -36,11 +36,11 @@ type UploadProtocol string
 
 const (
 	TFTP  UploadProtocol = "TFTP"
-	SFTP                 = "SFTP"
-	SCP                  = "SCP"
-	HTTP                 = "HTTP"
-	HTTPS                = "HTTPS"
-	S3                   = "S3"
+	SFTP  UploadProtocol = "SFTP"
+	SCP   UploadProtocol = "SCP"
+	HTTP  UploadProtocol = "HTTP"
+	HTTPS UploadProtocol = "HTTPS"
+	S3    UploadProtocol = "S3"
 )
 
 var urlRe = regexp.MustCompile(`^[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$`)
@@ -91,7 +91,9 @@ func (obj *UploadRepository) Clone() (*UploadRepository, error) {
 
 // NewUploadRepositoryInf constructor
 func NewUploadRepositoryInf() interface{} {
-	return &UploadRepository{}
+	return &UploadRepository{
+		ApplicationType: shared.STB,
+	}
 }
 
 // LogFile table
@@ -156,38 +158,49 @@ func NewLogFileListInf() interface{} {
 }
 
 type Schedule struct {
-	Type              string      `json:"type"`
-	Expression        string      `json:"expression"`
-	TimeZone          string      `json:"timeZone"`
-	ExpressionL1      string      `json:"expressionL1"`
-	ExpressionL2      string      `json:"expressionL2"`
-	ExpressionL3      string      `json:"expressionL3"`
-	StartDate         string      `json:"startDate"`
-	EndDate           string      `json:"endDate"`
-	TimeWindowMinutes json.Number `json:"timeWindowMinutes"`
+	Type              string      `json:"type,omitempty"`
+	Expression        string      `json:"expression,omitempty"`
+	TimeZone          string      `json:"timeZone,omitempty"`
+	ExpressionL1      string      `json:"expressionL1,omitempty"`
+	ExpressionL2      string      `json:"expressionL2,omitempty"`
+	ExpressionL3      string      `json:"expressionL3,omitempty"`
+	StartDate         string      `json:"startDate,omitempty"`
+	EndDate           string      `json:"endDate,omitempty"`
+	TimeWindowMinutes json.Number `json:"timeWindowMinutes,omitempty"`
 }
-
 type ConfigurationServiceURL struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	URL         string `json:"url"`
+	ID          string `json:"id,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+	URL         string `json:"url,omitempty"`
 }
 
 // DcmRule DcmRule table
 type DCMGenericRule struct {
 	re.Rule
-	ID              string `json:"id"`
-	Updated         int64  `json:"updated"`
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	Priority        int    `json:"priority"`
-	RuleExpression  string `json:"ruleExpression"`
-	Percentage      int    `json:"percentage"`
-	PercentageL1    int    `json:"percentageL1"`
-	PercentageL2    int    `json:"percentageL2"`
-	PercentageL3    int    `json:"percentageL3"`
-	ApplicationType string `json:"applicationType"`
+	ID              string      `json:"id"`
+	Updated         int64       `json:"updated"`
+	Name            string      `json:"name,omitempty"`
+	Description     string      `json:"description,omitempty"`
+	Priority        int         `json:"priority,omitempty"`
+	RuleExpression  string      `json:"ruleExpression,omitempty"`
+	Percentage      int         `json:"percentage,omitempty"`
+	PercentageL1    json.Number `json:"percentageL1,omitempty"`
+	PercentageL2    json.Number `json:"percentageL2,omitempty"`
+	PercentageL3    json.Number `json:"percentageL3,omitempty"`
+	ApplicationType string      `json:"applicationType"`
+}
+
+func (obj *DCMGenericRule) GetPriority() int {
+	return obj.Priority
+}
+
+func (obj *DCMGenericRule) SetPriority(priority int) {
+	obj.Priority = priority
+}
+
+func (obj *DCMGenericRule) GetID() string {
+	return obj.ID
 }
 
 func (obj *DCMGenericRule) Clone() (*DCMGenericRule, error) {
@@ -272,6 +285,22 @@ func GetDCMGenericRuleList() []*DCMGenericRule {
 		cm.ApplicationCacheSet(db.TABLE_DCM_RULE, cacheKey, all)
 	}
 
+	return all
+}
+
+func GetDCMGenericRuleListForAS() []*DCMGenericRule {
+	all := []*DCMGenericRule{}
+	dmcRuleList, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_DCM_RULE, 0)
+	if err != nil {
+		log.Warn("no dmcRule found")
+		return all
+	}
+	for idx := range dmcRuleList {
+		if dmcRuleList[idx] != nil {
+			dmcRule := dmcRuleList[idx].(*DCMGenericRule)
+			all = append(all, dmcRule)
+		}
+	}
 	return all
 }
 
