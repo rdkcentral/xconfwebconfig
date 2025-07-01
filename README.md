@@ -34,7 +34,7 @@ The interface between STBs and Xconf is simple. STBs make HTTP requests to Xconf
 * Cassandra DB
 
 ## Run the application
-1. Run cassandra DB and create a corresponding schema using `db_init.cql` file in `db` folder.
+1. Run cassandra DB and create a corresponding schema using `db/db_init.cql` file in `db` folder.
 2. Use config/sample_xconfwebconfig.conf to add/override specific environments properties.
 4. Build the binary:
 ```shell
