@@ -39,15 +39,17 @@ var satServiceName string
 type SatServiceConnector interface {
 	SatServiceName() string
 	SatServiceHost() string
+	ConsumerHost() string
 	SetSatServiceName(name string)
 	SetSatServiceHost(host string)
 	GetSatTokenFromSatService(fields log.Fields, vargs ...string) (*SatServiceResponse, error)
 }
 
 type DefaultSatService struct {
-	host    string
-	headers map[string]string
-	name    string
+	host         string
+	consumerHost string
+	headers      map[string]string
+	name         string
 	*HttpClient
 }
 
@@ -87,6 +89,10 @@ func NewSatServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, e
 		if util.IsBlank(host) {
 			panic(fmt.Errorf("%s is required", confKey))
 		}
+		consumerHost := conf.GetString("xconfwebconfig.sat_consumer.consumer_host", host)
+		if util.IsBlank(consumerHost) {
+			panic(fmt.Errorf("%s is required", consumerHost))
+		}
 
 		headers := map[string]string{
 			"X-Client-Id":     satClientId,
@@ -94,10 +100,11 @@ func NewSatServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, e
 		}
 
 		return &DefaultSatService{
-			HttpClient: NewHttpClient(conf, satServiceName, tlsConfig),
-			host:       host,
-			headers:    headers,
-			name:       satServiceName,
+			HttpClient:   NewHttpClient(conf, satServiceName, tlsConfig),
+			host:         host,
+			consumerHost: consumerHost,
+			headers:      headers,
+			name:         satServiceName,
 		}
 	}
 }
@@ -112,6 +119,10 @@ func (c *DefaultSatService) SetSatServiceName(name string) {
 
 func (c *DefaultSatService) SatServiceHost() string {
 	return c.host
+}
+
+func (c *DefaultSatService) ConsumerHost() string {
+	return c.consumerHost
 }
 
 func (c *DefaultSatService) SetSatServiceHost(host string) {
