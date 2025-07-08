@@ -18,8 +18,9 @@
 package http
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"testing"
 
 	"gotest.tools/assert"
@@ -35,7 +36,7 @@ func TestSimpleHandler(t *testing.T) {
 	res := ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, 200)
 
-	rbytes, err := ioutil.ReadAll(res.Body)
+	rbytes, err := io.ReadAll(res.Body)
 	assert.NilError(t, err)
 	res.Body.Close()
 	t.Log(string(rbytes))
@@ -46,7 +47,7 @@ func TestSimpleHandler(t *testing.T) {
 	res = ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, 200)
 
-	rbytes, err = ioutil.ReadAll(res.Body)
+	rbytes, err = io.ReadAll(res.Body)
 	assert.NilError(t, err)
 	res.Body.Close()
 	assert.Equal(t, len(rbytes), 0)
@@ -57,7 +58,7 @@ func TestSimpleHandler(t *testing.T) {
 	res = ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, 200)
 
-	rbytes, err = ioutil.ReadAll(res.Body)
+	rbytes, err = io.ReadAll(res.Body)
 	assert.NilError(t, err)
 	res.Body.Close()
 	assert.Equal(t, len(rbytes), 0)
@@ -68,13 +69,13 @@ func TestSimpleHandler(t *testing.T) {
 	res = ExecuteRequest(req, router).Result()
 	assert.Equal(t, res.StatusCode, 200)
 
-	rbytes, err = ioutil.ReadAll(res.Body)
+	rbytes, err = io.ReadAll(res.Body)
 	assert.NilError(t, err)
 	res.Body.Close()
 	t.Log(string(rbytes))
 
 	// get the expected config file
-	configBytes, err := ioutil.ReadFile(testConfigFile)
+	configBytes, err := os.ReadFile(testConfigFile)
 	assert.NilError(t, err)
 	assert.DeepEqual(t, rbytes, configBytes)
 }
