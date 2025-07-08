@@ -22,9 +22,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -95,10 +97,13 @@ type AppMetricsConfig struct {
 }
 
 func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
-	caCertPEM, err := ioutil.ReadFile(conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file"))
+	certFile := conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file")
+	if len(certFile) == 0 {
+		return nil, errors.New("xconfwebconfig.http_client.ca_comodo_cert_file not specified")
+	}
+	caCertPEM, err := os.ReadFile(certFile)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read comodo cert file %s with error: %+v",
-			conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file"), err)
+		return nil, fmt.Errorf("unable to read comodo cert file %s with error: %+v", certFile, err)
 	}
 
 	roots := x509.NewCertPool()
@@ -107,13 +112,13 @@ func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
 		return nil, fmt.Errorf("unable to append cert from pem: %+v", err)
 	}
 
-	certFile := conf.GetString("xconfwebconfig.http_client.cert_file")
+	certFile = conf.GetString("xconfwebconfig.http_client.cert_file")
 	if len(certFile) == 0 {
-		return nil, fmt.Errorf("missing file %v", certFile)
+		return nil, errors.New("xconfwebconfig.http_client.cert_file not specified")
 	}
 	privateKeyFile := conf.GetString("xconfwebconfig.http_client.private_key_file")
 	if len(privateKeyFile) == 0 {
-		return nil, fmt.Errorf("missing file %v", privateKeyFile)
+		return nil, errors.New("xconfwebconfig.http_client.private_key_file not specified")
 	}
 	cert, err := tls.LoadX509KeyPair(certFile, privateKeyFile)
 	if err != nil {
@@ -165,8 +170,10 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 	loguploadSecurityTokenConfig := NewLogUploaderNonMtlSsrTokenPathConfig(conf)
 	firmwareSecurityTokenConfig := NewFirmwareNonMtlSsrTokenPathConfig(conf)
 
-	// tlsConfig, here we ignore any error
-	tlsConfig, _ := NewTlsConfig(conf)
+	tlsConfig, err := NewTlsConfig(conf)
+	if err != nil && !testOnly {
+		panic(err)
+	}
 
 	var serviceHostname string
 	if conf.GetBoolean("xconfwebconfig.server.localhost_only") {
@@ -222,7 +229,7 @@ func (s *XconfServer) TestingMiddleware(next http.Handler) http.Handler {
 
 		if r.Method == "POST" {
 			if r.Body != nil {
-				if rbytes, err := ioutil.ReadAll(r.Body); err == nil {
+				if rbytes, err := io.ReadAll(r.Body); err == nil {
 					xw.SetBody(string(rbytes))
 				}
 			} else {
@@ -361,7 +368,7 @@ func (s *XconfServer) LogRequestStarts(w http.ResponseWriter, r *http.Request) X
 	if r.Method == "POST" || r.Method == "PUT" {
 		var body string
 		if r.Body != nil {
-			b, err := ioutil.ReadAll(r.Body)
+			b, err := io.ReadAll(r.Body)
 			if err != nil {
 				copyFields["error"] = err
 				log.WithFields(copyFields).Error("request starts")

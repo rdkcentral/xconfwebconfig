@@ -18,7 +18,7 @@
 package http
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -95,7 +95,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 
 	returnCode := m.Run()
 

@@ -22,7 +22,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -210,7 +210,7 @@ func (c *HttpClient) Do(method string, url string, headers map[string]string, bb
 	statusCode = res.StatusCode
 
 	fields[fmt.Sprintf("%v_status", loggerName)] = res.StatusCode
-	rbytes, err := ioutil.ReadAll(res.Body)
+	rbytes, err := io.ReadAll(res.Body)
 	if err != nil {
 		fields[errorKey] = err.Error()
 		log.WithFields(fields).Info(endMessage)

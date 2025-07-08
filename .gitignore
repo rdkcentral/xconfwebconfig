@@ -1,4 +1,7 @@
-.vscode/
-.DS_Store/
-bin/
+bin/*
+.vscode/*
 coverage.out
+.DS_Store
+.env
+*.sh
+.idea/*
