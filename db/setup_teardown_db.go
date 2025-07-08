@@ -25,14 +25,14 @@ import (
 )
 
 func (c *CassandraClient) SetUp() error {
-	if !c.testOnly {
+	if !c.TestOnly {
 		err := errors.New("DB Setup() can only be invoked from unit test")
 		fmt.Println(err.Error())
 		return err
 	}
 
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	// NOTE: CREATE cannot be used in batch
 	for _, t := range AllTables {
@@ -52,14 +52,14 @@ func (c *CassandraClient) SetUp() error {
 }
 
 func (c *CassandraClient) TearDown() error {
-	if !c.testOnly {
+	if !c.TestOnly {
 		err := errors.New("DB TearDown() can only be invoked from unit test")
 		fmt.Println(err.Error())
 		return err
 	}
 
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	// NOTE: TRUNCATE cannot be used in a batch
 	for _, tableName := range AllTables {

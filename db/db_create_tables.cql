@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Comcast Cable Communications Management, LLC
+ * Copyright 2023 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,66 +16,70 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- CREATE TABLE IF NOT EXISTS "AppSettings" (key text,column1 text,value blob,PRIMARY KEY ((key), column1));
+CREATE TABLE IF NOT EXISTS "DcmRule" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "DcmRule" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "DeviceSettings2" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "DeviceSettings2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "Environment" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "Environment" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "FeatureControlRule2" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "FeatureControlRule2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "FirmwareConfig" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "FirmwareConfig" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "FirmwareRule4" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "FirmwareRule4" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "FirmwareRuleTemplate" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "FirmwareRuleTemplate" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "GenericXconfNamedList" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "GenericXconfNamedList" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "LogFile" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "LogFile" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "LogFileList" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "LogFileList" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "LogFilesGroups" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "LogFilesGroups" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "LogUploadSettings2" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "LogUploadSettings2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "Logs2" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "Logs2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "Model" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "Model" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "PermanentTelemetry" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "PermanentTelemetry" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "SettingProfiles" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "SettingProfiles" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "SettingRules" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "SettingRules" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "SingletonFilterValue" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "SingletonFilterValue" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "Telemetry" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "Telemetry" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "TelemetryRules" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "TelemetryRules" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "UploadRepository" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "UploadRepository" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "VodSettings2" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "VodSettings2" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "XconfApprovedChange" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "XconfApprovedChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "XconfChange" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "XconfChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "XconfFeature" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "XconfFeature" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "XconfChangedKeys4" (key bigint, columnName timeuuid, value blob, PRIMARY KEY (key, columnName));
 
-CREATE TABLE "XconfChangedKeys4" ( key bigint, columnName timeuuid, value blob, PRIMARY KEY (key, columnName) ) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "TelemetryTwoProfiles" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "TelemetryTwoProfiles" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "TelemetryTwoRules" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "TelemetryTwoRules" (key text,column1 text,value blob,PRIMARY KEY ((key), column1)) WITH COMPACT STORAGE;
+CREATE TABLE IF NOT EXISTS "XconfTelemetryTwoChange" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE IF NOT EXISTS "XconfTelemetryTwoChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1));
+CREATE TABLE IF NOT EXISTS "XconfApprovedTelemetryTwoChange" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE IF NOT EXISTS "XconfApprovedTelemetryTwoChange" (key text,column1 text,value blob,PRIMARY KEY ((key), column1));
+CREATE TABLE IF NOT EXISTS "AppSettings" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
-CREATE TABLE "PenetrationMetrics" (estb_mac text,partner text,model text,fw_version text,fw_reported_version text,fw_additional_version_info text,fw_applied_rule text,rfc_applied_rules text,rfc_features text,rfc_ts timestamp,fw_ts timestamp,time_zone text,account_id text,env text,application_type text,experience text, PRIMARY KEY (estb_mac)) WITH COMPACT STORAGE; 
+CREATE TABLE IF NOT EXISTS "RecookingStatus" (module text, partition_id text, state int, updated_time timestamp, primary key (module, partition_id));
+
+CREATE TABLE IF NOT EXISTS "PenetrationMetrics" (estb_mac text, ecm_mac text, serial_number text, partner text, model text, fw_version text, fw_reported_version text, fw_additional_version_info text, fw_applied_rule text, rfc_applied_rules text, rfc_features text, rfc_ts timestamp, fw_ts timestamp, time_zone text, rfc_account_hash text, rfc_account_id text, rfc_account_mgmt text, AccountService_account_id text, rfc_partner text, AccountService_partner text, rfc_model text, rfc_fw_reported_version text, rfc_env text, rfc_application_type text, rfc_experience text, rfc_time_zone text, precook_rfc_rules text, rfc_configsethash text, precook_configsethash text, precook_rfc_features text, rfc_post_proc text, rfc_query_params text, rfc_tags text, rfc_estb_ip text, client_cert_expiry text, recovery_cert_expiry text, PRIMARY KEY (estb_mac));
+
+CREATE TABLE IF NOT EXISTS "Tag" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));

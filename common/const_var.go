@@ -18,18 +18,33 @@
 package common
 
 const (
-	LOGGING_TIME_FORMAT = "2006-01-02 15:04:05.000"
-	DATE_TIME_FORMATTER = "1/2/2006 15:04"
-	LAST_CONFIG_LOG_ID  = "0"
+	LOGGING_TIME_FORMAT        = "2006-01-02 15:04:05.000"
+	DATE_TIME_FORMATTER        = "1/2/2006 15:04"
+	LAST_CONFIG_LOG_ID         = "0"
+	ClientCertExpiryDateFormat = "Jan 2, 2006 @ 15:04:05.000"
 )
 
 const (
-	X_CONF_FIRMWARE_DOWNLOAD_SERVER = "test_DownloadServer"
-	CDN_DIRECT                      = "cdn_direct"
+	PROP_READONLY_MODE                  = "ReadonlyMode"
+	PROP_CANARY_MAXSIZE                 = "CanaryMaxSize"
+	PROP_CANARY_DISTRIBUTION_PERCENTAGE = "CanaryDistributionPercentage"
+	PROP_CANARY_FW_UPGRADE_STARTTIME    = "CanaryFwUpgradeStartTime"
+	PROP_CANARY_FW_UPGRADE_ENDTIME      = "CanaryFwUpgradeEndTime"
+	PROP_PRECOOK_LOCKDOWN_ENABLED       = "PrecookLockdownEnabled"
 )
+
+var AllAppSettings = []string{
+	PROP_READONLY_MODE,
+	PROP_CANARY_MAXSIZE,
+	PROP_CANARY_DISTRIBUTION_PERCENTAGE,
+	PROP_CANARY_FW_UPGRADE_STARTTIME,
+	PROP_CANARY_FW_UPGRADE_ENDTIME,
+	PROP_PRECOOK_LOCKDOWN_ENABLED,
+}
 
 const (
 	XCONF_HTTP_HEADER             = "HA-Haproxy-xconf-http"
+	XCONF_SNI_HEADER              = "HA-Haproxy-xconf-sni"
 	XCONF_HTTP_VALUE              = "xconf-http"
 	XCONF_HTTPS_VALUE             = "xconf-https"
 	XCONF_MTLS_VALUE              = "xconf-mtls"
@@ -39,18 +54,29 @@ const (
 	MTLS_CLIENT_PROTOCOL          = "mtls"
 	MTLS_RECOVERY_CLIENT_PROTOCOL = "mtls-recovery"
 	CLIENT_PROTOCOL               = "clientProtocol"
+	CLIENT_SNI                    = "clientSni"
 	X_FORWARDED_FOR_HEADER        = "X-Forwarded-For"
 	HA_FORWARDED_FOR_HEADER       = "HA-Forwarded-For"
 
-	HeaderAuthorization    = "Authorization"
-	HeaderUserAgent        = "User-Agent"
-	HeaderIfNoneMatch      = "If-None-Match"
-	HeaderFirmwareVersion  = "X-System-Firmware-Version"
-	HeaderModelName        = "X-System-Model-Name"
-	HeaderProfileVersion   = "X-System-Telemetry-Profile-Version"
-	HeaderPartnerID        = "X-System-PartnerID"
-	HeaderAccountID        = "X-System-AccountID"
-	HeaderXconfDataService = "XconfDataService"
+	HeaderAuthorization           = "Authorization"
+	HeaderUserAgent               = "User-Agent"
+	HeaderIfNoneMatch             = "If-None-Match"
+	HeaderFirmwareVersion         = "X-System-Firmware-Version"
+	HeaderModelName               = "X-System-Model-Name"
+	HeaderProfileVersion          = "X-System-Telemetry-Profile-Version"
+	HeaderPartnerID               = "X-System-PartnerID"
+	HeaderAccountID               = "X-System-AccountID"
+	HeaderXconfDataService        = "XconfDataService"
+	HeaderTraceparent             = "Traceparent"
+	HeaderTracestate              = "Tracestate"
+	HeaderMoracide                = "X-Cl-Experiment"
+	HeaderCanary                  = "X-Cl-Canary"
+	CLIENT_CERT_EXPIRY_HEADER     = "Client-Cert-Expiry"
+	XCONF_MTLS_OPTIONAL_VALUE     = "xconf-mtls-optional"
+	MTLS_OPTIONAL_CLIENT_PROTOCOL = "mtls-optional"
+	CLIENT_CERT_EXPIRY            = "clientCertExpiry"
+	CERT_EXPIRY_DAYS              = "certExpiryDays"
+	RECOVERY_CERT_EXPIRY          = "recoveryCertExpiry"
 )
 
 const (
@@ -112,6 +138,11 @@ const (
 	MANDATORY_UPDATE           = "mandatoryUpdate"
 	FIRMWARE_VERSIONS          = "firmwareVersions"
 	REGULAR_EXPRESSIONS        = "regularExpressions"
+	ADDITIONAL_FW_VER_INFO     = "additionalFwVerInfo"
+	EXPERIENCE                 = "experience"
+	CERT_EXPIRY_DURATION       = "certExpiryDays"
+	SERIAL_NUMBER_PARAM        = "serialNumber"
+	COUNTRY_CODE               = "countryCode"
 )
 
 const (
@@ -125,6 +156,10 @@ const (
 	GenericNamespacedListTypes_MAC_LIST    = "MAC_LIST"
 	GenericNamespacedListTypes_IP_LIST     = "IP_LIST"
 	GenericNamespacedListTypes_RI_MAC_LIST = "RI_MAC_LIST"
+)
+
+const (
+	NoPenetrationMetricsHeader = "X-No-Penetration-Metrics"
 )
 
 func isValidType(namespacedListType string) bool {

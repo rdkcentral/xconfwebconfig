@@ -31,8 +31,8 @@ Retrieving and processing Xconf data from cache:
 The following code illustrates how to retrieve a specific Model from the Model table:
 
 	inmport (
-		"xconfwebconfig/core"
-		coreef "xconfwebconfig/core/estbfirmware"
+		"xconfwebconfig/shared"
+		coreef "xconfwebconfig/shared/estbfirmware"
 		"xconfwebconfig/db"
 	)
 

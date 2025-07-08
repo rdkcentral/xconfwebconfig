@@ -50,3 +50,7 @@ func (s Set) ToSlice() []string {
 	}
 	return list
 }
+
+func (s Set) IsEmpty() bool {
+	return len(s) == 0
+}

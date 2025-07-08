@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package xpc.xdas.model;
+
+option go_package = ".;conversion";
+
+message CpeGroup {
+  bool storm_ready_fw = 1;
+  bool wanfailover = 2;
+  bool gwfailover = 3;
+}

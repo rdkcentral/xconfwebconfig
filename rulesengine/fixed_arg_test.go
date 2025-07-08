@@ -71,7 +71,7 @@ func TestFixedArgsEquality(t *testing.T) {
 
 func TestFixedArgCollection(t *testing.T) {
 	baseF := FixedArg{
-		Collection: Collection{
+		Collection: &Collection{
 			Value: []string{
 				"one",
 				"two",
@@ -87,7 +87,7 @@ func TestFixedArgCollection(t *testing.T) {
 	var testData = []TestInput{
 		TestInput{
 			input: FixedArg{
-				Collection: Collection{
+				Collection: &Collection{
 					Value: []string{
 						"one",
 						"two",
@@ -98,7 +98,7 @@ func TestFixedArgCollection(t *testing.T) {
 		},
 		TestInput{
 			input: FixedArg{
-				Collection: Collection{
+				Collection: &Collection{
 					Value: []string{"two", "one"},
 				},
 			},
@@ -106,7 +106,7 @@ func TestFixedArgCollection(t *testing.T) {
 		},
 		TestInput{
 			input: FixedArg{
-				Collection: Collection{
+				Collection: &Collection{
 					Value: []string{"one", "two", "three"},
 				},
 			},
@@ -114,7 +114,7 @@ func TestFixedArgCollection(t *testing.T) {
 		},
 		TestInput{
 			input: FixedArg{
-				Collection: Collection{
+				Collection: &Collection{
 					Value: []string{"one"},
 				},
 			},
@@ -122,7 +122,7 @@ func TestFixedArgCollection(t *testing.T) {
 		},
 		TestInput{
 			input: FixedArg{
-				Collection: Collection{
+				Collection: &Collection{
 					Value: []string{"different"},
 				},
 			},
@@ -130,7 +130,7 @@ func TestFixedArgCollection(t *testing.T) {
 		},
 		TestInput{
 			input: FixedArg{
-				Collection: Collection{
+				Collection: &Collection{
 					Value: []string{"one", "two", "one"},
 				},
 			},

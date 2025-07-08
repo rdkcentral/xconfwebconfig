@@ -27,6 +27,7 @@ import (
 
 	"xconfwebconfig/common"
 	"xconfwebconfig/db"
+	"xconfwebconfig/shared"
 	"xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
@@ -110,7 +111,7 @@ type Feature struct {
 	FeatureName        string                 `json:"featureName,omitempty"`
 	EffectiveImmediate bool                   `json:"effectiveImmediate"`
 	Enable             bool                   `json:"enable"`
-	Whitelisted        bool                   `json:"whitelisted,omitempty"`
+	Whitelisted        bool                   `json:"whitelisted"`
 	ConfigData         map[string]string      `json:"configData"`
 	WhitelistProperty  *WhitelistProperty     `json:"whitelistProperty,omitempty"`
 	ApplicationType    string                 `json:"applicationType,omitempty"`
@@ -238,12 +239,16 @@ func (f *FeatureResponse) MarshalJSON() ([]byte, error) {
 
 // NewFeature to create a new Feature
 func NewFeature() *Feature {
-	return &Feature{}
+	return &Feature{
+		ApplicationType: shared.STB,
+	}
 }
 
 // NewFeatureInf to create a new Feature
 func NewFeatureInf() interface{} {
-	return &Feature{}
+	return &Feature{
+		ApplicationType: shared.STB,
+	}
 }
 
 func (f *Feature) equals(o *Feature) bool {
@@ -307,6 +312,14 @@ func GetOneFeature(featureId string) *Feature {
 	return feature
 }
 
+func SetFeatureRule(id string, featureRule *FeatureRule) error {
+	if err := db.GetCachedSimpleDao().SetOne(db.TABLE_FEATURE_CONTROL_RULE, id, featureRule); err != nil {
+		log.Error("cannot save featureRule to DB")
+		return err
+	}
+	return nil
+}
+
 func GetFeatureList() []*Feature {
 	cm := db.GetCacheManager()
 	cacheKey := "FeatureList"
@@ -334,6 +347,20 @@ func GetFeatureList() []*Feature {
 	return all
 }
 
+func GetFeatureListForAS() []*Feature {
+	all := []*Feature{}
+	featureList, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_XCONF_FEATURE, 0)
+	if err != nil {
+		log.Warn("no feature found")
+		return nil
+	}
+	for idx := range featureList {
+		feature := featureList[idx].(*Feature)
+		all = append(all, feature)
+	}
+	return all
+}
+
 // API response object for Feature.
 // Note that FeatureInstance attribute is the same as FeatureName and
 // only used when importing/exporting a Feature.
@@ -348,6 +375,14 @@ type FeatureEntity struct {
 	ApplicationType    string             `json:"applicationType"`
 	FeatureName        string             `json:"featureName"`
 	FeatureInstance    string             `json:"featureInstance"`
+}
+
+func (obj *FeatureEntity) SetApplicationType(appType string) {
+	obj.ApplicationType = appType
+}
+
+func (obj *FeatureEntity) GetApplicationType() string {
+	return obj.ApplicationType
 }
 
 func (obj *FeatureEntity) CreateFeature() *Feature {
@@ -474,7 +509,21 @@ func GetFeatureRuleList() []*FeatureRule {
 	return all
 }
 
-var GetFeatureListFunc = GetFeatureRuleList
+func GetFeatureRuleListForAS() []*FeatureRule {
+	all := []*FeatureRule{}
+	featureRuleList, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FEATURE_CONTROL_RULE, 0)
+	if err != nil {
+		log.Warn("no featureRule found")
+		return nil
+	}
+	for idx := range featureRuleList {
+		featureRule := featureRuleList[idx].(*FeatureRule)
+		all = append(all, featureRule)
+	}
+	return all
+}
+
+var GetFeatureListFunc = GetFeatureRuleListForAS
 
 // GetFeatureControl returns FeatureRule sorted by Priority
 func GetSortedFeatureRules() []*FeatureRule {

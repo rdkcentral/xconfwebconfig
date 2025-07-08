@@ -47,7 +47,7 @@ func NewFeatureControlRuleBase() *FeatureControlRuleBase {
 	}
 }
 
-func (f *FeatureControlRuleBase) Eval(context map[string]string, applicationType string, fields log.Fields) *rfc.FeatureControl {
+func (f *FeatureControlRuleBase) Eval(context map[string]string, applicationType string, fields log.Fields) (*rfc.FeatureControl, []*rfc.FeatureRule) {
 	appliedFeatureRules := f.ProcessFeatureRules(context, applicationType)
 	featureMap := map[string]*rfc.Feature{}
 	if len(appliedFeatureRules) > 0 {
@@ -62,9 +62,7 @@ func (f *FeatureControlRuleBase) Eval(context map[string]string, applicationType
 	featureControl := &rfc.FeatureControl{
 		FeatureResponses: featureResponseList,
 	}
-
-	f.LogFeatureInfo(context, appliedFeatureRules, featureResponseList, fields)
-	return featureControl
+	return featureControl, appliedFeatureRules
 }
 
 var rfcGetOneFeatureFunc = rfc.GetOneFeature
@@ -139,8 +137,25 @@ func (f *FeatureControlRuleBase) LogFeatureInfo(context map[string]string, appli
 	}
 	fields["features"] = featureInstances
 	fields["configSetHash"] = f.CalculateHash(features)
-	log.WithFields(fields).Info("FeatureControlRuleBase")
+	log.WithFields(common.FilterLogFields(fields)).Info("FeatureControlRuleBase")
 	http.UpdateLogCounter("FeatureControlRuleBase")
+}
+
+func SortCaseInsensitive(list []string) []string {
+	if list == nil {
+		return nil
+	}
+	sortedList := make([]string, len(list))
+	copy(sortedList, list)
+
+	sort.SliceStable(sortedList, func(i, j int) bool {
+		val := strings.Compare(strings.ToLower(sortedList[i]), strings.ToLower(sortedList[j]))
+		if val == 0 {
+			return strings.Compare(sortedList[i], sortedList[j]) < 0
+		}
+		return val < 0
+	})
+	return sortedList
 }
 
 func (f *FeatureControlRuleBase) NormalizeContext(context map[string]string) map[string]string {

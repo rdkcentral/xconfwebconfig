@@ -24,13 +24,15 @@ import (
 	"net"
 	"regexp"
 	"strings"
-	"time"
+	"sync"
 	"xconfwebconfig/db"
 	"xconfwebconfig/util"
 )
 
 // GenericNamespacedListType
 type GenericNamespacedListType string
+
+var namespacedListUpdateMutex sync.Mutex
 
 const (
 	STRING      = "STRING"
@@ -104,6 +106,38 @@ func (obj *GenericNamespacedList) Validate() error {
 	return nil
 }
 
+func (obj *GenericNamespacedList) ValidateForAdminService() error {
+	matched, _ := regexp.MatchString("^[-a-zA-Z0-9_.' ]+$", obj.ID)
+	if !matched {
+		return errors.New("name is invalid")
+	}
+
+	if !IsValidType(obj.TypeName) {
+		return fmt.Errorf("type %s is invalid", obj.TypeName)
+	}
+	itemsSet := util.Set{}
+	itemsSet.Add(obj.Data...)
+	obj.Data = itemsSet.ToSlice()
+
+	if err := ValidateListDataForAdmin(obj.TypeName, obj.Data); err != nil {
+		return err
+	}
+
+	if err := obj.ValidateDataIntersection(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func LockGenericNamespacedList() {
+	namespacedListUpdateMutex.Lock()
+}
+
+func UnlockGenericNamespacedList() {
+	namespacedListUpdateMutex.Unlock()
+}
+
 func ValidateListData(typeName string, listData []string) error {
 	if !IsValidType(typeName) {
 		return errors.New("Type is invalid")
@@ -117,6 +151,36 @@ func ValidateListData(typeName string, listData []string) error {
 	if typeName == IP_LIST {
 		for _, ipAddress := range listData {
 			if net.ParseIP(ipAddress) == nil {
+				invalidAddresses = append(invalidAddresses, ipAddress)
+			}
+		}
+	} else if typeName == MAC_LIST {
+		for _, mac := range listData {
+			if !util.IsValidMacAddress(mac) {
+				invalidAddresses = append(invalidAddresses, mac)
+			}
+		}
+	}
+	if len(invalidAddresses) > 0 {
+		return fmt.Errorf("List contains invalid address(es): %v", invalidAddresses)
+	}
+
+	return nil
+}
+
+func ValidateListDataForAdmin(typeName string, listData []string) error {
+	if !IsValidType(typeName) {
+		return errors.New("Type is invalid")
+	}
+
+	if len(listData) == 0 {
+		return errors.New("List must not be empty")
+	}
+
+	var invalidAddresses []string
+	if typeName == IP_LIST {
+		for _, ipAddress := range listData {
+			if NewIpAddress(ipAddress) == nil {
 				invalidAddresses = append(invalidAddresses, ipAddress)
 			}
 		}
@@ -223,6 +287,31 @@ func (obj *GenericNamespacedList) ValidateDataIntersection() error {
 	return nil
 }
 
+func GetGenericNamedListSetByType(typeName string) (*util.Set, error) {
+	if !IsValidType(typeName) {
+		return nil, fmt.Errorf("Invalid GenericNamespacedList typeName %s", typeName)
+	}
+	cm := db.GetCacheManager()
+	cacheKey := typeName
+	cacheInst := cm.ApplicationCacheGet(db.TABLE_GENERIC_NS_LIST, cacheKey)
+	if cacheInst != nil {
+		return cacheInst.(*util.Set), nil
+	}
+	result := util.NewSet()
+	entry, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_GENERIC_NS_LIST, 0)
+	if err != nil {
+		return nil, err
+	}
+	for _, obj := range entry {
+		nl := obj.(*GenericNamespacedList)
+		if nl.TypeName == typeName {
+			result.Add(nl.Data...)
+		}
+	}
+	cm.ApplicationCacheSet(db.TABLE_GENERIC_NS_LIST, cacheKey, &result)
+	return &result, nil
+}
+
 func GetGenericNamedListOneDB(id string) (*GenericNamespacedList, error) {
 	instlst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_GENERIC_NS_LIST, id)
 	if err != nil {
@@ -274,7 +363,7 @@ func GetGenericNamedListListsByTypeDB(typeName string) ([]*GenericNamespacedList
 }
 
 func CreateGenericNamedListOneDB(newList *GenericNamespacedList) error {
-	newList.Updated = util.GetTimestamp(time.Now())
+	newList.Updated = util.GetTimestamp()
 	err := db.GetCachedSimpleDao().SetOne(db.TABLE_GENERIC_NS_LIST, newList.ID, newList)
 	return err
 }
@@ -307,11 +396,11 @@ func GetGenericNamedListOneByTypeNonCached(id string, typeName string) (*Generic
 	}
 
 	lstptr := instlst.(*GenericNamespacedList)
-	if lstptr.TypeName == typeName {
-		return lstptr, nil
+	if typeName != "" && lstptr.TypeName != typeName {
+		return nil, nil
 	}
 
-	return nil, nil
+	return lstptr, nil
 }
 
 func DeleteOneGenericNamedList(id string) error {

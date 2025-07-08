@@ -44,7 +44,8 @@ var (
 		{"firmwareVersion", common.HeaderFirmwareVersion},
 	}
 
-	alnumRe = regexp.MustCompile("[^a-zA-Z0-9]+")
+	alnumRe    = regexp.MustCompile("[^a-zA-Z0-9]+")
+	validMacRe = regexp.MustCompile(`^([0-9a-fA-F]{12}$)|([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9A-Fa-f]{4}[.]){2}([0-9A-Fa-f]{4})$`)
 )
 
 func ToAlphaNumericString(str string) string {
@@ -190,6 +191,31 @@ func MacAddrComplexFormat(macaddr string) (string, error) {
 func IsValidMacAddress(macaddr string) bool {
 	_, err := MACAddressValidator(macaddr)
 	return err == nil
+}
+
+func MACAddressValidatorForAS(macAddress string) (bool, error) {
+	if validMacRe.MatchString(macAddress) {
+		return true, nil
+	}
+
+	return false, errors.New("Invalid MAC address")
+}
+
+func IsValidMacAddressForAdminService(macaddr string) bool {
+	_, err := MACAddressValidatorForAS(macaddr)
+	return err == nil
+}
+
+func ValidateAndNormalizeMacAddress(macaddr string) (string, error) {
+	// 1st validates the mac address
+	_, err := MACAddressValidator(macaddr)
+	if err != nil {
+		return "", err
+	}
+
+	// Replace all dash, colon or period from MAC address
+	mac := AlphaNumericMacAddress(macaddr)
+	return ToColonMac(mac), nil
 }
 
 func NormalizeMacAddress(macAddress string) string {

@@ -50,9 +50,9 @@ type ConvertedContext struct {
 	ChannelMapId        int64               `json:"channelMapId,omitempty"`
 	VodId               int64               `json:"vodId,omitempty"`
 	BypassFilters       map[string]struct{} `json:"-"`
-	RawBypassFilters    []string            `json:"bypassFilters"` // custom unmarshal for BypassFilters
+	RawBypassFilters    []string            `json:"bypassFilters,omitempty"` // custom unmarshal for BypassFilters
 	ForceFilters        map[string]struct{} `json:"-"`
-	RawForceFilters     []string            `json:"forceFilters"` // custom unmarshal for ForceFilters
+	RawForceFilters     []string            `json:"forceFilters,omitempty"` // custom unmarshal for ForceFilters
 	XconfHttpHeader     string              `json:"xconfHttpHeader,omitempty"`
 	AccountId           string              `json:"accountId,omitempty"`
 	Capabilities        []Capabilities      `json:"capabilities"`
@@ -98,7 +98,9 @@ func (cc *ConvertedContext) UnmarshalJSON(bytes []byte) error {
 
 	cc.BypassFilters = util.NewStringSet(cc.RawBypassFilters)
 	cc.ForceFilters = util.NewStringSet(cc.RawForceFilters)
-
+	cc.Rcdl = cc.IsRcdl()
+	cc.RebootDecoupled = cc.IsRebootDecoupled()
+	cc.SupportsFullHttpUrl = cc.IsSupportsFullHttpUrl()
 	return nil
 }
 
@@ -379,7 +381,7 @@ func (c *ConvertedContext) GetXconfHttpHeaderConverted() string {
 }
 
 func (c *ConvertedContext) IsXconfHttpHeaderSecureConnection() bool {
-	if c.XconfHttpHeader == common.XCONF_HTTPS_VALUE || c.XconfHttpHeader == common.XCONF_MTLS_VALUE || c.XconfHttpHeader == common.XCONF_MTLS_RECOVERY_VALUE {
+	if c.XconfHttpHeader == common.XCONF_HTTPS_VALUE || c.XconfHttpHeader == common.XCONF_MTLS_VALUE || c.XconfHttpHeader == common.XCONF_MTLS_RECOVERY_VALUE || c.XconfHttpHeader == common.XCONF_MTLS_OPTIONAL_VALUE {
 		return true
 	}
 	return false

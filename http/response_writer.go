@@ -127,16 +127,7 @@ func (w *XResponseWriter) TraceId() string {
 }
 
 func (w *XResponseWriter) Audit() log.Fields {
-	// return w.audit
-	out := log.Fields{}
-	for k, v := range w.audit {
-		if k == "body" && w.bodyObfuscated {
-			out[k] = "****"
-		} else {
-			out[k] = v
-		}
-	}
-	return out
+	return w.audit
 }
 
 func (w *XResponseWriter) AuditData(k string) string {

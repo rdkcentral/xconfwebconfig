@@ -33,8 +33,8 @@ type TimeFilter struct {
 	EnvModelRuleBean          EnvModelRuleBean       `json:"envModelWhitelist" xml:"envModelWhitelist"`
 	NeverBlockRebootDecoupled bool                   `json:"neverBlockRebootDecoupled" xml:"neverBlockRebootDecoupled"`
 	NeverBlockHttpDownload    bool                   `json:"neverBlockHttpDownload" xml:"neverBlockHttpDownload"`
-	Start                     string                 `json:"start" xml:"start"`
-	End                       string                 `json:"end" xml:"end"`
+	Start                     string                 `json:"startTime" xml:"startTime"`
+	End                       string                 `json:"endTime" xml:"endTime"`
 	LocalTime                 bool                   `json:"localTime" xml:"localTime"`
 }
 

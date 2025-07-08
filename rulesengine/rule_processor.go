@@ -18,7 +18,6 @@
 package rulesengine
 
 import (
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -150,7 +149,8 @@ func (p *RuleProcessor) evaluateWithNegation(r *Rule, negation bool, context map
 	condition := r.GetCondition()
 	evaluator := p.getEvaluator(condition.GetFreeArg().GetType(), condition.GetOperation())
 	if evaluator == nil {
-		fmt.Printf("type=%v, operation=%v\n", condition.GetFreeArg().GetType(), condition.GetOperation())
+		log.Errorf("type=%v, operation=%v\n", condition.GetFreeArg().GetType(), condition.GetOperation())
+		return false
 	}
 	result := evaluator.Evaluate(condition, context)
 	if negation {
@@ -188,7 +188,7 @@ func (p *RuleProcessor) GetEvaluatorOK(r *Rule) bool {
 		}
 		evaluator := p.getEvaluator(condition.GetFreeArg().GetType(), condition.GetOperation())
 		if evaluator == nil {
-			fmt.Printf("type=%v, operation=%v\n", condition.GetFreeArg().GetType(), condition.GetOperation())
+			log.Errorf("type=%v, operation=%v\n", condition.GetFreeArg().GetType(), condition.GetOperation())
 			return false
 		}
 		return true

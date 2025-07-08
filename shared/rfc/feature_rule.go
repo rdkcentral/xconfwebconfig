@@ -32,6 +32,14 @@ type FeatureRule struct {
 	ApplicationType string   `json:"applicationType"`
 }
 
+func (obj *FeatureRule) SetApplicationType(appType string) {
+	obj.ApplicationType = appType
+}
+
+func (obj *FeatureRule) GetApplicationType() string {
+	return obj.ApplicationType
+}
+
 func (obj *FeatureRule) Clone() (*FeatureRule, error) {
 	cloneObj, err := util.Copy(obj)
 	if err != nil {
@@ -47,6 +55,18 @@ func NewFeatureRuleInf() interface{} {
 // GetId XRule interface
 func (r *FeatureRule) GetId() string {
 	return r.Id
+}
+
+func (r *FeatureRule) GetID() string {
+	return r.Id
+}
+
+func (r *FeatureRule) GetPriority() int {
+	return r.Priority
+}
+
+func (r *FeatureRule) SetPriority(priority int) {
+	r.Priority = priority
 }
 
 // GetRule XRule interface

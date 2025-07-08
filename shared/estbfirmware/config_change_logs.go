@@ -54,7 +54,7 @@ type RuleInfo struct {
 	Type     string `json:"type,omitempty"`
 	Name     string `json:"name,omitempty"`
 	NoOp     bool   `json:"noop"`
-	Blocking bool   `json:"blocking"`
+	Blocking bool   `json:"blocking,omitempty"`
 }
 
 // ConfigChangeLog Logs2 table

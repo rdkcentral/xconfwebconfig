@@ -1,0 +1,10 @@
+// generic message for keyspaces that uses Redis Hashes
+
+syntax = "proto3";
+package xpc.xdas.model;
+
+option go_package = ".;conversion";
+
+message XdasHashes {
+  map<string, string> fields = 1;
+}

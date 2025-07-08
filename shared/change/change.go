@@ -65,16 +65,16 @@ type EntityInterface interface {
 
 // Change XconfChange table
 type Change struct {
-	ID              string                              `json:"id"`
-	Updated         int64                               `json:"updated"`
-	EntityID        string                              `json:"entityId"`
-	EntityType      EntityType                          `json:"entityType"`
-	ApplicationType string                              `json:"applicationType"`
-	NewEntity       logupload.PermanentTelemetryProfile `json:"newEntity"`
-	OldEntity       logupload.PermanentTelemetryProfile `json:"oldEntity"`
-	Operation       ChangeOperation                     `json:"operation"`
-	Author          string                              `json:"author"`
-	ApprovedUser    string                              `json:"approvedUser"`
+	ID              string                               `json:"id"`
+	Updated         int64                                `json:"updated"`
+	EntityID        string                               `json:"entityId"`
+	EntityType      EntityType                           `json:"entityType"`
+	ApplicationType string                               `json:"applicationType"`
+	NewEntity       *logupload.PermanentTelemetryProfile `json:"newEntity,omitempty"`
+	OldEntity       *logupload.PermanentTelemetryProfile `json:"oldEntity,omitempty"`
+	Operation       ChangeOperation                      `json:"operation"`
+	Author          string                               `json:"author"`
+	ApprovedUser    string                               `json:"approvedUser"`
 }
 
 func (c Change) GetID() string {
@@ -94,11 +94,11 @@ func (c Change) GetApplicationType() string {
 }
 
 func (c Change) GetNewEntity() *logupload.PermanentTelemetryProfile {
-	return &c.NewEntity
+	return c.NewEntity
 }
 
 func (c Change) GetOldEntity() *logupload.PermanentTelemetryProfile {
-	return &c.OldEntity
+	return c.OldEntity
 }
 
 func (c Change) GetOperation() ChangeOperation {
@@ -130,11 +130,11 @@ func (c ApprovedChange) GetApplicationType() string {
 }
 
 func (c ApprovedChange) GetNewEntity() *logupload.PermanentTelemetryProfile {
-	return &c.NewEntity
+	return c.NewEntity
 }
 
 func (c ApprovedChange) GetOldEntity() *logupload.PermanentTelemetryProfile {
-	return &c.OldEntity
+	return c.OldEntity
 }
 
 func (c ApprovedChange) GetOperation() ChangeOperation {
@@ -191,6 +191,19 @@ type PendingChange interface {
 	GetApprovedUser() string
 }
 
+// NewChangeInf constructor
+func NewChangeInf() interface{} {
+	return &Change{
+		ApplicationType: shared.STB,
+	}
+}
+
+func NewEmptyChange() *Change {
+	return &Change{
+		ApplicationType: shared.STB,
+	}
+}
+
 func (c *Change) EqualChangeData(c2 *Change) bool {
 	if c == c2 {
 		return true
@@ -216,11 +229,6 @@ func NewTelemetryTwoChangeInf() interface{} {
 	}
 }
 
-// NewChangeInf constructor
-func NewChangeInf() interface{} {
-	return &Change{}
-}
-
 func (c *Change) byAuthor(author string) bool {
 	return strings.EqualFold(c.Author, author)
 }
@@ -234,5 +242,5 @@ type ApprovedChange Change
 
 // NewApprovedChangeInf constructor
 func NewApprovedChangeInf() interface{} {
-	return &ApprovedChange{}
+	return &ApprovedChange{ApplicationType: shared.STB}
 }

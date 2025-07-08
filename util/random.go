@@ -30,6 +30,10 @@ func RandomDouble() float64 {
 	return rand.Float64()
 }
 
+// RandomPercentage returns a random integer between 0 and 99 (inclusive).
+// WARNING: This function uses math/rand which is NOT cryptographically secure.
+// It should ONLY be used for non-security critical operations like load balancing or
+// gradual feature rollouts, never for security purposes, authentication, or encryption.
 func RandomPercentage() int {
 	return rand.Intn(100)
 }

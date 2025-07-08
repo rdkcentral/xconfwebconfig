@@ -23,12 +23,22 @@ const (
 
 type ActivationVersion struct {
 	ID                 string   `json:"id"`
-	ApplicationType    string   `json:"applicationtype"`
-	Description        string   `json:"description"`
-	Model              string   `json:"model"`
-	PartnerId          string   `json:"partnerId"`
+	ApplicationType    string   `json:"applicationType,omitempty"`
+	Description        string   `json:"description,omitempty"`
+	Model              string   `json:"model,omitempty"`
+	PartnerId          string   `json:"partnerId,omitempty"`
 	RegularExpressions []string `json:"regularExpressions"`
 	FirmwareVersions   []string `json:"firmwareVersions"`
+}
+
+// setApplicationType implements queries.T.
+func (obj *ActivationVersion) SetApplicationType(appType string) {
+	obj.ApplicationType = appType
+}
+
+// getApplicationType implements queries.T.
+func (obj *ActivationVersion) GetApplicationType() string {
+	return obj.ApplicationType
 }
 
 // NewActivationVersion constructor

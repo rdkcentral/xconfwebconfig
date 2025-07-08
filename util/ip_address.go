@@ -15,6 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package util
 
 import (
@@ -24,40 +25,68 @@ import (
 	"strings"
 
 	"xconfwebconfig/common"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
 	INADDR4SZ = 4
 )
 
-func GetIpAddress(r *http.Request, ipAddress string) string {
-	if IsIPv4LiteralAddress(ipAddress) {
-		return ipAddress
-	}
-	if net.ParseIP(ipAddress) != nil {
-		return ipAddress
-	}
-
+func GetIpAddressWithoutQueryParam(r *http.Request) (string, bool, bool) {
 	// First we check 'HA-Forwarded-For' header, then 'X-Forwarded-For' if it exists and contains valid ip address.
 	// Usually format of header is 'HA-Forwarded-For: client, proxy1, proxy2' so we split string by "[,]" and take first part.
+	ipFromHeader := ""
 	xff_headers := []string{common.HA_FORWARDED_FOR_HEADER, common.X_FORWARDED_FOR_HEADER}
 	for _, header := range xff_headers {
-		ipFromHeader := r.Header.Get(header)
+		ipFromHeader = r.Header.Get(header)
 		if !IsBlank(ipFromHeader) {
 			parts := strings.Split(ipFromHeader, ",")
 			if len(parts) > 0 {
 				ipFromHeader = strings.Trim(parts[0], " ")
 				if net.ParseIP(ipFromHeader) != nil {
-					return ipFromHeader
+					return ipFromHeader, true, false
 				}
 			}
 		}
 	}
-
 	remoteIp := r.RemoteAddr
 	if net.ParseIP(remoteIp) != nil {
-		return remoteIp
+		return remoteIp, false, true
 	}
+
+	return "0.0.0.0", false, false
+}
+
+func GetIpAddress(r *http.Request, ipAddress string, fields log.Fields) string {
+	foundIpFromQueryParam := false
+
+	if IsIPv4LiteralAddress(ipAddress) {
+		foundIpFromQueryParam = true
+	} else if net.ParseIP(ipAddress) != nil {
+		foundIpFromQueryParam = true
+	}
+	ipWithoutQueryParam, foundIpFromHeader, foundIpFromRemote := GetIpAddressWithoutQueryParam(r)
+	if foundIpFromHeader {
+		if len(ipAddress) > 0 && ipAddress != ipWithoutQueryParam {
+			if foundIpFromQueryParam {
+				log.WithFields(fields).Infof("IP address mismatch, ipFromQueryParam=%s, ipFromIstio=%s", ipAddress, ipWithoutQueryParam)
+			} else {
+				log.WithFields(fields).Infof("IP address mismatch and invalid, ipFromQueryParam=%s, ipFromIstio=%s", ipAddress, ipWithoutQueryParam)
+			}
+		}
+	} else {
+		log.WithFields(fields).Warn("No IP address header present")
+	}
+
+	if foundIpFromQueryParam {
+		return ipAddress
+	}
+
+	if foundIpFromHeader || foundIpFromRemote {
+		return ipWithoutQueryParam
+	}
+
 	if len(ipAddress) > 0 {
 		return ipAddress
 	}
@@ -181,4 +210,10 @@ func TextToNumericFormatV4(src string) []byte {
  */
 func IsIPv4LiteralAddress(src string) bool {
 	return TextToNumericFormatV4(src) != nil
+}
+
+func ConvertIpBytesToString(bbytes []byte) string {
+	nip := make(net.IP, len(bbytes))
+	copy(nip, bbytes)
+	return nip.String()
 }

@@ -33,10 +33,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func NormalizeLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap map[string]string, usePartnerAppType bool) {
+func NormalizeLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap map[string]string, usePartnerAppType bool, fields log.Fields) {
 	NormalizeCommonContext(contextMap, common.ESTB_MAC_ADDRESS, common.ECM_MAC_ADDRESS)
-	estbIp := util.GetIpAddress(r, contextMap[common.ESTB_IP])
+	estbIp := util.GetIpAddress(r, contextMap[common.ESTB_IP], fields)
 	contextMap[common.ESTB_IP] = estbIp
+	fields[common.ESTB_IP] = estbIp
 	// check if request is for partner
 	if usePartnerAppType && contextMap[common.APPLICATION_TYPE] == shared.STB {
 		if appType := GetApplicationTypeFromPartnerId(contextMap[common.PARTNER_ID]); appType != "" {
@@ -54,9 +55,8 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 		fields = log.Fields{}
 	}
 
-	NormalizeLogUploaderContext(ws, r, contextMap, usePartnerAppType)
+	NormalizeLogUploaderContext(ws, r, contextMap, usePartnerAppType, fields)
 
-	// getting local sat token
 	localToken, err := xhttp.GetLocalSatToken(fields)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Error getting sat token from codebig")
@@ -107,15 +107,14 @@ func CleanupLusUploadRepository(settings *logupload.Settings, apiVersion string)
 }
 
 func LogResultSettings(settings *logupload.Settings, telemetryRule *logupload.TelemetryRule, settingRules []*logupload.SettingRule, fields log.Fields) {
-	ruleNames := make([]string, 0)
+	ruleNames := make([]string, 0, len(settings.RuleIDs))
 	for ruleId, _ := range settings.RuleIDs {
-		// *DCMGenericRule
 		dcmRule := loguploader.GetOneDcmRuleFunc(ruleId)
 		if dcmRule != nil && len(dcmRule.Name) > 0 {
 			ruleNames = append(ruleNames, dcmRule.Name)
 		}
 	}
-	settingRuleNames := make([]string, 0)
+	settingRuleNames := make([]string, 0, len(settingRules))
 	if len(settingRules) > 0 {
 		for _, settingRule := range settingRules {
 			settingRuleNames = append(settingRuleNames, settingRule.Name)
@@ -128,29 +127,39 @@ func LogResultSettings(settings *logupload.Settings, telemetryRule *logupload.Te
 
 	fields["formulaNames"] = ruleNames
 	fields["telemetryRuleName"] = telemetryRuleName
-	fields["telemetryRuleName"] = settingRuleNames
-	log.WithFields(fields).Info("LogUploaderService AppliedRules")
+	fields["settingRuleNames"] = settingRuleNames
+	log.WithFields(common.FilterLogFields(fields)).Info("LogUploaderService AppliedRules")
 }
 
-func GetTelemetryTwoProfileResponeDicts(contextMap map[string]string) ([]util.Dict, error) {
+type TelemetryEvaluationResult struct {
+	RulesMatched bool
+	ProfilesData []util.Dict
+}
+
+func GetTelemetryTwoProfileResponeDicts(contextMap map[string]string, fields log.Fields) (*TelemetryEvaluationResult, error) {
 	telemetryProfileService := telemetry.NewTelemetryProfileService()
-	telemetryTwoRules := telemetryProfileService.ProcessTelemetryTwoRules(contextMap)
-	telemetryTwoProfiles := telemetryProfileService.GetTelemetryTwoProfileByTelemetryRules(telemetryTwoRules)
-	var dicts []util.Dict
-	for _, profile := range telemetryTwoProfiles {
+	matchedRules := telemetryProfileService.ProcessTelemetryTwoRules(contextMap)
+	matchedProfiles := telemetryProfileService.GetTelemetryTwoProfileByTelemetryRules(matchedRules, fields)
+	dicts := []util.Dict{}
+	for _, profile := range matchedProfiles {
 		// profile = nil should not happen
 		var valueDict util.Dict
-		err := json.Unmarshal([]byte(profile.Jsonconfig), &valueDict)
+		var err = json.Unmarshal([]byte(profile.Jsonconfig), &valueDict)
 		if err != nil {
 			return nil, err
 		}
 
-		dict := util.Dict{
+		profileData := util.Dict{
 			"name":        profile.Name,
 			"versionHash": util.GetCRC32HashValue(profile.Jsonconfig),
 			"value":       valueDict,
 		}
-		dicts = append(dicts, dict)
+		dicts = append(dicts, profileData)
 	}
-	return dicts, nil
+	evaluationResult := &TelemetryEvaluationResult{}
+	if len(matchedRules) > 0 {
+		evaluationResult.RulesMatched = true
+	}
+	evaluationResult.ProfilesData = dicts
+	return evaluationResult, nil
 }

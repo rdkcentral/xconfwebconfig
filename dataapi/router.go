@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
-	db "xconfwebconfig/db"
+	"xconfwebconfig/db"
 	xhttp "xconfwebconfig/http"
 	"xconfwebconfig/rulesengine"
 	"xconfwebconfig/shared"
@@ -33,8 +34,10 @@ import (
 	"xconfwebconfig/shared/rfc"
 	"xconfwebconfig/util"
 
+	cache "github.com/Comcast/goburrow-cache"
 	conf "github.com/go-akka/configuration"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 type XconfConfigs struct {
@@ -42,16 +45,42 @@ type XconfConfigs struct {
 	PartnerApplicationTypes      []string // List of partner's application type
 	EnableDeviceService          bool
 	EnableDeviceDBLookup         bool
+	EnableMacAccountServiceCall  bool
+	AccountServiceMacPrefix      string
 	EnableAccountService         bool
-	EnableGroupService           bool
-	GroupServiceModelSet         util.Set
 	EnableTaggingService         bool
 	EnableTaggingServiceRFC      bool
-	EnableCdnDirect              bool
+	IPv4NetworkMaskPrefixLength  int32
+	IPv6NetworkMaskPrefixLength  int32
+	EnableFwDownloadLogs         bool
+	EnableRfcPrecook             bool
+	EnableRfcPrecookForOfferedFw bool
+	EnableRfcPrecook304          bool
+	RfcPrecookStartTime          string
+	RfcPrecookEndTime            string
+	RfcPrecookTimeZone           *time.Location
+	RfcPrecookTimeFormat         string
+	EnableGroupService           bool
+	EnableFtGroups               bool
+	EnableFtMacTags              bool
+	EnableFtAccountTags          bool
+	EnableFtPartnerTags          bool
+	GroupServiceModelSet         util.Set
+	MacTagsModelSet              util.Set
+	AccountTagsModelSet          util.Set
+	PartnerTagsModelSet          util.Set
+	MacTagsPrefixList            []string
+	AccountTagsPrefixList        []string
+	PartnerTagsPrefixList        []string
 	ReturnAccountId              bool
 	ReturnAccountHash            bool
-	DiagnosticAPIsEnabled        bool
 	EstbRecoveryFirmwareVersions string
+	DiagnosticAPIsEnabled        bool
+	Account_mgmt                 string
+	GroupServiceCacheEnabled     bool
+	RfcReturnCountryCode         bool
+	RfcCountryCodeModelsSet      util.Set
+	RfcCountryCodePartnersSet    util.Set
 }
 
 // Function to register the table name and the corresponding model/struct constructor
@@ -160,19 +189,126 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		appTypes = append(appTypes, strings.ToLower(v))
 	}
 
+	GroupServiceModelSet := util.NewSet()
+	GroupsModelString := conf.GetString("xconfwebconfig.xconf.group_service_model_list")
+	if !util.IsBlank(GroupsModelString) {
+		xdpGroupsModelList := strings.Split(GroupsModelString, ";")
+		for _, model := range xdpGroupsModelList {
+			GroupServiceModelSet.Add(strings.ToUpper(model))
+		}
+	}
+	macTagsModelSet := util.NewSet()
+	macTagsModelString := conf.GetString("xconfwebconfig.xconf.mac_tags_model_list")
+	if !util.IsBlank(macTagsModelString) {
+		macTagsModelList := strings.Split(macTagsModelString, ";")
+		for _, model := range macTagsModelList {
+			macTagsModelSet.Add(strings.ToUpper(model))
+		}
+	}
+	accountTagsModelSet := util.NewSet()
+	accounTagsModelString := conf.GetString("xconfwebconfig.xconf.account_tags_model_list")
+	if !util.IsBlank(accounTagsModelString) {
+		accountTagsModelList := strings.Split(accounTagsModelString, ";")
+		for _, model := range accountTagsModelList {
+			accountTagsModelSet.Add(strings.ToUpper(model))
+		}
+	}
+	partnerTagsModelSet := util.NewSet()
+	partnerTagsModelString := conf.GetString("xconfwebconfig.xconf.partner_tags_model_list")
+	if !util.IsBlank(partnerTagsModelString) {
+		partnerTagsModelList := strings.Split(partnerTagsModelString, ";")
+		for _, model := range partnerTagsModelList {
+			partnerTagsModelSet.Add(strings.ToUpper(model))
+		}
+	}
+
+	macTagsPrefixList := []string{}
+	macTagsPrefixString := conf.GetString("xconfwebconfig.xconf.mac_tags_prefix_list")
+	if !util.IsBlank(macTagsPrefixString) {
+		macTagsPrefixList = strings.Split(macTagsPrefixString, ";")
+	}
+	accountTagsPrefixList := []string{}
+	accountTagsPrefixString := conf.GetString("xconfwebconfig.xconf.account_tags_prefix_list")
+	if !util.IsBlank(accountTagsPrefixString) {
+		accountTagsPrefixList = strings.Split(accountTagsPrefixString, ";")
+	}
+	partnerTagsPrefixList := []string{}
+	partnerTagsPrefixString := conf.GetString("xconfwebconfig.xconf.partner_tags_prefix_list")
+	if !util.IsBlank(partnerTagsPrefixString) {
+		partnerTagsPrefixList = strings.Split(partnerTagsPrefixString, ";")
+	}
+	rfcPrecookEnabled := conf.GetBoolean("xconfwebconfig.xconf.enable_rfc_precook")
+	rfcPrecookForOfferedFwEnabled := conf.GetBoolean("xconfwebconfig.xconf.enable_rfc_precook_for_offered_fw")
+	var timezone *time.Location
+	var err error
+	if rfcPrecookEnabled {
+		timezoneStr := conf.GetString("xconfwebconfig.xconf.rfc_precook_time_zone")
+		// if timezoneStr is empty, defaults on UTC
+		timezone, err = time.LoadLocation(timezoneStr)
+		if err != nil {
+			log.Errorf("Error loading timezone: %s", timezoneStr)
+			panic(err)
+		}
+	}
+
+	rfcCountryCodeModelsSet := util.NewSet()
+	rfcCountryCodeModelsList := conf.GetString("xconfwebconfig.xconf.rfc_country_code_model_list")
+	if !util.IsBlank(rfcCountryCodeModelsList) {
+		rfcCountryCodeModels := strings.Split(rfcCountryCodeModelsList, ";")
+		for _, model := range rfcCountryCodeModels {
+			rfcCountryCodeModelsSet.Add(strings.ToUpper(strings.TrimSpace(model)))
+		}
+	}
+
+	rfcCountryCodePartnersSet := util.NewSet()
+	rfcCountryCodePartnersList := conf.GetString("xconfwebconfig.xconf.rfc_country_code_partner_list")
+	if !util.IsBlank(rfcCountryCodePartnersList) {
+		rfcCountryCodePartners := strings.Split(rfcCountryCodePartnersList, ";")
+		for _, partner := range rfcCountryCodePartners {
+			rfcCountryCodePartnersSet.Add(strings.ToUpper(strings.TrimSpace(partner)))
+		}
+	}
+
 	xc := &XconfConfigs{
 		DeriveAppTypeFromPartnerId:   conf.GetBoolean("xconfwebconfig.xconf.derive_application_type_from_partner_id"),
 		PartnerApplicationTypes:      appTypes,
 		EnableDeviceService:          conf.GetBoolean("xconfwebconfig.xconf.enable_device_service"),
 		EnableDeviceDBLookup:         conf.GetBoolean("xconfwebconfig.xconf.enable_device_db_lookup"),
+		EnableMacAccountServiceCall:  conf.GetBoolean("xconfwebconfig.xconf.enable_mac_accountservice_call"),
 		EnableAccountService:         conf.GetBoolean("xconfwebconfig.xconf.enable_account_service"),
 		EnableTaggingService:         conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service"),
 		EnableTaggingServiceRFC:      conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service_rfc"),
-		EnableCdnDirect:              conf.GetBoolean("xconfwebconfig.xconf.enable_cdn_direct"),
 		ReturnAccountId:              conf.GetBoolean("xconfwebconfig.xconf.return_account_id"),
 		ReturnAccountHash:            conf.GetBoolean("xconfwebconfig.xconf.return_account_hash"),
 		EstbRecoveryFirmwareVersions: conf.GetString("xconfwebconfig.xconf.estb_recovery_firmware_versions"),
 		DiagnosticAPIsEnabled:        conf.GetBoolean("xconfwebconfig.xconf.diagnostic_apis_enabled"),
+		AccountServiceMacPrefix:      conf.GetString("xconfwebconfig.xconf.account_service_mac_prefix"),
+		IPv4NetworkMaskPrefixLength:  conf.GetInt32("xconfwebconfig.xconf.ipv4_network_mask_prefix_length"),
+		IPv6NetworkMaskPrefixLength:  conf.GetInt32("xconfwebconfig.xconf.ipv6_network_mask_prefix_length"),
+		EnableFwDownloadLogs:         conf.GetBoolean("xconfwebconfig.xconf.enable_fw_download_logs"),
+		EnableRfcPrecook:             rfcPrecookEnabled,
+		EnableRfcPrecookForOfferedFw: rfcPrecookForOfferedFwEnabled,
+		EnableRfcPrecook304:          conf.GetBoolean("xconfwebconfig.xconf.enable_rfc_precook_304"),
+		RfcPrecookStartTime:          conf.GetString("xconfwebconfig.xconf.rfc_precook_start_time"),
+		RfcPrecookEndTime:            conf.GetString("xconfwebconfig.xconf.rfc_precook_end_time"),
+		RfcPrecookTimeZone:           timezone,
+		RfcPrecookTimeFormat:         conf.GetString("xconfwebconfig.xconf.rfc_precook_time_format"),
+		EnableGroupService:           conf.GetBoolean("xconfwebconfig.xconf.enable_group_service"),
+		EnableFtMacTags:              conf.GetBoolean("xconfwebconfig.xconf.enable_ft_mac_tags"),
+		EnableFtAccountTags:          conf.GetBoolean("xconfwebconfig.xconf.enable_ft_account_tags"),
+		EnableFtPartnerTags:          conf.GetBoolean("xconfwebconfig.xconf.enable_ft_partner_tags"),
+		EnableFtGroups:               conf.GetBoolean("xconfwebconfig.xconf.enable_ft_xdp_groups"),
+		GroupServiceModelSet:         GroupServiceModelSet,
+		MacTagsModelSet:              macTagsModelSet,
+		AccountTagsModelSet:          accountTagsModelSet,
+		PartnerTagsModelSet:          partnerTagsModelSet,
+		MacTagsPrefixList:            macTagsPrefixList,
+		AccountTagsPrefixList:        accountTagsPrefixList,
+		PartnerTagsPrefixList:        partnerTagsPrefixList,
+		GroupServiceCacheEnabled:     conf.GetBoolean(fmt.Sprintf("xconfwebconfig.%v.cache_enabled", conf.GetString("xconfwebconfig.xconf.group_service_name"))),
+		RfcReturnCountryCode:         conf.GetBoolean("xconfwebconfig.xconf.rfc_return_country_code"),
+		RfcCountryCodeModelsSet:      rfcCountryCodeModelsSet,
+		RfcCountryCodePartnersSet:    rfcCountryCodePartnersSet,
 	}
 	return xc
 }
@@ -180,21 +316,20 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 // Xconf setup
 func XconfSetup(server *xhttp.XconfServer, r *mux.Router) {
 	xc := GetXconfConfigs(server.ServerConfig.Config)
-
 	WebServerInjection(server, xc)
 	db.ConfigInjection(server.ServerConfig.Config)
-
+	db.SetGrpCacheLoadFunc(LoadGroupServiceFeatureTags)
 	RegisterTables()
 	db.GetCacheManager() // Initialize cache manager
 
-	routeXconfDataserviceApis(r, server)
+	RouteXconfDataserviceApis(r, server)
 
 	if xc.DiagnosticAPIsEnabled {
-		routeDiagnosticApis(r, server)
+		RouteDiagnosticApis(r, server)
 	}
 }
 
-func routeXconfDataserviceApis(r *mux.Router, s *xhttp.XconfServer) {
+func RouteXconfDataserviceApis(r *mux.Router, s *xhttp.XconfServer) {
 	paths := []*mux.Router{}
 
 	getFeatureSettingsPath := r.Path("/featureControl/getSettings").Subrouter()
@@ -253,6 +388,7 @@ func routeXconfDataserviceApis(r *mux.Router, s *xhttp.XconfServer) {
 
 	// r.NotFoundHandler = PathNotFoundHandler()
 	for _, p := range paths {
+		p.Use(s.SpanMiddleware)
 		p.Use(s.NoAuthMiddleware)
 	}
 
@@ -261,12 +397,8 @@ func routeXconfDataserviceApis(r *mux.Router, s *xhttp.XconfServer) {
 }
 
 // Potential Todo: Add metrics to these routes as well
-func routeDiagnosticApis(r *mux.Router, s *xhttp.XconfServer) {
+func RouteDiagnosticApis(r *mux.Router, s *xhttp.XconfServer) {
 	paths := []*mux.Router{}
-
-	getConfigPath := r.Path("/config").Subrouter()
-	getConfigPath.HandleFunc("", s.ServerConfigHandler).Methods("GET")
-	paths = append(paths, getConfigPath)
 
 	getInfoRefreshAllPath := r.Path("/info/refreshAll").Subrouter()
 	getInfoRefreshAllPath.HandleFunc("", GetInfoRefreshAllHandler).Methods("GET")
@@ -287,4 +419,37 @@ func PathNotFoundHandler() http.Handler {
 		xhttp.WriteXconfResponse(w, 404, []byte(fmt.Sprintf("Problem accessing %s", r.URL.Path)))
 
 	})
+}
+
+func isNotFoundError(err error) bool {
+	return strings.Contains(err.Error(), "404")
+}
+
+func LoadGroupServiceFeatureTags(key cache.Key) (cache.Value, error) {
+	log.WithFields(log.Fields{"key": key}).Info("loading function for group service cache called")
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("Recovered in loadGroupServiceFeatureTags: %v", r)
+		}
+	}()
+	partnerID := key.(string)
+	fields := log.Fields{"partnerId": partnerID}
+	// Fetch feature tags from XDAS service
+	featureTags, err := Ws.GroupServiceConnector.GetFeatureTagsHashedItems(partnerID, fields)
+	if err != nil {
+		if isNotFoundError(err) {
+			log.WithFields(log.Fields{"error": err}).Debugf("No feature tags found for partner=%s", partnerID)
+
+			// Cache the absence of tags by storing nil
+			emptyTags := map[string]string{}
+			cacheErr := db.GetCacheManager().SetGroupServiceFeatureTags(partnerID, emptyTags)
+			if cacheErr != nil {
+				log.WithFields(log.Fields{"error": cacheErr, "partnerId": partnerID}).Error("Failed to cache empty tags")
+			}
+			return emptyTags, nil
+		}
+		log.WithFields(log.Fields{"error": err}).Debugf("Error getting response from XDAS for partner=%s", partnerID)
+		return nil, err
+	}
+	return featureTags, nil
 }

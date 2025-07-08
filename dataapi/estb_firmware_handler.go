@@ -41,11 +41,10 @@ func GetEstbFirmwareSwuBseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	var isIpAddressPresent bool
 	var ipAddress string
-	var ips []string
 	queryParams := r.URL.Query()
-	if len(queryParams) > 0 {
-		ips, isIpAddressPresent = queryParams[common.IP_ADDRESS]
-		ipAddress = ips[0]
+	if len(queryParams) > 0 && queryParams.Has(common.IP_ADDRESS) {
+		ipAddress = queryParams.Get(common.IP_ADDRESS)
+		isIpAddressPresent = true
 	}
 	if !isIpAddressPresent {
 		if r.ContentLength != 0 {
@@ -87,7 +86,7 @@ func GetEstbFirmwareSwuHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.Error(w, http.StatusInternalServerError, common.NotOK)
 		return
 	}
-	status, response, firmwareConfigFacade := getFirmwareResponse(w, r, xw, fields)
+	status, response, firmwareConfigFacade, _ := GetFirmwareResponse(w, r, xw, fields)
 	if status == 200 {
 		firmwareConfigResponse := sharedef.CreateFirmwareConfigFacadeResponse(*firmwareConfigFacade)
 		response, _ := util.JSONMarshal(firmwareConfigResponse)
@@ -97,17 +96,15 @@ func GetEstbFirmwareSwuHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResponseWriter, fields log.Fields) (int, []byte, *sharedef.FirmwareConfigFacade) {
+func GetFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResponseWriter, fields log.Fields) (int, []byte, *sharedef.FirmwareConfigFacade, map[string]string) {
 	queryParams := r.URL.Query()
 	clientProtocolHeader := GetClientProtocolHeaderValue(r)
+
 	contextMap := make(map[string]string)
-	var version string
-	// don't add any variation of "clientProtocol" from query params to contextMap
+	// don't add any variation of "clientProtocol" or "clientCertExpiry" from query params to contextMap (these should come from Istio)
 	if len(queryParams) > 0 {
 		for k, v := range queryParams {
-			if k == common.VERSION {
-				version = v[0]
-			} else if !strings.EqualFold(k, common.CLIENT_PROTOCOL) {
+			if !strings.EqualFold(k, common.CLIENT_PROTOCOL) && !strings.EqualFold(k, common.CLIENT_CERT_EXPIRY) && !strings.EqualFold(k, common.RECOVERY_CERT_EXPIRY) {
 				contextMap[k] = strings.Join(v, ",")
 			}
 		}
@@ -116,25 +113,25 @@ func getFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResp
 		// body, _ := fields["body"].(string)
 		body := xw.Body()
 		if body != "" {
-			version = parseProcBody(body, contextMap)
+			parseProcBody(body, contextMap)
 		}
 	}
 	contextMap[common.APPLICATION_TYPE] = mux.Vars(r)[common.APPLICATION_TYPE]
 	contextMap[common.XCONF_HTTP_HEADER] = clientProtocolHeader
 	AddClientProtocolToContextMap(contextMap, clientProtocolHeader)
+	clientCertExpiry := GetClientCertExpiryHeaderValue(r)
+	AddCertExpiryToContextMap(contextMap, clientCertExpiry)
+	AddClientCertDurationToContext(contextMap, clientCertExpiry)
 	GetFirstElementsInContextMap(contextMap)
 	if contextMap[common.ESTB_MAC] == "" {
-		if util.IsVersionGreaterOrEqual(version, 2.0) {
-			return http.StatusBadRequest, []byte("\"eStbMac should be specified\""), nil
-		}
-		return http.StatusInternalServerError, []byte("\"eStbMac should be specified\""), nil
+		return http.StatusBadRequest, []byte("\"eStbMac should be specified\""), nil, nil
 	}
 	if !IsAllowedRequest(contextMap, clientProtocolHeader) {
-		return http.StatusForbidden, []byte("FORBIDDEN"), nil
+		return http.StatusForbidden, []byte("FORBIDDEN"), nil, nil
 	}
 	_, errmac := util.MACAddressValidator(contextMap[common.ESTB_MAC])
 	if errmac != nil {
-		return http.StatusInternalServerError, []byte(fmt.Sprintf("\"<h2>500 Internal Server Error</h2><div>invalid mac address: %s</div>\"", contextMap[common.ESTB_MAC])), nil
+		return http.StatusBadRequest, []byte(fmt.Sprintf("\"<h2>400 Bad Request</h2><div>invalid mac address: %s</div>\"", contextMap[common.ESTB_MAC])), nil, nil
 	}
 
 	log.Debugf("GetEstbFirmwareSwuHandler call AddEstbFirmwareContext start ... queryParams %v", queryParams)
@@ -145,11 +142,31 @@ func getFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResp
 	evaluationResult, _ := estbFirmwareRuleBase.Eval(contextMap, convertedContext, contextMap[common.APPLICATION_TYPE], fields)
 	explanation := GetExplanation(contextMap, evaluationResult)
 	if evaluationResult == nil || evaluationResult.Blocked || evaluationResult.FirmwareConfig == nil || evaluationResult.FirmwareConfig.Properties == nil {
-		LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
-		return http.StatusNotFound, []byte(fmt.Sprintf("\"<h2>404 NOT FOUND</h2><div>%s<div>\"", explanation)), nil
+		if Xc.EnableFwDownloadLogs {
+			LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
+		}
+		return http.StatusNotFound, []byte(fmt.Sprintf("\"<h2>404 NOT FOUND</h2><div>%s<div>\"", explanation)), nil, nil
 	}
-	LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
-	return http.StatusOK, []byte(""), evaluationResult.FirmwareConfig
+
+	deviceInfo := map[string]string{
+		xhttp.SECURITY_TOKEN_ESTB_MAC:        contextMap[common.ESTB_MAC],
+		xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
+		xhttp.SECURITY_TOKEN_ESTB_IP:         contextMap[common.IP_ADDRESS],
+		xhttp.SECURITY_TOKEN_FW_LIST:         xhttp.GetListOfAllFirmwares(evaluationResult.FirmwareConfig.GetFirmwareFilename(), evaluationResult.FirmwareConfig.Properties),
+	}
+	if !util.IsBlank(contextMap[common.PARTNER_ID]) {
+		deviceInfo[xhttp.SECURITY_TOKEN_PARTNER] = contextMap[common.PARTNER_ID]
+	}
+	if !util.IsBlank(contextMap[common.MODEL]) {
+		deviceInfo[xhttp.SECURITY_TOKEN_MODEL] = contextMap[common.MODEL]
+	}
+
+	locationWithToken := Ws.FirmwareSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, evaluationResult.FirmwareConfig.GetFirmwareLocation(), fields)
+	evaluationResult.FirmwareConfig.SetFirmwareLocation(locationWithToken)
+	if Xc.EnableFwDownloadLogs {
+		LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
+	}
+	return http.StatusOK, []byte(""), evaluationResult.FirmwareConfig, contextMap
 }
 
 func GetCheckMinFirmwareHandler(w http.ResponseWriter, r *http.Request) {
@@ -218,6 +235,7 @@ func GetEstbFirmwareVersionInfoPath(w http.ResponseWriter, r *http.Request) {
 	if len(queryParams) > 0 {
 		for k, v := range queryParams {
 			// don't add any variation of "clientProtoco" from query params to contextMap
+			queryParams.Get(k)
 			if !strings.EqualFold(k, common.CLIENT_PROTOCOL) {
 				contextMap[k] = strings.Join(v, ",")
 			}
@@ -244,7 +262,7 @@ func GetEstbFirmwareVersionInfoPath(w http.ResponseWriter, r *http.Request) {
 		estbFirmwareRuleBase := dataef.NewEstbFirmwareRuleBaseDefault()
 		runningVersionInfo := estbFirmwareRuleBase.GetAppliedActivationVersionType(contextMap, contextMap[common.APPLICATION_TYPE])
 		fields["context"] = contextMap
-		log.WithFields(fields).Info("EstbFirmwareService ActivationVersion")
+		log.WithFields(common.FilterLogFields(fields)).Info("EstbFirmwareService ActivationVersion")
 		response, _ := util.JSONMarshal(*runningVersionInfo)
 		xhttp.WriteXconfResponse(w, 200, response)
 	}
