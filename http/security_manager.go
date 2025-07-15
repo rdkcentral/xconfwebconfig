@@ -30,7 +30,7 @@ const (
 	SECURITY_TOKEN_ESTB_IP         = "estbIP"
 	SECURITY_TOKEN_MODEL           = "model"
 	SECURITY_TOKEN_PARTNER         = "partnerId"
-	SECURITY_TOKEN_FW_LIST         = "fwList"
+	SECURITY_TOKEN_FW_FILENAME     = "firmwareFilename"
 	SECURITY_TOKEN_FW_DOWNLOAD_TS  = "fwDownloadTs"
 	SECURITY_TOKEN_LOG_UPLOAD_TS   = "logUploadTs"
 	URL_PROTOCOL_PREFIX            = "http://"
@@ -39,11 +39,6 @@ const (
 
 // Define a custom Base64 encoding with a custom alphabet
 var SecurityTokenCustomBase64Encoding = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_").WithPadding(base64.NoPadding)
-
-type AuxiliaryFirmware struct {
-	Prefix    string
-	Extension string
-}
 
 type SecurityTokenPathConfig struct {
 	UrlPathMap             map[string]bool
@@ -60,7 +55,6 @@ type SecurityTokenConfig struct {
 	SecurityTokenHostKeyword           string
 	SecurityTokenKey                   string
 	SecurityTokenGroupServiceEnabled   bool
-	AuxiliaryFirmwareList              []AuxiliaryFirmware
 }
 
 func NewSecurityTokenConfig(conf *configuration.Config) *SecurityTokenConfig {
@@ -78,7 +72,6 @@ func NewSecurityTokenConfig(conf *configuration.Config) *SecurityTokenConfig {
 			modelSet.Add(strings.ToLower(model))
 		}
 	}
-	auxFirmwareList := getAuxiliaryFirmwares(conf.GetString("xconfwebconfig.xconf.auxiliary_extensions"))
 	devicePercentEnabled := conf.GetBoolean("xconfwebconfig.xconf.security_token_device_percent_enabled")
 	devicePercentValue := conf.GetFloat64("xconfwebconfig.xconf.security_token_device_percent_value")
 	hostKeyword := conf.GetString("xconfwebconfig.xconf.security_token_host_keyword")
@@ -92,7 +85,6 @@ func NewSecurityTokenConfig(conf *configuration.Config) *SecurityTokenConfig {
 		SecurityTokenHostKeyword:           hostKeyword,
 		SecurityTokenKey:                   getSecurityTokenKey(conf),
 		SecurityTokenGroupServiceEnabled:   securityTokenGroupServiceEnabled,
-		AuxiliaryFirmwareList:              auxFirmwareList,
 	}
 }
 
@@ -129,76 +121,6 @@ func getSecurityTokenKey(conf *configuration.Config) string {
 		}
 	}
 	return key
-}
-
-func getAuxiliaryFirmwares(auxExtensionString string) []AuxiliaryFirmware {
-	var auxFirmwareList []AuxiliaryFirmware
-	if auxExtensionString != "" {
-		auxExtensionList := strings.Split(auxExtensionString, ";")
-		// create list with length 0 but capacity the num of auxExtensions
-		auxFirmwareList = make([]AuxiliaryFirmware, 0, len(auxExtensionList))
-		for _, auxExtension := range auxExtensionList {
-			auxPairList := strings.Split(auxExtension, ":")
-			if len(auxPairList) == 2 {
-				auxPair := AuxiliaryFirmware{
-					Prefix:    strings.ToLower(auxPairList[0]),
-					Extension: strings.ToLower(auxPairList[1]),
-				}
-				auxFirmwareList = append(auxFirmwareList, auxPair)
-			}
-		}
-	}
-	return auxFirmwareList
-}
-
-func findAuxiliaryExtension(propName string) string {
-	propName = strings.ToLower(propName)
-	for _, auxFirmware := range Ws.SecurityTokenConfig.AuxiliaryFirmwareList {
-		if strings.HasPrefix(propName, auxFirmware.Prefix) {
-			return auxFirmware.Extension
-		}
-	}
-	return ""
-}
-
-func isAuxiliary(propName string) bool {
-	propName = strings.ToLower(propName)
-	for _, auxFirmware := range Ws.SecurityTokenConfig.AuxiliaryFirmwareList {
-		if strings.HasPrefix(propName, auxFirmware.Prefix) {
-			return true
-		}
-	}
-	return false
-}
-
-func GetListOfAllFirmwares(filename string, properties map[string]interface{}) string {
-	if !Ws.SecurityTokenConfig.SecurityTokenGroupServiceEnabled {
-		return filename
-	}
-	// if using group service, need the list of all firmwares
-	fwList := make([]string, 0, len(properties))
-	fwList = append(fwList, filename)
-	if Ws.SecurityTokenConfig.SecurityTokenGroupServiceEnabled {
-		for k, v := range properties {
-			if isAuxiliary(k) {
-				firmwareFilename := v.(string)
-				fwList = append(fwList, firmwareFilename)
-			}
-		}
-	}
-	return strings.Join(fwList, ",")
-}
-
-func GetAuxFirmwareFilename(propName string, propFileName interface{}) string {
-	var auxFilename string
-	extension := findAuxiliaryExtension(propName)
-	if len(extension) > 0 {
-		auxFilename = propFileName.(string)
-		if !strings.HasSuffix(strings.ToLower(auxFilename), extension) {
-			auxFilename = fmt.Sprintf("%s%s", auxFilename, extension)
-		}
-	}
-	return auxFilename
 }
 
 func (s *SecurityTokenPathConfig) getSecurityToken(deviceInfo map[string]string, fields log.Fields) string {
@@ -239,7 +161,7 @@ func (s *SecurityTokenPathConfig) getSecurityToken(deviceInfo map[string]string,
 		}
 		input := estbIp
 		if s.FilenameInTokenEnabled {
-			input = fmt.Sprintf("%s_%s", input, deviceInfo[SECURITY_TOKEN_FW_LIST])
+			input = fmt.Sprintf("%s_%s", input, deviceInfo[SECURITY_TOKEN_FW_FILENAME])
 		}
 		token = generateSecurityToken(input, fields)
 	}
