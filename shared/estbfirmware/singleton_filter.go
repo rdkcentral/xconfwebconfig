@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"strings"
 
-	"xconfwebconfig/shared"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 const (

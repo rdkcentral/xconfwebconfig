@@ -21,7 +21,7 @@ import (
 	"net"
 	"strings"
 
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 type MacAddress struct {

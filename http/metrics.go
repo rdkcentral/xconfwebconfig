@@ -23,7 +23,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"xconfwebconfig/common"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"

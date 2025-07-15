@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 const (

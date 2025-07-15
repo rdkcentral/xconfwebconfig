@@ -26,13 +26,13 @@ import (
 	"strings"
 	"time"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/shared/firmware"
-	corefw "xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	log "github.com/sirupsen/logrus"
 )

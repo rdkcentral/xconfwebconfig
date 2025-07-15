@@ -23,12 +23,12 @@ import (
 	"math/rand"
 	"strings"
 
-	"xconfwebconfig/db"
-	"xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/firmware"
-	"xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )

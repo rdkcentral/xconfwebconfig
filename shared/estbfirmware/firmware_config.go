@@ -25,10 +25,10 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

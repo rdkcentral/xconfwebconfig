@@ -18,8 +18,8 @@
 package rulesengine
 
 import (
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	log "github.com/sirupsen/logrus"
 )

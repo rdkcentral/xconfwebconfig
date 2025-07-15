@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"testing"
 
-	"xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/common"
 
 	"gotest.tools/assert"
 )

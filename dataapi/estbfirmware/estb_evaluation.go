@@ -23,9 +23,9 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
 // EvaluationResult ...

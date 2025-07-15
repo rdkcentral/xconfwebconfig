@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 
 	log "github.com/sirupsen/logrus"
 )

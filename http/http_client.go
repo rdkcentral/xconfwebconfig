@@ -28,7 +28,7 @@ import (
 	"strings"
 	"time"
 
-	"xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/common"
 
 	"github.com/go-akka/configuration"
 	"github.com/google/uuid"

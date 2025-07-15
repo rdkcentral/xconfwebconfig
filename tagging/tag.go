@@ -2,7 +2,8 @@ package tagging
 
 import (
 	"encoding/json"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 type Tag struct {

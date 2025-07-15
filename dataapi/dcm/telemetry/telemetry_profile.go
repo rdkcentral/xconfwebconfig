@@ -23,9 +23,9 @@ import (
 	"sort"
 	"time"
 
-	common "xconfwebconfig/common"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared/logupload"
+	common "github.com/rdkcentral/xconfwebconfig/common"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	scheduler "github.com/carlescere/scheduler"
 	log "github.com/sirupsen/logrus"

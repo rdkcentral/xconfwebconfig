@@ -22,7 +22,7 @@ import (
 	_ "net"
 	_ "strings"
 
-	util "xconfwebconfig/util"
+	util "github.com/rdkcentral/xconfwebconfig/util"
 )
 
 // IpAddressGroup IpAddressGroupExtended table

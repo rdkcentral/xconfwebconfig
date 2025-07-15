@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/common"
 )
 
 func (s *XconfServer) VersionHandler(w http.ResponseWriter, r *http.Request) {
