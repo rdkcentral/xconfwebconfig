@@ -247,6 +247,12 @@ func AddGroupServiceFTContext(ws *xhttp.XconfServer, macAddressKey string, conte
 		getPrefixData := true
 		if Xc.EnableFtPartnerTags && (len(Xc.PartnerTagsModelSet) == 0 || Xc.PartnerTagsModelSet.Contains(strings.ToUpper(contextMap[common.MODEL]))) {
 			partner = strings.TrimSpace(partner)
+
+			if Xc.PartnerIdValidationEnabled && !Xc.ValidPartnerIdRegex.MatchString(partner) {
+				log.WithFields(fields).Infof("Skipping AddGroupServiceFTContext for invalid partnerId: %q", partner)
+				return tags
+			}
+
 			log.WithFields(fields).Debugf("Getting all data from GroupService /ft keyspace for partnerId=%s", partner)
 
 			if Xc.GroupServiceCacheEnabled {

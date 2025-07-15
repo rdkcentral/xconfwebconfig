@@ -20,6 +20,7 @@ package dataapi
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -81,6 +82,8 @@ type XconfConfigs struct {
 	RfcReturnCountryCode         bool
 	RfcCountryCodeModelsSet      util.Set
 	RfcCountryCodePartnersSet    util.Set
+	PartnerIdValidationEnabled   bool
+	ValidPartnerIdRegex          *regexp.Regexp
 }
 
 // Function to register the table name and the corresponding model/struct constructor
@@ -269,6 +272,17 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		}
 	}
 
+	partnerIdValidationEnabled := conf.GetBoolean("xconfwebconfig.xconf.partner_id_validation_enabled", false)
+
+	// Partner ID regex config
+	const defaultValidPartnerIdRegex = `^[A-Za-z0-9_.\-,:;]{3,32}$`
+	validPartnerIdRegexStr := conf.GetString("xconfwebconfig.xconf.valid_partner_id_regex", defaultValidPartnerIdRegex)
+	validPartnerIdRegex, err := regexp.Compile(validPartnerIdRegexStr)
+	if err != nil {
+		log.Warnf("Invalid partner ID regex pattern '%s', using default. Error: %v", validPartnerIdRegexStr, err)
+		validPartnerIdRegex = regexp.MustCompile(defaultValidPartnerIdRegex)
+	}
+
 	xc := &XconfConfigs{
 		DeriveAppTypeFromPartnerId:   conf.GetBoolean("xconfwebconfig.xconf.derive_application_type_from_partner_id"),
 		PartnerApplicationTypes:      appTypes,
@@ -309,6 +323,8 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		RfcReturnCountryCode:         conf.GetBoolean("xconfwebconfig.xconf.rfc_return_country_code"),
 		RfcCountryCodeModelsSet:      rfcCountryCodeModelsSet,
 		RfcCountryCodePartnersSet:    rfcCountryCodePartnersSet,
+		ValidPartnerIdRegex:          validPartnerIdRegex,
+		PartnerIdValidationEnabled:   partnerIdValidationEnabled,
 	}
 	return xc
 }
