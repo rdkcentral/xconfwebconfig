@@ -83,6 +83,7 @@ type XconfConfigs struct {
 	RfcReturnCountryCode         bool
 	RfcCountryCodeModelsSet      util.Set
 	RfcCountryCodePartnersSet    util.Set
+	AuxiliaryFirmwareList        []AuxiliaryFirmware
 	PartnerIdValidationEnabled   bool
 	ValidPartnerIdRegex          *regexp.Regexp
 }
@@ -274,6 +275,7 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		}
 	}
 
+	auxFirmwareList := getAuxiliaryFirmwares(conf.GetString("xconfwebconfig.xconf.auxiliary_extensions"))
 	partnerIdValidationEnabled := conf.GetBoolean("xconfwebconfig.xconf.partner_id_validation_enabled", false)
 
 	// Partner ID regex config
@@ -325,6 +327,7 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		RfcReturnCountryCode:         conf.GetBoolean("xconfwebconfig.xconf.rfc_return_country_code"),
 		RfcCountryCodeModelsSet:      rfcCountryCodeModelsSet,
 		RfcCountryCodePartnersSet:    rfcCountryCodePartnersSet,
+		AuxiliaryFirmwareList:        auxFirmwareList,
 		ValidPartnerIdRegex:          validPartnerIdRegex,
 		PartnerIdValidationEnabled:   partnerIdValidationEnabled,
 	}
@@ -470,4 +473,24 @@ func LoadGroupServiceFeatureTags(key cache.Key) (cache.Value, error) {
 		return nil, err
 	}
 	return featureTags, nil
+}
+
+func getAuxiliaryFirmwares(auxExtensionString string) []AuxiliaryFirmware {
+	var auxFirmwareList []AuxiliaryFirmware
+	if auxExtensionString != "" {
+		auxExtensionList := strings.Split(auxExtensionString, ";")
+		// create list with length 0 but capacity the num of auxExtensions
+		auxFirmwareList = make([]AuxiliaryFirmware, 0, len(auxExtensionList))
+		for _, auxExtension := range auxExtensionList {
+			auxPairList := strings.Split(auxExtension, ":")
+			if len(auxPairList) == 2 {
+				auxPair := AuxiliaryFirmware{
+					Prefix:    auxPairList[0],
+					Extension: auxPairList[1],
+				}
+				auxFirmwareList = append(auxFirmwareList, auxPair)
+			}
+		}
+	}
+	return auxFirmwareList
 }
