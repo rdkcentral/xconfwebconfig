@@ -25,12 +25,12 @@ import (
 	"sort"
 	"strings"
 
-	common "xconfwebconfig/common"
-	"xconfwebconfig/db"
-	"xconfwebconfig/http"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared/rfc"
-	"xconfwebconfig/util"
+	common "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/http"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )

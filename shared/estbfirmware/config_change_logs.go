@@ -26,9 +26,9 @@ import (
 	"strings"
 	"time"
 
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 const (

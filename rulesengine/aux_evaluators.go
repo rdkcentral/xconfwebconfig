@@ -20,7 +20,7 @@ package rulesengine
 import (
 	"regexp"
 
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 func GetAuxEvaluators() []IConditionEvaluator {

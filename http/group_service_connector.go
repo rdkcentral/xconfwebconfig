@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"reflect"
 
-	conversion "xconfwebconfig/protobuf"
-	"xconfwebconfig/util"
+	conversion "github.com/rdkcentral/xconfwebconfig/protobuf"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"

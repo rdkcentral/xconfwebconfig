@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"strings"
 
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/firmware"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
 type TimeFilter struct {

@@ -31,9 +31,9 @@ Retrieving and processing Xconf data from cache:
 The following code illustrates how to retrieve a specific Model from the Model table:
 
 	inmport (
-		"xconfwebconfig/shared"
-		coreef "xconfwebconfig/shared/estbfirmware"
-		"xconfwebconfig/db"
+		"github.com/rdkcentral/xconfwebconfig/shared"
+		coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+		"github.com/rdkcentral/xconfwebconfig/db"
 	)
 
 	obj, err := db.GetListingDao().GetOne(db.TABLE_LOGS, "85:B5:61:4A:26:D5", "tvxads-do-77-xconfdataservice-0.do.xcal.tv_5")

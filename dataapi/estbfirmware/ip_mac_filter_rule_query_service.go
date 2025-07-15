@@ -23,14 +23,14 @@ import (
 
 	"github.com/google/uuid"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	sharedef "xconfwebconfig/shared/estbfirmware"
-	sharedfw "xconfwebconfig/shared/firmware"
-	util "xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	sharedef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	sharedfw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	util "github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )

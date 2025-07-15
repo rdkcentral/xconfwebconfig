@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-module xconfwebconfig
+module github.com/rdkcentral/xconfwebconfig
 
 go 1.23.0
 

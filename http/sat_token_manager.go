@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )

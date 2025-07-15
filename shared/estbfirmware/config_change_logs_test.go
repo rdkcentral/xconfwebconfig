@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"gotest.tools/assert"
 )

@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"xconfwebconfig/common"
-	util "xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	util "github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
