@@ -22,12 +22,12 @@ import (
 	"net/http"
 	"strings"
 
-	"xconfwebconfig/common"
-	dataef "xconfwebconfig/dataapi/estbfirmware"
-	xhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared"
-	sharedef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	dataef "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	sharedef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -152,7 +152,7 @@ func GetFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResp
 		xhttp.SECURITY_TOKEN_ESTB_MAC:        contextMap[common.ESTB_MAC],
 		xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
 		xhttp.SECURITY_TOKEN_ESTB_IP:         contextMap[common.IP_ADDRESS],
-		xhttp.SECURITY_TOKEN_FW_LIST:         xhttp.GetListOfAllFirmwares(evaluationResult.FirmwareConfig.GetFirmwareFilename(), evaluationResult.FirmwareConfig.Properties),
+		xhttp.SECURITY_TOKEN_FW_FILENAME:     evaluationResult.FirmwareConfig.GetFirmwareFilename(),
 	}
 	if !util.IsBlank(contextMap[common.PARTNER_ID]) {
 		deviceInfo[xhttp.SECURITY_TOKEN_PARTNER] = contextMap[common.PARTNER_ID]

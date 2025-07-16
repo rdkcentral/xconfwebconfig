@@ -21,8 +21,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 
 	"gotest.tools/assert"
 )

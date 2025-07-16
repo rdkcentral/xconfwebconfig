@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"os"
 
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"
@@ -71,7 +71,8 @@ func NewSatServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, e
 
 		satClientId := os.Getenv("SAT_CLIENT_ID")
 		if util.IsBlank(satClientId) {
-			satClientId = conf.GetString("xconfwebconfig.%v.client_id", satServiceName)
+			confKey := fmt.Sprintf("xconfwebconfig.%v.client_id", satServiceName)
+			satClientId = conf.GetString(confKey)
 			if util.IsBlank(satClientId) {
 				panic("No env SAT_CLIENT_ID")
 			}
@@ -79,7 +80,8 @@ func NewSatServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, e
 
 		satClientSecret := os.Getenv("SAT_CLIENT_SECRET")
 		if util.IsBlank(satClientSecret) {
-			satClientSecret = conf.GetString("xconfwebconfig.%v.client_secret", satServiceName)
+			confKey := fmt.Sprintf("xconfwebconfig.%v.client_secret", satServiceName)
+			satClientSecret = conf.GetString(confKey)
 			if util.IsBlank(satClientSecret) {
 				panic("No env SAT_CLIENT_SECRET")
 			}

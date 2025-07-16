@@ -20,8 +20,8 @@ package featurecontrol
 import (
 	"fmt"
 
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	log "github.com/sirupsen/logrus"
 )

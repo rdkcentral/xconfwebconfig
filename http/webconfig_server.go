@@ -28,10 +28,10 @@ import (
 	"strings"
 	"time"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	"xconfwebconfig/tracing"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/tracing"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/go-akka/configuration"
 	"github.com/gorilla/mux"

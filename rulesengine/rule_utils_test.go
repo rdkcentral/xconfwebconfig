@@ -21,8 +21,8 @@ import (
 	"reflect"
 	"testing"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"gotest.tools/assert"
 )

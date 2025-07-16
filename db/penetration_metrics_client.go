@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 const (

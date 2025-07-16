@@ -21,14 +21,14 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
-	"xconfwebconfig/common"
-	loguploader "xconfwebconfig/dataapi/dcm/logupload"
-	"xconfwebconfig/dataapi/dcm/telemetry"
-	xhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	loguploader "github.com/rdkcentral/xconfwebconfig/dataapi/dcm/logupload"
+	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/telemetry"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	log "github.com/sirupsen/logrus"
 )

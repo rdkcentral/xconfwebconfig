@@ -20,8 +20,8 @@ package featurecontrol
 import (
 	"testing"
 
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
 	"gotest.tools/assert"
 )
