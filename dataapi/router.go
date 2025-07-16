@@ -24,8 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rdkcentral/xconfwebconfig/tagging"
-
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
