@@ -22,7 +22,7 @@ import (
 	"sort"
 	"strings"
 
-	"xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/common"
 )
 
 type Void struct{}

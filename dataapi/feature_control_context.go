@@ -25,11 +25,11 @@ import (
 	"strings"
 	"time"
 
-	"xconfwebconfig/common"
-	xhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/rfc"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/btcsuite/btcutil/base58"
 	log "github.com/sirupsen/logrus"

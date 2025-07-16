@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/common"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/google/uuid"

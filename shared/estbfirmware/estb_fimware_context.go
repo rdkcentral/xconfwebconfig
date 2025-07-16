@@ -25,9 +25,9 @@ import (
 	"time"
 	"unicode"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"os"
 
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"

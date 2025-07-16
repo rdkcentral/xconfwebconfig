@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/common"
 
 	log "github.com/sirupsen/logrus"
 )

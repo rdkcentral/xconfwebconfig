@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/go-akka/configuration"
 	"github.com/gocql/gocql"

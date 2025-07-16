@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 	"gotest.tools/assert"

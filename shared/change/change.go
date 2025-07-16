@@ -21,9 +21,10 @@ import (
 	"errors"
 	"reflect"
 	"strings"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 // EntityType enum

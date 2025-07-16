@@ -27,15 +27,15 @@ import (
 	"strings"
 	"time"
 
-	"xconfwebconfig/dataapi/estbfirmware"
-	"xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	xhttp "xconfwebconfig/http"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/agrison/go-commons-lang/stringUtils"
 	log "github.com/sirupsen/logrus"

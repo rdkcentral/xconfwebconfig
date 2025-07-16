@@ -24,10 +24,10 @@ import (
 	"strings"
 	"time"
 
-	common "xconfwebconfig/common"
-	"xconfwebconfig/db"
-	xhttp "xconfwebconfig/http"
-	"xconfwebconfig/util"
+	common "github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )

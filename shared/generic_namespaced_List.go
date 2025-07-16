@@ -25,8 +25,9 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"xconfwebconfig/db"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 // GenericNamespacedListType

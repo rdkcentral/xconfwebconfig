@@ -28,9 +28,9 @@ import (
 	"time"
 	_ "time/tzdata"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/dataapi"
-	xhttp "xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
