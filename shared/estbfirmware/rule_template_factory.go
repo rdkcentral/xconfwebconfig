@@ -19,8 +19,9 @@ package estbfirmware
 
 import (
 	"time"
-	"xconfwebconfig/common"
-	re "xconfwebconfig/rulesengine"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 )
 
 var (

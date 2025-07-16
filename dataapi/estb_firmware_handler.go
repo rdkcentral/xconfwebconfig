@@ -22,12 +22,12 @@ import (
 	"net/http"
 	"strings"
 
-	"xconfwebconfig/common"
-	dataef "xconfwebconfig/dataapi/estbfirmware"
-	xhttp "xconfwebconfig/http"
-	"xconfwebconfig/shared"
-	sharedef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	dataef "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	sharedef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"

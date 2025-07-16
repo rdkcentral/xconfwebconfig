@@ -32,7 +32,7 @@ Retrieving and processing Xconf data:
 
 The following code illustrates how to retrieve a specific Model from the Model table:
 
-    import 	"xconfwebconfig/db"
+    import 	"github.com/rdkcentral/xconfwebconfig/db"
 
 	obj, err := db.GetCachedSimpleDao().GetOne("Model", "PX013ANM")
 	if err != nil {

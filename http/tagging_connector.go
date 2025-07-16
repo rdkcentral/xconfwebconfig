@@ -22,8 +22,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"

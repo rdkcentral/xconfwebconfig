@@ -23,11 +23,11 @@ import (
 	"sort"
 	"strings"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"

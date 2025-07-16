@@ -24,8 +24,9 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
-	"xconfwebconfig/common"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/aead/siphash"
 )

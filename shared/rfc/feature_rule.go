@@ -18,8 +18,8 @@
 package rfc
 
 import (
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/util"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 // FeatureRule FeatureControlRule2 table

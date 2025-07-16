@@ -28,8 +28,8 @@ import (
 	"github.com/go-akka/configuration"
 	"github.com/gocql/gocql"
 
-	"xconfwebconfig/security"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/security"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )

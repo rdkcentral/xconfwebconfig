@@ -23,10 +23,10 @@ import (
 	"sort"
 	"strings"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"testing"
 
-	"xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/common"
 
 	log "github.com/sirupsen/logrus"
 	"gotest.tools/assert"

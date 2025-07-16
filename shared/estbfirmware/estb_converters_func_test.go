@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
 	"gotest.tools/assert"
 )
