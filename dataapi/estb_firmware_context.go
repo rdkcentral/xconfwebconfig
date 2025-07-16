@@ -69,6 +69,11 @@ var (
 	}
 )
 
+type AuxiliaryFirmware struct {
+	Prefix    string
+	Extension string
+}
+
 func IsMacPresentAndValid(queryParams url.Values) (bool, string, string) {
 	var mac string
 	var errorStr string
