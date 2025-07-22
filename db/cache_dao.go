@@ -329,7 +329,7 @@ func (csd cachedSimpleDaoImpl) RefreshAll(tableName string) error {
 
 	var entries map[string]interface{}
 	if tableInfo.IsCompressAndSplit() {
-		entries, err = GetCompressingDataDao().GetAllAsMap(tableName)
+		entries, err = GetCompressingDataDao().GetAllAsMap(tableName, true)
 	} else {
 		entries, err = GetSimpleDao().GetAllAsMap(tableName, 0)
 	}
