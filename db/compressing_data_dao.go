@@ -19,8 +19,10 @@ package db
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/golang/snappy"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -35,8 +37,8 @@ type CompressingDataDao interface {
 	SetOne(tableName string, rowKey string, value []byte) error
 	DeleteOne(tableName string, rowKey string) error
 	GetAllByKeys(tableName string, rowKeys []string) ([]interface{}, error)
-	GetAllAsList(tableName string) ([]interface{}, error)
-	GetAllAsMap(tableName string) (map[string]interface{}, error)
+	GetAllAsList(tableName string, continueOnError bool) ([]interface{}, error)
+	GetAllAsMap(tableName string, continueOnError bool) (map[string]interface{}, error)
 	GetKeys(tableName string) []string
 }
 
@@ -64,7 +66,7 @@ func (cd compressingDataDaoImpl) GetOne(tableName string, rowKey string) (interf
 
 	jsonData, err := decompress(compressedData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
 	}
 
 	obj := tableInfo.ConstructorFunc()  // Instantiate a new model/struct
@@ -114,8 +116,8 @@ func (cd compressingDataDaoImpl) GetAllByKeys(tableName string, rowKeys []string
 }
 
 // GetAllAsList get a list of all Xconf records
-func (cd compressingDataDaoImpl) GetAllAsList(tableName string) ([]interface{}, error) {
-	resultMap, err := cd.GetAllAsMap(tableName)
+func (cd compressingDataDaoImpl) GetAllAsList(tableName string, continueOnError bool) ([]interface{}, error) {
+	resultMap, err := cd.GetAllAsMap(tableName, continueOnError)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +131,7 @@ func (cd compressingDataDaoImpl) GetAllAsList(tableName string) ([]interface{}, 
 }
 
 // GetAllAsMap get a map of all Xconf records
-func (cd compressingDataDaoImpl) GetAllAsMap(tableName string) (map[string]interface{}, error) {
+func (cd compressingDataDaoImpl) GetAllAsMap(tableName string, continueOnError bool) (map[string]interface{}, error) {
 	var result = make(map[string]interface{})
 
 	tableInfo, err := GetTableInfo(tableName)
@@ -142,6 +144,11 @@ func (cd compressingDataDaoImpl) GetAllAsMap(tableName string) (map[string]inter
 	for key, compressedData := range compressedDataMap {
 		jsonData, err := decompress(compressedData)
 		if err != nil {
+			err = fmt.Errorf("failed to decompress rowKey '%s': %w", key, err)
+			if continueOnError {
+				log.Error(err)
+				continue
+			}
 			return nil, err
 		}
 
