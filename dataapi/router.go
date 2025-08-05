@@ -87,6 +87,7 @@ type XconfConfigs struct {
 	AuxiliaryFirmwareList        []AuxiliaryFirmware
 	PartnerIdValidationEnabled   bool
 	ValidPartnerIdRegex          *regexp.Regexp
+	SecurityTokenManagerEnabled  bool
 }
 
 // Function to register the table name and the corresponding model/struct constructor
@@ -331,6 +332,7 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		AuxiliaryFirmwareList:        auxFirmwareList,
 		ValidPartnerIdRegex:          validPartnerIdRegex,
 		PartnerIdValidationEnabled:   partnerIdValidationEnabled,
+		SecurityTokenManagerEnabled:  conf.GetBoolean("xconfwebconfig.xconf.security_token_manager_enabled"),
 	}
 	return xc
 }

@@ -148,21 +148,25 @@ func GetFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResp
 		return http.StatusNotFound, []byte(fmt.Sprintf("\"<h2>404 NOT FOUND</h2><div>%s<div>\"", explanation)), nil, nil
 	}
 
-	deviceInfo := map[string]string{
-		xhttp.SECURITY_TOKEN_ESTB_MAC:        contextMap[common.ESTB_MAC],
-		xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
-		xhttp.SECURITY_TOKEN_ESTB_IP:         contextMap[common.IP_ADDRESS],
-		xhttp.SECURITY_TOKEN_FW_FILENAME:     evaluationResult.FirmwareConfig.GetFirmwareFilename(),
-	}
-	if !util.IsBlank(contextMap[common.PARTNER_ID]) {
-		deviceInfo[xhttp.SECURITY_TOKEN_PARTNER] = contextMap[common.PARTNER_ID]
-	}
-	if !util.IsBlank(contextMap[common.MODEL]) {
-		deviceInfo[xhttp.SECURITY_TOKEN_MODEL] = contextMap[common.MODEL]
-	}
+	// only invoke security manager code if flag is enabled and offered firmware version differs from reported firmware version
+	if Xc.SecurityTokenManagerEnabled && evaluationResult.FirmwareConfig.GetFirmwareVersion() != contextMap[common.FIRMWARE_VERSION] {
 
-	locationWithToken := Ws.FirmwareSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, evaluationResult.FirmwareConfig.GetFirmwareLocation(), fields)
-	evaluationResult.FirmwareConfig.SetFirmwareLocation(locationWithToken)
+		deviceInfo := map[string]string{
+			xhttp.SECURITY_TOKEN_ESTB_MAC:        contextMap[common.ESTB_MAC],
+			xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
+			xhttp.SECURITY_TOKEN_ESTB_IP:         contextMap[common.IP_ADDRESS],
+			xhttp.SECURITY_TOKEN_FW_FILENAME:     evaluationResult.FirmwareConfig.GetFirmwareFilename(),
+		}
+		if !util.IsBlank(contextMap[common.PARTNER_ID]) {
+			deviceInfo[xhttp.SECURITY_TOKEN_PARTNER] = contextMap[common.PARTNER_ID]
+		}
+		if !util.IsBlank(contextMap[common.MODEL]) {
+			deviceInfo[xhttp.SECURITY_TOKEN_MODEL] = contextMap[common.MODEL]
+		}
+
+		locationWithToken := Ws.FirmwareSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, evaluationResult.FirmwareConfig.GetFirmwareLocation(), fields)
+		evaluationResult.FirmwareConfig.SetFirmwareLocation(locationWithToken)
+	}
 	if Xc.EnableFwDownloadLogs {
 		LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
 	}
