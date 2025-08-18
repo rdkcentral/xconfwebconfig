@@ -41,9 +41,9 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 }
 
 func TestMain(m *testing.M) {
-	testConfigFile = "/app/ossxconfds/ossxconfds.conf"
+	testConfigFile = "/app/xconfwebconfig/xconfwebconfig.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
-		testConfigFile = "../config/sample_ossxconfds.conf"
+		testConfigFile = "../config/sample_xconfwebconfig.conf"
 	}
 
 	sid := os.Getenv("SAT_CLIENT_ID")
