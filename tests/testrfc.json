@@ -1,0 +1,472 @@
+{
+    "featureControl": {
+        "features": [
+            {
+                "name": "AccountId",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {
+                    "tr181.Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.AccountInfo.AccountID": "4512454147896557114"
+                },
+                "featureInstance": "AccountId"
+            },
+            {
+                "name": "RDKC_RESOLUTIONCHANGE",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {},
+                "featureInstance": "RDKC_RESOLUTIONCHANGE"
+            },
+            {
+                "name": "RDKC_WEBRTC",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {},
+                "featureInstance": "RDKC_WEBRTC"
+            },
+            {
+                "name": "RDKC_WIFI",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Band": "0",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.BandSetting.RSSIThreshold": "-75",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.BandSetting.RSSIDelta": "8",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_LnF.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.Psk.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_LnF.EapTls.Enable": "0",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.BandSetting.DecisionTimeFrame": "60",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.BandSetting.BeaconMissedThreshold": "10"
+                },
+                "featureInstance": "RDKC_WIFI"
+            },
+            {
+                "name": "RDKC_LNF",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.Psk.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.EapTls.Enable": "1"
+                },
+                "featureInstance": "RDKC_LNF"
+            },
+            {
+                "name": "XCAM2_SMARTRC",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {},
+                "featureInstance": "XCAM2_SMARTRC"
+            },
+            {
+                "name": "SSHWhiteList",
+                "effectiveImmediate": false,
+                "enable": true,
+                "configData": {},
+                "listType": "SSHWhiteList_ipList",
+                "listSize": 44,
+                "featureInstance": "SSHWhiteList",
+                "SSHWhiteList_ipList": [
+                    "96.114.220.197",
+                    "96.114.220.34",
+                    "96.114.220.56",
+                    "2001:558:fc0a:6:f816:3eff:fe26:c806",
+                    "96.118.21.170",
+                    "2001:558:fc0a:6:f816:3eff:febc:9632",
+                    "2001:558:fe15:8cc5::6072:dcc5",
+                    "96.114.220.33",
+                    "96.114.220.55",
+                    "96.118.208.237",
+                    "2001:558:fc11:2:f816:3eff:fe05:915f",
+                    "96.118.149.77",
+                    "2001:558:fc0c:0:f816:3eff:fef8:f62f",
+                    "2001:558:fe15:8cfe::6072:dcfe",
+                    "2001:558:fc18:1:f816:3eff:fe9b:e986",
+                    "96.114.220.97",
+                    "2001:558:fc11:2:f816:3eff:fe33:fcf3",
+                    "96.114.220.254",
+                    "2001:558:fc11:2:f816:3eff:fe9a:2d0",
+                    "96.116.63.53",
+                    "96.118.214.184",
+                    "2001:558:fc11:2:f816:3eff:fed2:80e8",
+                    "2001:558:fc0a:6:f816:3eff:fe38:224b",
+                    "96.117.0.72",
+                    "96.116.134.221",
+                    "96.116.134.243",
+                    "2001:558:fc11:2:f816:3eff:fe5e:e710",
+                    "2001:558:fc11:9:f816:3eff:fe65:7931",
+                    "96.116.134.242",
+                    "2001:558:fc0c:0:f816:3eff:fe5e:26b5",
+                    "2001:558:fc0a:3:f816:3eff:fe48:ba20",
+                    "96.116.134.240",
+                    "2001:558:fc0a:6:f816:3eff:fef7:ae52",
+                    "2001:558:fc0c:0:f816:3eff:fe53:deeb",
+                    "96.114.220.66",
+                    "96.118.211.209",
+                    "96.118.220.67",
+                    "2001:558:fc11:2:f816:3eff:feeb:d6f7",
+                    "96.118.217.151",
+                    "2001:558:fc0c:0:f816:3eff:fe0b:4fd0",
+                    "96.118.213.116",
+                    "96.118.155.199",
+                    "96.118.159.156",
+                    "96.118.137.237"
+                ]
+            },
+            {
+                "name": "AccountHash",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {
+                    "tr181.Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.MD5AccountHash": "19m9w7x4DCtfRemmQGTLHCmAH8vXsXA6Jk"
+                },
+                "featureInstance": "AccountHash"
+            }
+        ]
+    }
+}
+
+
+
+
+{
+    "featureControl": {
+        "features": [
+            {
+                "SSHWhiteList_ipList": [
+                    "96.114.220.197",
+                    "96.114.220.34",
+                    "96.114.220.56",
+                    "2001:558:fc0a:6:f816:3eff:fe26:c806",
+                    "96.118.21.170",
+                    "2001:558:fc0a:6:f816:3eff:febc:9632",
+                    "2001:558:fe15:8cc5::6072:dcc5",
+                    "96.114.220.33",
+                    "96.114.220.55",
+                    "96.118.208.237",
+                    "2001:558:fc11:2:f816:3eff:fe05:915f",
+                    "96.118.149.77",
+                    "2001:558:fc0c:0:f816:3eff:fef8:f62f",
+                    "2001:558:fe15:8cfe::6072:dcfe",
+                    "2001:558:fc18:1:f816:3eff:fe9b:e986",
+                    "96.114.220.97",
+                    "2001:558:fc11:2:f816:3eff:fe33:fcf3",
+                    "96.114.220.254",
+                    "2001:558:fc11:2:f816:3eff:fe9a:2d0",
+                    "96.116.63.53",
+                    "96.118.214.184",
+                    "2001:558:fc11:2:f816:3eff:fed2:80e8",
+                    "2001:558:fc0a:6:f816:3eff:fe38:224b",
+                    "96.117.0.72",
+                    "96.116.134.221",
+                    "96.116.134.243",
+                    "2001:558:fc11:2:f816:3eff:fe5e:e710",
+                    "2001:558:fc11:9:f816:3eff:fe65:7931",
+                    "96.116.134.242",
+                    "2001:558:fc0c:0:f816:3eff:fe5e:26b5",
+                    "2001:558:fc0a:3:f816:3eff:fe48:ba20",
+                    "96.116.134.240",
+                    "2001:558:fc0a:6:f816:3eff:fef7:ae52",
+                    "2001:558:fc0c:0:f816:3eff:fe53:deeb",
+                    "96.114.220.66",
+                    "96.118.211.209",
+                    "96.118.220.67",
+                    "2001:558:fc11:2:f816:3eff:feeb:d6f7",
+                    "96.118.217.151",
+                    "2001:558:fc0c:0:f816:3eff:fe0b:4fd0",
+                    "96.118.213.116",
+                    "96.118.155.199",
+                    "96.118.159.156",
+                    "96.118.137.237"
+                ],
+                "configData": {},
+                "effectiveImmediate": false,
+                "enable": true,
+                "featureInstance": "SSHWhiteList",
+                "listSize": 44,
+                "listType": "SSHWhiteList_ipList",
+                "name": "SSHWhiteList"
+            },
+            {
+                "configData": {},
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "XCAM2_SMARTRC",
+                "name": "XCAM2_SMARTRC"
+            },
+            {
+                "configData": {},
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "RDKC_RESOLUTIONCHANGE",
+                "name": "RDKC_RESOLUTIONCHANGE"
+            },
+            {
+                "configData": {
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.EapTls.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.Psk.Enable": "1"
+                },
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "RDKC_LNF",
+                "name": "RDKC_LNF"
+            },
+            {
+                "configData": {
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Band": "0",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.BandSetting.BeaconMissedThreshold": "10",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.BandSetting.DecisionTimeFrame": "60",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.BandSetting.RSSIDelta": "8",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.BandSetting.RSSIThreshold": "-75",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_BandSteering.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_LnF.EapTls.Enable": "0",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_LnF.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.Psk.Enable": "1"
+                },
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "RDKC_WIFI",
+                "name": "RDKC_WIFI"
+            },
+            {
+                "configData": {},
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "RDKC_WEBRTC",
+                "name": "RDKC_WEBRTC"
+            },
+            {
+                "configData": {
+                    "tr181.Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.AccountInfo.AccountID": "4512454147896557114"
+                },
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "AccountId",
+                "name": "AccountId"
+            },
+            {
+                "configData": {
+                    "tr181.Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.MD5AccountHash": "19m9w7x4DCtfRemmQGTLHCmAH8vXsXA6Jk"
+                },
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "AccountHash",
+                "name": "AccountHash"
+            }
+        ]
+    }
+}
+
+
+
+{
+    "featureControl": {
+        "features": [
+            {
+                "name": "AccountId",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {
+                    "tr181.Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.AccountInfo.AccountID": "4512454147896557114"
+                },
+                "featureInstance": "AccountId"
+            },
+            {
+                "name": "RDKC_RESOLUTIONCHANGE",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {},
+                "featureInstance": "RDKC_RESOLUTIONCHANGE"
+            },
+            {
+                "name": "RDKC_LNF",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.Psk.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.EapTls.Enable": "1"
+                },
+                "featureInstance": "RDKC_LNF"
+            },
+            {
+                "name": "XCAM2_SMARTRC",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {},
+                "featureInstance": "XCAM2_SMARTRC"
+            },
+            {
+                "name": "SSHWhiteList",
+                "effectiveImmediate": false,
+                "enable": true,
+                "configData": {},
+                "listType": "SSHWhiteList_ipList",
+                "listSize": 44,
+                "featureInstance": "SSHWhiteList",
+                "SSHWhiteList_ipList": [
+                    "96.114.220.197",
+                    "96.114.220.34",
+                    "96.114.220.56",
+                    "2001:558:fc0a:6:f816:3eff:fe26:c806",
+                    "96.118.21.170",
+                    "2001:558:fc0a:6:f816:3eff:febc:9632",
+                    "2001:558:fe15:8cc5::6072:dcc5",
+                    "96.114.220.33",
+                    "96.114.220.55",
+                    "96.118.208.237",
+                    "2001:558:fc11:2:f816:3eff:fe05:915f",
+                    "96.118.149.77",
+                    "2001:558:fc0c:0:f816:3eff:fef8:f62f",
+                    "2001:558:fe15:8cfe::6072:dcfe",
+                    "2001:558:fc18:1:f816:3eff:fe9b:e986",
+                    "96.114.220.97",
+                    "2001:558:fc11:2:f816:3eff:fe33:fcf3",
+                    "96.114.220.254",
+                    "2001:558:fc11:2:f816:3eff:fe9a:2d0",
+                    "96.116.63.53",
+                    "96.118.214.184",
+                    "2001:558:fc11:2:f816:3eff:fed2:80e8",
+                    "2001:558:fc0a:6:f816:3eff:fe38:224b",
+                    "96.117.0.72",
+                    "96.116.134.221",
+                    "96.116.134.243",
+                    "2001:558:fc11:2:f816:3eff:fe5e:e710",
+                    "2001:558:fc11:9:f816:3eff:fe65:7931",
+                    "96.116.134.242",
+                    "2001:558:fc0c:0:f816:3eff:fe5e:26b5",
+                    "2001:558:fc0a:3:f816:3eff:fe48:ba20",
+                    "96.116.134.240",
+                    "2001:558:fc0a:6:f816:3eff:fef7:ae52",
+                    "2001:558:fc0c:0:f816:3eff:fe53:deeb",
+                    "96.114.220.66",
+                    "96.118.211.209",
+                    "96.118.220.67",
+                    "2001:558:fc11:2:f816:3eff:feeb:d6f7",
+                    "96.118.217.151",
+                    "2001:558:fc0c:0:f816:3eff:fe0b:4fd0",
+                    "96.118.213.116",
+                    "96.118.155.199",
+                    "96.118.159.156",
+                    "96.118.137.237"
+                ]
+            },
+            {
+                "name": "AccountHash",
+                "effectiveImmediate": true,
+                "enable": true,
+                "configData": {
+                    "tr181.Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.MD5AccountHash": "19m9w7x4DCtfRemmQGTLHCmAH8vXsXA6Jk"
+                },
+                "featureInstance": "AccountHash"
+            }
+        ]
+    }
+}
+
+{
+    "featureControl": {
+        "features": [
+            {
+                "configData": {},
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "RDKC_RESOLUTIONCHANGE",
+                "name": "RDKC_RESOLUTIONCHANGE"
+            },
+            {
+                "configData": {
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.EapTls.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.Enable": "1",
+                    "tr181.Device.WiFi.X_RDKCENTRAL-COM_Lnf.Psk.Enable": "1"
+                },
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "RDKC_LNF",
+                "name": "RDKC_LNF"
+            },
+            {
+                "SSHWhiteList_ipList": [
+                    "96.114.220.197",
+                    "96.114.220.34",
+                    "96.114.220.56",
+                    "2001:558:fc0a:6:f816:3eff:fe26:c806",
+                    "96.118.21.170",
+                    "2001:558:fc0a:6:f816:3eff:febc:9632",
+                    "2001:558:fe15:8cc5::6072:dcc5",
+                    "96.114.220.33",
+                    "96.114.220.55",
+                    "96.118.208.237",
+                    "2001:558:fc11:2:f816:3eff:fe05:915f",
+                    "96.118.149.77",
+                    "2001:558:fc0c:0:f816:3eff:fef8:f62f",
+                    "2001:558:fe15:8cfe::6072:dcfe",
+                    "2001:558:fc18:1:f816:3eff:fe9b:e986",
+                    "96.114.220.97",
+                    "2001:558:fc11:2:f816:3eff:fe33:fcf3",
+                    "96.114.220.254",
+                    "2001:558:fc11:2:f816:3eff:fe9a:2d0",
+                    "96.116.63.53",
+                    "96.118.214.184",
+                    "2001:558:fc11:2:f816:3eff:fed2:80e8",
+                    "2001:558:fc0a:6:f816:3eff:fe38:224b",
+                    "96.117.0.72",
+                    "96.116.134.221",
+                    "96.116.134.243",
+                    "2001:558:fc11:2:f816:3eff:fe5e:e710",
+                    "2001:558:fc11:9:f816:3eff:fe65:7931",
+                    "96.116.134.242",
+                    "2001:558:fc0c:0:f816:3eff:fe5e:26b5",
+                    "2001:558:fc0a:3:f816:3eff:fe48:ba20",
+                    "96.116.134.240",
+                    "2001:558:fc0a:6:f816:3eff:fef7:ae52",
+                    "2001:558:fc0c:0:f816:3eff:fe53:deeb",
+                    "96.114.220.66",
+                    "96.118.211.209",
+                    "96.118.220.67",
+                    "2001:558:fc11:2:f816:3eff:feeb:d6f7",
+                    "96.118.217.151",
+                    "2001:558:fc0c:0:f816:3eff:fe0b:4fd0",
+                    "96.118.213.116",
+                    "96.118.155.199",
+                    "96.118.159.156",
+                    "96.118.137.237"
+                ],
+                "configData": {},
+                "effectiveImmediate": false,
+                "enable": true,
+                "featureInstance": "SSHWhiteList",
+                "listSize": 44,
+                "listType": "SSHWhiteList_ipList",
+                "name": "SSHWhiteList"
+            },
+            {
+                "configData": {},
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "XCAM2_SMARTRC",
+                "name": "XCAM2_SMARTRC"
+            },
+            {
+                "configData": {
+                    "tr181.Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.AccountInfo.AccountID": "4512454147896557114"
+                },
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "AccountId",
+                "name": "AccountId"
+            },
+            {
+                "configData": {
+                    "tr181.Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.MD5AccountHash": "19m9w7x4DCtfRemmQGTLHCmAH8vXsXA6Jk"
+                },
+                "effectiveImmediate": true,
+                "enable": true,
+                "featureInstance": "AccountHash",
+                "name": "AccountHash"
+            }
+        ]
+    }
+}
