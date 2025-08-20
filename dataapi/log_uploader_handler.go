@@ -186,22 +186,24 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 		if result == nil {
 			xhttp.WriteXconfResponseAsText(w, 404, []byte("\"<h2>404 NOT FOUND</h2><div>settings not found</div>\""))
 		} else {
-			deviceInfo := map[string]string{
-				xhttp.SECURITY_TOKEN_ESTB_MAC:        contextMap[common.ESTB_MAC_ADDRESS],
-				xhttp.SECURITY_TOKEN_ESTB_IP:         contextMap[common.ESTB_IP],
-				xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
-			}
-			if !util.IsBlank(contextMap[common.MODEL]) {
-				deviceInfo[xhttp.SECURITY_TOKEN_MODEL] = contextMap[common.MODEL]
-			}
-			if !util.IsBlank(contextMap[common.PARTNER_ID]) {
-				deviceInfo[xhttp.SECURITY_TOKEN_PARTNER] = contextMap[common.PARTNER_ID]
-			}
+			if Xc.SecurityTokenManagerEnabled {
+				deviceInfo := map[string]string{
+					xhttp.SECURITY_TOKEN_ESTB_MAC:        contextMap[common.ESTB_MAC_ADDRESS],
+					xhttp.SECURITY_TOKEN_ESTB_IP:         contextMap[common.ESTB_IP],
+					xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
+				}
+				if !util.IsBlank(contextMap[common.MODEL]) {
+					deviceInfo[xhttp.SECURITY_TOKEN_MODEL] = contextMap[common.MODEL]
+				}
+				if !util.IsBlank(contextMap[common.PARTNER_ID]) {
+					deviceInfo[xhttp.SECURITY_TOKEN_PARTNER] = contextMap[common.PARTNER_ID]
+				}
 
-			if !util.IsBlank(result.LusUploadRepositoryURL) {
-				result.LusUploadRepositoryURL = Ws.LogUploadSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, result.LusUploadRepositoryURL, fields)
-			} else if !util.IsBlank(result.LusUploadRepositoryURLNew) {
-				result.LusUploadRepositoryURLNew = Ws.LogUploadSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, result.LusUploadRepositoryURLNew, fields)
+				if !util.IsBlank(result.LusUploadRepositoryURL) {
+					result.LusUploadRepositoryURL = Ws.LogUploadSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, result.LusUploadRepositoryURL, fields)
+				} else if !util.IsBlank(result.LusUploadRepositoryURLNew) {
+					result.LusUploadRepositoryURLNew = Ws.LogUploadSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, result.LusUploadRepositoryURLNew, fields)
+				}
 			}
 			LogResultSettings(result, telemetryRule, settingRules, fields)
 			settingsResponse := logupload.CreateSettingsResponseObject(result)
