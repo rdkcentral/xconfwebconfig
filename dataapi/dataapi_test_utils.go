@@ -55,7 +55,7 @@ func GetTestXconfServer(testConfigFile string) (*xwhttp.XconfServer, *mux.Router
 		panic(err)
 	}
 
-	os.Setenv("XPC_KEY", "/d7BEl8H78rVtiMwGvughqQMHhSCIGsTuTncw8+q1bo=")
+	os.Setenv("XPC_KEY", "testXpcKey")
 	os.Setenv("SAT_CLIENT_ID", "foo")
 	os.Setenv("SAT_CLIENT_SECRET", "bar")
 	os.Setenv("AWS_S3_SSEC_KEY", "testAwsS3SsecKey")
@@ -71,7 +71,7 @@ func GetTestXconfServer(testConfigFile string) (*xwhttp.XconfServer, *mux.Router
 	os.Setenv("DATABASE_PASSWORD", "cassandra")
 	// these keys below are FAKE keys that were randomly created to be the correct number of digits for testing purposes only, these keys are not used in CI or PROD
 	os.Setenv("SKY_PARTNER_KEYS", "test:2687d34a2f2a4e9db5657ad2782c867c2406c4b21a33c7ec6be479137a4cfa77df3ecacdaf7fe1db5385e2aca2e69397b8ad2c59285e50d0bddb9d4de07fbbe1;partner1:40ce6eb1f2b2d00d8c8d2ccf55dfd2913c7cb92cfebaaefa86e1c209e37c6bf145aa30cbacf78f00366201d1421f59cd69f8ef3d2bcfa049241f7d6ca1ac28a6")
-	os.Setenv("SECURITY_TOKEN_KEY", "dGVzdC1jMDctZDBkMS00MTBiLTg5Y2EtNmM1NWY1ZTU=")
+	os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
 
 	var err error
 	sc, err = common.NewServerConfig(testConfigFile)
