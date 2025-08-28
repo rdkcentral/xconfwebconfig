@@ -80,7 +80,7 @@ func TestMain(m *testing.M) {
 	}
 	fmt.Printf("testConfigFile=%v\n", testConfigFile)
 
-	os.Setenv("XPC_KEY", "/d6BEl0H34rVtiMwGvughqQMHhSCIGsTuTncw8+q1bo=")
+	os.Setenv("XPC_KEY", "testXpcKey")
 	os.Setenv("SAT_CLIENT_ID", "foo")
 	os.Setenv("SAT_CLIENT_SECRET", "bar")
 	os.Setenv("AWS_ACCESS_KEY", "testAwsAccessKey")
@@ -90,7 +90,7 @@ func TestMain(m *testing.M) {
 	os.Setenv("SKY_AWS_ACCESS_KEY", "testSkyAwsAccessKey")
 	os.Setenv("SKY_AWS_SECRET_KEY", "testSkyAwsSecretKey")
 	os.Setenv("X1_SSR_KEYS", "test-key-1;test-key-2;test-key-3")
-	os.Setenv("SECURITY_TOKEN_KEY", "bGVzdB1jMDdfZDBkMS22MTBiLTg5Y2EtNmM1NWY1ZTU=")
+	os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
 	os.Setenv("AWS_S3_SSEC_KEY", "testAwsS3SsecKey")
 	os.Setenv("MD5_AWS_S3_SSEC_KEY", "testMd5AwsS3SsecKey")
 
