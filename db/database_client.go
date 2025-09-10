@@ -120,7 +120,7 @@ type DatabaseClient interface {
 	//Penetration Metrics
 	SetFwPenetrationMetrics(*FwPenetrationMetrics) error
 	GetFwPenetrationMetrics(string) (*FwPenetrationMetrics, error)
-	SetRfcPenetrationMetrics(*RfcPenetrationMetrics) error
+	SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetrics, is304FromPrecook bool) error
 	GetRfcPenetrationMetrics(string) (*RfcPenetrationMetrics, error)
 	UpdateFwPenetrationMetrics(map[string]string) error
 	GetEstbIp(string) (string, error)
