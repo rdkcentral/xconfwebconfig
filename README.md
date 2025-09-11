@@ -25,6 +25,17 @@ xconfwebconfig/
 └── ...
 ```
 
+## Technology Stack
+
+- **Language:** Go (Golang)
+- **Web Framework:** [gorilla/mux](https://github.com/gorilla/mux) (HTTP routing)
+- **Database:** Cassandra (NoSQL persistent storage)
+- **Configuration:** Environment variables & `.conf` files
+- **Build Tool:** Makefile
+- **Tracing:** OpenTelemetry
+- **Security:** Token-based authentication, SSL/TLS support
+- **Logging:** Configurable log levels and formats
+
 # Table of Contents
 <!--ts-->
 * [XConf DataService Overview](#xconf-dataservice-overview)
