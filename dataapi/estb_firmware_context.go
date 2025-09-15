@@ -359,8 +359,10 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 			fields["appliedRule"] = evaluationResult.MatchedRule.Name
 			fields["ruleType"] = evaluationResult.MatchedRule.Type
 		}
+		var firmwareVersion string
 		if evaluationResult.FirmwareConfig != nil {
-			fields["firmwareVersion"] = evaluationResult.FirmwareConfig.GetFirmwareVersion()
+			firmwareVersion = evaluationResult.FirmwareConfig.GetFirmwareVersion()
+			fields["firmwareVersion"] = firmwareVersion
 			fields["firmwareDownloadProtocol"] = evaluationResult.FirmwareConfig.GetFirmwareDownloadProtocol()
 			fields["firmwareLocation"] = evaluationResult.FirmwareConfig.GetFirmwareLocation()
 			fields["rebootImmediately"] = evaluationResult.FirmwareConfig.GetRebootImmediately()
@@ -376,10 +378,23 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 				}
 			}
 		} else if evaluationResult.Blocked {
-			fields["firmwareVersion"] = estbfirmware.BLOCKED
+			firmwareVersion = string(estbfirmware.BLOCKED)
+			fields["firmwareVersion"] = firmwareVersion
 		} else {
-			fields["firmwareVersion"] = estbfirmware.NOMATCH
+			firmwareVersion = string(estbfirmware.NOMATCH)
+			fields["firmwareVersion"] = firmwareVersion
 		}
+
+		// Add newFWOffer flag logic
+		reportedFirmwareVersion := contextMap[common.FIRMWARE_VERSION]
+		if firmwareVersion == string(estbfirmware.NOMATCH) || firmwareVersion == string(estbfirmware.BLOCKED) {
+			fields["newFWOffer"] = false
+		} else if reportedFirmwareVersion != "" && firmwareVersion != "" && reportedFirmwareVersion != firmwareVersion {
+			fields["newFWOffer"] = true
+		} else {
+			fields["newFWOffer"] = false
+		}
+
 		for key, value := range evaluationResult.AppliedVersionInfo {
 			fields[key] = value
 		}
