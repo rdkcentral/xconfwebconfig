@@ -178,13 +178,14 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		if matchedHash := getMatchedPrecookHash(configSetHash, precookData, isRfcPrecookForOfferedFwEnabled); matchedHash != "" {
 			xhttp.IncreaseReturn304FromPrecookCounter(common.PARTNER_ID, contextMap[common.MODEL])
 			tfields := common.FilterLogFields(fields)
+			tfields["isLiveCalculated"] = false
 			log.WithFields(tfields).Info("Returning 304 based on precook data")
 			headers := map[string]string{
 				common.CONFIG_SET_HASH: matchedHash,
 			}
 			if Ws.Config.GetBoolean("xconfwebconfig.xconf.enable_rfc_penetration_metrics", false) && !skipPenetrationLogging {
 				copyFields := common.CopyLogFields(fields)
-				go UpdatePenetrationMetrics(contextMap, AccountServiceData, tags, "", copyFields)
+				go UpdatePenetrationMetrics(contextMap, AccountServiceData, tags, "", copyFields, true)
 			}
 			xhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusNotModified, []byte(""))
 			return
@@ -254,15 +255,13 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	calculatedConfigSetHash := featureControlRuleBase.CalculateHash(featureControl.FeatureResponses)
 	fields["configsetHashCalculated"] = calculatedConfigSetHash
 
-	// only log FeatureControlRuleBase log if we ran the rules engine
-	if precookRulesEngineResponse == nil {
-		featureControlRuleBase.LogFeatureInfo(contextMap, appliedFeatureRules, featureControl.FeatureResponses, fields)
-	}
+	isLiveCalculated := precookData == nil || precookRulesEngineResponse == nil
+	featureControlRuleBase.LogFeatureInfo(contextMap, appliedFeatureRules, featureControl.FeatureResponses, isLiveCalculated, fields)
 
 	if Ws.Config.GetBoolean("xconfwebconfig.xconf.enable_rfc_penetration_metrics", false) {
 		if !skipPenetrationLogging {
 			copyFields := common.CopyLogFields(fields)
-			go UpdatePenetrationMetrics(contextMap, AccountServiceData, tags, rfcPostProc, copyFields)
+			go UpdatePenetrationMetrics(contextMap, AccountServiceData, tags, rfcPostProc, copyFields, false)
 		}
 	}
 
@@ -297,7 +296,7 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	xhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusOK, []byte(response))
 }
 
-func UpdatePenetrationMetrics(context map[string]string, AccountServiceData *AccountServiceData, taglist []string, rfcPostProc string, fields log.Fields) {
+func UpdatePenetrationMetrics(context map[string]string, AccountServiceData *AccountServiceData, taglist []string, rfcPostProc string, fields log.Fields, is304FromPrecook bool) {
 	// if we're using precook data, the following fields will be empty and will write empty string
 	// to penetration table: appliedRules, features, configsetHashCalculatedruleNames := []string{}
 	ruleNames := []string{}
@@ -367,7 +366,7 @@ func UpdatePenetrationMetrics(context map[string]string, AccountServiceData *Acc
 			pTable.TitanPartner = AccountServiceData.PartnerId
 			pTable.TitanAccountId = AccountServiceData.AccountId
 		}
-		err := db.GetDatabaseClient().SetRfcPenetrationMetrics(pTable)
+		err := db.GetDatabaseClient().SetRfcPenetrationMetrics(pTable, is304FromPrecook)
 		if err != nil {
 			log.Error(fmt.Sprintf("Can't save RFC penetration metric, estbMacAddress=%s, error=%+v", estbMac, err))
 		}
