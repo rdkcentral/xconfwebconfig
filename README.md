@@ -12,6 +12,18 @@
     * [Get STB settings](#get-stb-settings)
     * [Get Feature Settings](#get-feature-settings)
     * [Rule Structure](#rule-structure)
+* [Project Folder Structure](#project-folder-structure)
+    * [Folder Details](#folder-details)
+* [Core Idea and Project Overview](#core-idea-and-project-overview)
+    * [Key Concepts](#key-concepts)
+    * [Typical Use Cases](#typical-use-cases)
+* [Community & Contribution](#community--contribution)
+* [🧪 Testing](#-testing)
+    * [Run All Tests](#run-all-tests)
+* [Development Workflow](#development-workflow)
+* [📄 License](#-license)
+* [🆘 Support](#-support)
+* [🔗 Related Projects](#-related-projects)
 <!--te-->
 
 ## XConf DataService Overview
@@ -293,3 +305,127 @@ fixedArg value meaning.
 
 If rule has only one condition there are no `compoundParts`, `relation` field is empty.
 If there are more than one condition - they are located in `compoundParts` object. First condition does not have any relation, next one has a relation.
+
+---
+
+## Project Folder Structure
+
+Below is the typical folder structure for `xconfwebconfig`:
+
+```
+xconfwebconfig/
+├── bin/                # Compiled binaries
+├── config/             # Configuration files (e.g., sample_xconfwebconfig.conf)
+├── db/                 # Database schema and migration scripts (e.g., db_init.cql)
+├── internal/           # Core Go application logic (handlers, services, utils)
+│   ├── api/            # API endpoint handlers
+│   ├── models/         # Data models and DTOs
+│   ├── repository/     # Database access logic
+│   └── ...             # Other internal packages
+├── scripts/            # Utility scripts (build, deploy, etc.)
+├── test/               # Unit and integration tests
+├── Dockerfile          # Docker build file
+├── Makefile            # Build automation
+├── go.mod, go.sum      # Go module files
+└── README.md           # Project documentation
+```
+
+### Folder Details
+
+- **bin/**: Contains the compiled application binaries after running `make`.
+- **config/**: Holds configuration files. `sample_xconfwebconfig.conf` is a template for environment-specific settings.
+- **db/**: Contains Cassandra database schema files and migration scripts. `db_init.cql` initializes the required tables and types.
+- **internal/**: Main Go source code for the service.
+  - **api/**: HTTP handler functions for each endpoint.
+  - **models/**: Structs representing data entities, request/response formats.
+  - **repository/**: Data access layer for interacting with Cassandra.
+  - Other subfolders may include business logic, middleware, and utilities.
+- **scripts/**: Helper scripts for building, testing, or deploying the application.
+- **test/**: Test cases for different modules and integration scenarios.
+- **Dockerfile**: Used to build a Docker image for containerized deployments.
+- **Makefile**: Defines build, test, and run commands for automation.
+- **go.mod, go.sum**: Go module dependency management files.
+- **README.md**: This documentation file.
+
+---
+
+## Core Idea and Project Overview
+
+**xconfwebconfig** is a microservice designed to manage and deliver configuration and firmware information to remote devices (primarily set-top boxes, or STBs) in the field, warehouses, and test environments.
+
+### Key Concepts
+
+- **Centralized Configuration Management**:  
+xconfwebconfig acts as the authoritative source for device firmware versions, feature flags, and operational settings. It does not push firmware, but tells devices what version to use and where to get it.
+
+- **Rule-Based Decision Engine**:  
+The service uses a flexible rule engine to determine which configuration or firmware a device should receive, based on device attributes (MAC, model, environment, etc.).
+
+- **RESTful API**:  
+Devices interact with xconfwebconfig via HTTP endpoints, sending identifying information and receiving JSON responses with configuration details.
+
+- **Extensible for Multiple Application Types**:  
+While primarily used for STBs, the architecture supports other device types (e.g., xhome, rdkcloud) via the `{applicationType}` parameter.
+
+- **Separation of Concerns**:  
+The codebase is organized to separate API handling, business logic, and data persistence, making it maintainable and extensible.
+
+### Typical Use Cases
+
+- **Firmware Management**:  
+Devices query which firmware version to use, and xconfwebconfig responds based on current rules and device attributes.
+
+- **Settings Distribution**:  
+Devices fetch operational settings (e.g., log upload schedules, telemetry profiles) tailored to their environment and model.
+
+- **Feature Control**:  
+Feature flags can be enabled/disabled remotely for specific devices or groups, allowing for controlled rollouts and testing.
+
+---
+
+## Community & Contribution
+
+- **Extensible Design**:  
+The modular structure allows contributors to add new endpoints, rule types, or support for additional device types with minimal friction.
+
+- **Open for Collaboration**:  
+Contributions are welcome! Please follow the existing code organization and submit pull requests with clear descriptions.
+
+---
+
+## 🧪 Testing
+
+### Run All Tests
+
+```bash
+make test
+```
+
+## Development Workflow
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+For support and questions:
+- Create an issue in the GitHub repository
+- Check the documentation (if available)
+- Review existing issues and discussions
+
+## 🔗 Related Projects
+
+- [xconfadmin](https://github.com/rdkcentral/xconfadmin) - admin service
+- [RDK Central](https://github.com/rdkcentral) - RDK Central organization
+
+---
+
+**Note**: This is a configuration management service for RDK devices. Ensure proper security measures are in place when deploying in production environments.
