@@ -315,34 +315,48 @@ Below is the typical folder structure for `xconfwebconfig`:
 ```
 xconfwebconfig/
 ├── bin/                # Compiled binaries
+├── common/             # Common utilities and constants
 ├── config/             # Configuration files (e.g., sample_xconfwebconfig.conf)
+├── dataapi/            # Data service API handlers and routers
+│   ├── dcm/            # Device Configuration Manager API
+│   ├── estbfirmware/   # STB firmware API
+│   └── featurecontrol/ # Feature Control API
 ├── db/                 # Database schema and migration scripts (e.g., db_init.cql)
-├── internal/           # Core Go application logic (handlers, services, utils)
-│   ├── api/            # API endpoint handlers
-│   ├── models/         # Data models and DTOs
-│   ├── repository/     # Database access logic
-│   └── ...             # Other internal packages
-├── scripts/            # Utility scripts (build, deploy, etc.)
-├── test/               # Unit and integration tests
-├── Dockerfile          # Docker build file
+├── http/               # HTTP server, middleware, and utilities
+├── protobuf/           # Protobuf definitions and generated code
+├── rulesengine/        # Rule engine logic and components
+├── security/           # Security-related code (auth, JWT, etc.)
+├── shared/             # Shared logic (firmware, rfc, logupload, estbfirmware, etc.)
+├── tagging/            # Tagging service and related logic
+├── tests/              # Unit and integration tests
+├── tracing/            # Distributed tracing utilities
+├── util/               # Utility functions and helpers
 ├── Makefile            # Build automation
-├── go.mod, go.sum      # Go module files
+├── Dockerfile          # Docker build file
+├── go.mod              # Go module definition
+├── go.sum              # Go module checksums
 └── README.md           # Project documentation
 ```
 
 ### Folder Details
 
 - **bin/**: Contains the compiled application binaries after running `make`.
-- **config/**: Holds configuration files. `sample_xconfwebconfig.conf` is a template for environment-specific settings.
-- **db/**: Contains Cassandra database schema files and migration scripts. `db_init.cql` initializes the required tables and types.
-- **internal/**: Main Go source code for the service.
-  - **api/**: HTTP handler functions for each endpoint.
-  - **models/**: Structs representing data entities, request/response formats.
-  - **repository/**: Data access layer for interacting with Cassandra.
-  - Other subfolders may include business logic, middleware, and utilities.
-- **scripts/**: Helper scripts for building, testing, or deploying the application.
-- **test/**: Test cases for different modules and integration scenarios.
-- **Dockerfile**: Used to build a Docker image for containerized deployments.
+- **common/**: Common utilities, helpers, and constants used across the project.
+- **config/**: Configuration files. `sample_xconfwebconfig.conf` is a template for environment-specific settings.
+- **dataapi/**: Data service API handlers and routers.
+  - **dcm/**: Device Configuration Manager API logic.
+  - **estbfirmware/**: STB firmware API logic.
+  - **featurecontrol/**: Feature Control API logic.
+- **db/**: Cassandra database schema files and migration scripts. `db_init.cql` initializes the required tables and types.
+- **http/**: HTTP server setup, middleware, and related utilities.
+- **protobuf/**: Protobuf definitions and generated code for gRPC or other protocol-based communication.
+- **rulesengine/**: Rule engine logic and components for evaluating device rules.
+- **security/**: Security-related code, including authentication, authorization, and JWT handling.
+- **shared/**: Shared logic and modules (e.g., firmware, rfc, logupload, estbfirmware) used by multiple parts of the application.
+- **tagging/**: Tagging service and related logic for device or configuration tagging.
+- **tests/**: Unit and integration tests for the project.
+- **tracing/**: Distributed tracing utilities and instrumentation.
+- **util/**: Utility functions and helpers not specific to other modules.
 - **Makefile**: Defines build, test, and run commands for automation.
 - **go.mod, go.sum**: Go module dependency management files.
 - **README.md**: This documentation file.
