@@ -332,7 +332,6 @@ xconfwebconfig/
 ├── tracing/            # Distributed tracing utilities
 ├── util/               # Utility functions and helpers
 ├── Makefile            # Build automation
-├── Dockerfile          # Docker build file
 ├── go.mod              # Go module definition
 ├── go.sum              # Go module checksums
 └── README.md           # Project documentation
