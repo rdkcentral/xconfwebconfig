@@ -22,13 +22,12 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -66,36 +65,36 @@ var (
 // FirmwareRule FirmwareRule4 table
 type ApplicableAction struct {
 	Type                       string               `json:"type"`
-	ActionType                 ApplicableActionType `json:"actionType"`
-	ConfigId                   string               `json:"configId"`
+	ActionType                 ApplicableActionType `json:"actionType,omitempty"`
+	ConfigId                   string               `json:"configId,omitempty"`
 	ConfigEntries              []ConfigEntry        `json:"configEntries"` // RuleAction
 	Active                     bool                 `json:"active"`
 	UseAccountPercentage       bool                 `json:"useAccountPercentage"`
 	FirmwareCheckRequired      bool                 `json:"firmwareCheckRequired"`
 	RebootImmediately          bool                 `json:"rebootImmediately"`
-	Whitelist                  string               `json:"whitelist"`
-	IntermediateVersion        string               `json:"intermediateVersion"`
-	FirmwareVersions           []string             `json:"firmwareVersions"`
-	Properties                 map[string]string    `json:"properties"` // DefinePropertiesAction
-	ByPassFilters              []string             `json:"byPassFilters"`
-	ActivationFirmwareVersions map[string][]string  `json:"activationFirmwareVersions"`
+	Whitelist                  string               `json:"whitelist,omitempty"`
+	IntermediateVersion        string               `json:"intermediateVersion,omitempty"`
+	FirmwareVersions           []string             `json:"firmwareVersions,omitempty"`
+	Properties                 map[string]string    `json:"properties,omitempty"` // DefinePropertiesAction
+	ByPassFilters              []string             `json:"byPassFilters,omitempty"`
+	ActivationFirmwareVersions map[string][]string  `json:"activationFirmwareVersions,omitempty"`
 }
 
 type TemplateApplicableAction struct {
 	Type                       string                   `json:"type"`
 	ActionType                 ApplicableActionType     `json:"actionType"`
-	ConfigId                   string                   `json:"configId"`
-	ConfigEntries              []ConfigEntry            `json:"configEntries"` // RuleAction
+	ConfigId                   string                   `json:"configI,omitempty"`
+	ConfigEntries              []ConfigEntry            `json:"configEntries,omitempty"` // RuleAction
 	Active                     bool                     `json:"active"`
 	UseAccountPercentage       bool                     `json:"useAccountPercentage"`
 	FirmwareCheckRequired      bool                     `json:"firmwareCheckRequired"`
 	RebootImmediately          bool                     `json:"rebootImmediately"`
-	Whitelist                  string                   `json:"whitelist"`
-	IntermediateVersion        string                   `json:"intermediateVersion"`
-	FirmwareVersions           []string                 `json:"firmwareVersions"`
-	Properties                 map[string]PropertyValue `json:"properties"` // DefinePropertiesAction
-	ByPassFilters              []string                 `json:"byPassFilters"`
-	ActivationFirmwareVersions map[string][]string      `json:"activationFirmwareVersions"`
+	Whitelist                  string                   `json:"whitelist,omitempty"`
+	IntermediateVersion        string                   `json:"intermediateVersion,omitempty"`
+	FirmwareVersions           []string                 `json:"firmwareVersions,omitempty"`
+	Properties                 map[string]PropertyValue `json:"properties,omitempty"` // DefinePropertiesAction
+	ByPassFilters              []string                 `json:"byPassFilters,omitempty"`
+	ActivationFirmwareVersions map[string][]string      `json:"activationFirmwareVersions,omitempty"`
 }
 
 func NewTemplateApplicableActionAndType(typ string, actionType ApplicableActionType, configId string) *TemplateApplicableAction {
@@ -216,6 +215,14 @@ type FirmwareRule struct {
 	ApplicationType  string            `json:"applicationType,omitempty"`
 }
 
+func (obj *FirmwareRule) SetApplicationType(appType string) {
+	obj.ApplicationType = appType
+}
+
+func (obj *FirmwareRule) GetApplicationType() string {
+	return obj.ApplicationType
+}
+
 func (obj *FirmwareRule) Clone() (*FirmwareRule, error) {
 	cloneObj, err := util.Copy(obj)
 	if err != nil {
@@ -252,8 +259,12 @@ func NewFirmwareRule(id string, name string, ruleType string, rule *re.Rule, act
 }
 
 func (r *FirmwareRule) Validate() error {
-	if r.ApplicableAction == nil || !IsValidApplicableActionType(r.ApplicableAction.ActionType) {
-		return errors.New("FirmwareRule's ApplicableAction is not present")
+	if r.Type == "" {
+		return fmt.Errorf("FirmwareRule's Type is is not present")
+	}
+
+	if r.ApplicableAction == nil {
+		return fmt.Errorf("FirmwareRule's ApplicableAction is not present: %s", r.ID)
 	}
 
 	if !IsValidApplicableActionType(r.ApplicableAction.ActionType) {
@@ -371,13 +382,13 @@ func (r *FirmwareRule) IsNoop() bool {
 // FirmwareRuleTemplate table
 type FirmwareRuleTemplate struct {
 	ID                   string                    `json:"id"`
-	Updated              int64                     `json:"updated"`
+	Updated              int64                     `json:"updated,omitempty"`
 	Rule                 re.Rule                   `json:"rule"`
 	ApplicableAction     *TemplateApplicableAction `json:"applicableAction"`
 	Priority             int32                     `json:"priority"`
-	RequiredFields       []string                  `json:"requiredFields"`
-	ByPassFilters        []string                  `json:"byPassFilters"`
-	ValidationExpression string                    `json:"validationExpression"`
+	RequiredFields       []string                  `json:"requiredFields,omitempty"`
+	ByPassFilters        []string                  `json:"byPassFilters,omitempty"`
+	ValidationExpression string                    `json:"validationExpression,omitempty"`
 	Editable             bool                      `json:"editable"`
 }
 
@@ -406,6 +417,33 @@ func NewFirmwareRuleTemplateInf() interface{} {
 // GetId XRule interface
 func (r *FirmwareRuleTemplate) GetId() string {
 	return r.ID
+}
+
+func (r *FirmwareRuleTemplate) GetID() string {
+	return r.ID
+}
+func (obj *FirmwareRuleTemplate) GetPriority() int {
+	return int(obj.Priority)
+}
+
+func (obj *FirmwareRuleTemplate) SetPriority(priority int) {
+	obj.Priority = int32(priority)
+}
+
+func (obj *FirmwareRuleTemplate) Validate() error {
+	if obj.ApplicableAction == nil {
+		return fmt.Errorf("FirmwareRuleTemplate's TemplateApplicableAction is not present: %s", obj.ID)
+	}
+
+	if !IsValidApplicableActionType(obj.ApplicableAction.ActionType) {
+		return fmt.Errorf("TemplateApplicableAction's ActionType is invalid: %s", obj.ApplicableAction.ActionType)
+	}
+
+	if !isValidApplicableClass(obj.ApplicableAction.Type) {
+		return fmt.Errorf("TemplateApplicableAction's Type is invalid: %s", obj.ApplicableAction.Type)
+	}
+
+	return nil
 }
 
 // GetRule XRule interface
@@ -489,15 +527,32 @@ func GetFirmwareRuleAllAsListDB() ([]*FirmwareRule, error) {
 		return nil, common.NotFound
 	}
 
-	var rulereflst = make([]*FirmwareRule, 0, len(rulelst))
+	//var rulereflst = make([]*FirmwareRule, 0, len(rulelst))
+	var rulereflst []*FirmwareRule
 
 	for _, r := range rulelst {
 		frule := r.(*FirmwareRule)
 		rulereflst = append(rulereflst, frule)
 	}
 
-	cm.ApplicationCacheSet(db.TABLE_FIRMWARE_RULE, cacheKey, rulereflst)
+	//cm.ApplicationCacheSet(db.TABLE_FIRMWARE_RULE, cacheKey, rulereflst)
 
+	return rulereflst, nil
+}
+
+func GetFirmwareRuleAllAsListDBForAdmin() ([]*FirmwareRule, error) {
+	// pass 0 or -1 as unlimit
+	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULE, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var rulereflst []*FirmwareRule
+
+	for _, r := range rulelst {
+		frule := r.(*FirmwareRule)
+		rulereflst = append(rulereflst, frule)
+	}
 	return rulereflst, nil
 }
 
@@ -560,6 +615,26 @@ func GetEnvModelFirmwareRules(applicationType string) ([]*FirmwareRule, error) {
 	return filtereddRules, nil
 }
 
+func GetEnvModelFirmwareRulesForAS(applicationType string) ([]*FirmwareRule, error) {
+	rules, err := GetFirmwareRuleAllAsListDBForAdmin()
+	if err != nil {
+		return rules, err
+	}
+
+	var filteredRules []*FirmwareRule
+
+	for _, rule := range rules {
+		if rule.ApplicationType != applicationType {
+			continue
+		}
+		if "ENV_MODEL_RULE" != rule.GetTemplateId() {
+			continue
+		}
+		filteredRules = append(filteredRules, rule)
+	}
+	return filteredRules, nil
+}
+
 // GetFirmwareSortedRuleAllAsListDB returns all FirmwareRule sorted by Name
 func GetFirmwareSortedRuleAllAsListDB() ([]*FirmwareRule, error) {
 	cm := db.GetCacheManager()
@@ -569,7 +644,7 @@ func GetFirmwareSortedRuleAllAsListDB() ([]*FirmwareRule, error) {
 		return cacheInst.([]*FirmwareRule), nil
 	}
 
-	rulelst, err := GetFirmwareRuleAllAsListDB()
+	rulelst, err := GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		return nil, err
 	}
@@ -608,6 +683,36 @@ func GetFirmwareRuleAllAsListByApplicationType(applicationType string) (map[stri
 	return result, nil
 }
 
+func GetFirmwareRuleAllAsListByApplicationTypeForAS(applicationType string) (map[string][]*FirmwareRule, error) {
+	log.Debug("GetFirmwareRuleAllAsListByApplicationType starts...")
+	// pass 0 or -1 as unlimit
+	rulemap, err := db.GetCachedSimpleDao().GetAllAsMap(db.TABLE_FIRMWARE_RULE)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rulemap) == 0 {
+		return nil, common.NotFound
+	}
+
+	result := map[string][]*FirmwareRule{}
+
+	for _, v := range rulemap {
+		rule := v.(*FirmwareRule)
+		if rule.ApplicationType == applicationType {
+			r, ok := result[rule.Type]
+			if !ok {
+				r = []*FirmwareRule{}
+			}
+			r = append(r, rule)
+			result[rule.Type] = r
+		}
+	}
+
+	log.Debug("GetFirmwareRuleAllAsListByApplicationType ends...")
+	return result, nil
+}
+
 func GetFirmwareRuleTemplateAllAsListDB(actionType ApplicableActionType) ([]*FirmwareRuleTemplate, error) {
 	cm := db.GetCacheManager()
 	cacheKey := "FirmwareRuleTemplateList"
@@ -637,6 +742,28 @@ func GetFirmwareRuleTemplateAllAsListDB(actionType ApplicableActionType) ([]*Fir
 	}
 
 	return result, nil
+}
+
+func GetFirmwareRuleTemplateAllAsListDBForAS(actionType ApplicableActionType) ([]*FirmwareRuleTemplate, error) {
+	tmprulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULE_TEMPLATE, 0)
+	if err != nil {
+		log.Error(fmt.Sprintf("Error load all template rules %v", err))
+		return nil, err
+	}
+
+	if tmprulelst == nil {
+		log.Error("Error load all template rules == failed to load , nil result")
+		return nil, err
+	}
+
+	var rulereflst []*FirmwareRuleTemplate
+	for _, tr := range tmprulelst {
+		tmprule := tr.(*FirmwareRuleTemplate)
+		if actionType == "" || tmprule.ApplicableAction.ActionType == actionType {
+			rulereflst = append(rulereflst, tmprule)
+		}
+	}
+	return rulereflst, nil
 }
 
 func GetFirmwareRuleTemplateAllAsListByActionType(actionType ApplicableActionType) ([]*FirmwareRuleTemplate, error) {
@@ -678,14 +805,14 @@ func GetFirmwareRuleTemplateAllAsListByActionType(actionType ApplicableActionTyp
 }
 
 func CreateFirmwareRuleOneDB(fr *FirmwareRule) error {
-	if util.IsBlank(fr.ID) {
-		fr.ID = uuid.New().String()
-	}
-	fr.Updated = util.GetTimestamp(time.Now())
-
 	if err := fr.Validate(); err != nil {
 		return err
 	}
+
+	if util.IsBlank(fr.ID) {
+		fr.ID = uuid.New().String()
+	}
+	fr.Updated = util.GetTimestamp()
 
 	return db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, fr.ID, fr)
 }
@@ -699,17 +826,20 @@ func DeleteOneFirmwareRule(id string) error {
 }
 
 func CreateFirmwareRuleTemplateOneDB(ft *FirmwareRuleTemplate) error {
+	if err := ft.Validate(); err != nil {
+		return err
+	}
 	return db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE_TEMPLATE, ft.ID, ft)
 }
 
-func ValidateRuleName(id string, name string) error {
-	list, err := GetFirmwareRuleAllAsListDB()
+func ValidateRuleName(id string, name string, applicationType string) error {
+	list, err := GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		return err
 	}
 
 	for _, rule := range list {
-		if rule.ID != id && rule.Name == name {
+		if rule.ID != id && rule.Name == name && rule.ApplicationType == applicationType {
 			return errors.New("Name is already used")
 		}
 	}

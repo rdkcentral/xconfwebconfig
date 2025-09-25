@@ -19,6 +19,7 @@ package db
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 /*
@@ -73,7 +74,7 @@ func (ld listingDaoImpl) GetOne(tableName string, rowKey string, key2 interface{
 	if tableInfo.Compress {
 		jsonData, err = decompress(data)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
 		}
 	} else {
 		jsonData = data
@@ -138,7 +139,7 @@ func (ld listingDaoImpl) GetAll(tableName string, rowKey string) ([]interface{},
 		if tableInfo.Compress {
 			jsonData, err = decompress(data)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
 			}
 		} else {
 			jsonData = data
@@ -203,7 +204,7 @@ func (ld listingDaoImpl) GetAllAsMap(tableName string, rowKey string, key2List [
 		if tableInfo.Compress {
 			jsonData, err = decompress(data)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
 			}
 		} else {
 			jsonData = data
@@ -235,7 +236,7 @@ func (ld listingDaoImpl) GetRange(tableName string, rowKey interface{}, rangeInf
 		if tableInfo.Compress {
 			jsonData, err = decompress(data)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
 			}
 		} else {
 			jsonData = data

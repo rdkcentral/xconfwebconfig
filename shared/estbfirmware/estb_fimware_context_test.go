@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/common"
 
 	"gotest.tools/assert"
 )

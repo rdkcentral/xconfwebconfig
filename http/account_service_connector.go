@@ -15,24 +15,34 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package http
 
 import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"xconfwebconfig/common"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	accountServiceName = "account_service"
-	getAccountPath     = "%s/account/%s"
+	getDevicesPath = "%s/devices?%s=%s&status=Active,PendingActivation"
+	getAccountPath = "%s/account/%s"
 )
 
-type AccountServiceConnector struct {
+type AccountServiceConnector interface {
+	AccountServiceHost() string
+	SetAccountServiceHost(host string)
+	GetAccountData(serviceAccountId string, token string, fields log.Fields) (Account, error)
+	GetDevices(macKey string, macValue string, token string, fields log.Fields) (AccountServiceDevices, error)
+}
+
+type DefaultAccountService struct {
 	*HttpClient
 	host string
 }
@@ -57,28 +67,43 @@ type AccountData struct {
 }
 
 type AccountAttributes struct {
-	TimeZone string `json:"timeZone"`
+	TimeZone    string `json:"timeZone"`
+	CountryCode string `json:"countryCode"`
 }
 
-func NewAccountServiceConnector(conf *configuration.Config, tlsConfig *tls.Config) *AccountServiceConnector {
-	confKey := fmt.Sprintf("xconfwebconfig.%v.host", accountServiceName)
-	host := conf.GetString(confKey)
+func (d *AccountServiceDevices) IsEmpty() bool {
+	return d.Id == "" && d.DeviceData.Partner == "" && d.DeviceData.ServiceAccountUri == ""
+}
 
-	return &AccountServiceConnector{
-		HttpClient: NewHttpClient(conf, accountServiceName, tlsConfig),
-		host:       host,
+var accountServiceName string
+
+func NewAccountServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, externalAccountService AccountServiceConnector) AccountServiceConnector {
+	if externalAccountService != nil {
+		return externalAccountService
+	} else {
+		accountServiceName = conf.GetString("xconfwebconfig.xconf.account_service_name")
+		confKey := fmt.Sprintf("xconfwebconfig.%v.host", accountServiceName)
+		host := conf.GetString(confKey)
+		if util.IsBlank(host) {
+			panic(fmt.Errorf("%s is required", confKey))
+		}
+
+		return &DefaultAccountService{
+			HttpClient: NewHttpClient(conf, accountServiceName, tlsConfig),
+			host:       host,
+		}
 	}
 }
 
-func (c *AccountServiceConnector) AccountServiceHost() string {
+func (c *DefaultAccountService) AccountServiceHost() string {
 	return c.host
 }
 
-func (c *AccountServiceConnector) SetAccountServiceHost(host string) {
+func (c *DefaultAccountService) SetAccountServiceHost(host string) {
 	c.host = host
 }
 
-func (c *AccountServiceConnector) GetAccountData(serviceAccountId string, token string, fields log.Fields) (Account, error) {
+func (c *DefaultAccountService) GetAccountData(serviceAccountId string, token string, fields log.Fields) (Account, error) {
 	url := fmt.Sprintf(getAccountPath, c.AccountServiceHost(), serviceAccountId)
 	headers := map[string]string{
 		common.HeaderAuthorization: fmt.Sprintf("Bearer %s", token),
@@ -96,7 +121,24 @@ func (c *AccountServiceConnector) GetAccountData(serviceAccountId string, token 
 	return account, nil
 }
 
-func (c *AccountServiceConnector) GetDevices(macKey string, macValue string, token string, fields log.Fields) (AccountServiceDevices, error) {
+func (c *DefaultAccountService) GetDevices(macKey string, macValue string, token string, fields log.Fields) (AccountServiceDevices, error) {
+	url := fmt.Sprintf(getDevicesPath, c.AccountServiceHost(), macKey, macValue)
+	headers := map[string]string{
+		common.HeaderAuthorization: fmt.Sprintf("Bearer %s", token),
+		common.HeaderUserAgent:     common.HeaderXconfDataService,
+	}
 	var devicesInfo AccountServiceDevices
+	var devicesArray []AccountServiceDevices
+	rbytes, err := c.DoWithRetries("GET", url, headers, nil, fields, accountServiceName)
+	if err != nil {
+		return devicesInfo, err
+	}
+	err = json.Unmarshal(rbytes, &devicesArray)
+	if err != nil {
+		return devicesInfo, err
+	}
+	if len(devicesArray) != 0 {
+		devicesInfo = devicesArray[0]
+	}
 	return devicesInfo, nil
 }

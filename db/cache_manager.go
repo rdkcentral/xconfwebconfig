@@ -25,16 +25,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rdkcentral/xconfwebconfig/util"
+
 	"github.com/go-akka/configuration"
 	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
-
-	"xconfwebconfig/util"
 
 	cache "github.com/Comcast/goburrow-cache"
 )
 
 var Conf *configuration.Config
+
+var (
+	syncCacheLock sync.Mutex
+)
 
 // ConfigInjection - dependency injection
 func ConfigInjection(conf *configuration.Config) {
@@ -47,6 +51,36 @@ type CacheRefreshTask struct {
 	refreshAttemptsLeft    int32
 	stopped                chan bool
 	ticker                 *time.Ticker
+}
+
+func (t *CacheRefreshTask) doSyncChanges() {
+	syncCacheLock.Lock()
+	defer syncCacheLock.Unlock()
+	now := time.Now().UTC()
+	log.Debugf("doSyncChanges. starting cache update [%v - %s]", t.lastRefreshedTimestamp.Format(time.RFC3339), now.Format(time.RFC3339))
+	if t.refreshAttemptsLeft == 0 {
+		log.Debug("attempting full cache refresh")
+		// load all data
+		t.lastRefreshedTimestamp = now
+		failedTables := GetCacheManager().RefreshAll()
+		if len(failedTables) == 0 {
+			t.refreshAttemptsLeft++
+		} else {
+			log.Errorf("failed to refresh cache for table(s): %v", failedTables)
+		}
+	} else {
+		// load only changed data
+		_, err := GetCacheManager().SyncChanges(t.lastRefreshedTimestamp, now, true)
+		if err == nil {
+			t.lastRefreshedTimestamp = now
+			t.refreshAttemptsLeft = cacheManager.Settings.retryCountUntilFullRefresh
+			//	Ws.UpdateCacheSyncMetrics(true)
+		} else {
+			log.Errorf("failed to sync cache changes: %v", err)
+			t.refreshAttemptsLeft--
+			//Ws.UpdateCacheSyncMetrics(false)
+		}
+	}
 }
 
 func (t *CacheRefreshTask) Run() {
@@ -121,6 +155,10 @@ type CacheSettings struct {
 	cloneDataEnabled bool
 
 	applicationCacheEnabled bool
+
+	groupServiceExpireAfterAccess int64
+
+	groupServiceRefreshAfterWrite int64
 }
 
 // CacheStats statistics for the cache.LoadingCache
@@ -147,17 +185,19 @@ type CacheInfo struct {
 
 // CacheManager a cache manager
 type CacheManager struct {
-	Settings                CacheSettings
-	cacheMap                map[string]CacheInfo
-	refreshCacheTask        CacheRefreshTask
-	applicationCache        cache.Cache
-	applicationCacheEnabled bool
+	Settings                 CacheSettings
+	cacheMap                 map[string]CacheInfo
+	refreshCacheTask         CacheRefreshTask
+	applicationCache         cache.Cache
+	applicationCacheEnabled  bool
+	groupServiceFeatureCache cache.Cache
 }
 
 // CacheManager a cache manager
 var cacheManager CacheManager
 var initOnce sync.Once
 var refreshCacheMutex sync.Mutex
+var grpCacheLoadfunc func(k cache.Key) (cache.Value, error)
 
 // GetCacheManager Initializes a CacheManager
 func GetCacheManager() CacheManager {
@@ -177,6 +217,8 @@ func GetCacheManager() CacheManager {
 			cacheManager.Settings.keysetChunkSizeForMassCacheLoad = 500
 			cacheManager.Settings.cloneDataEnabled = false
 			cacheManager.Settings.applicationCacheEnabled = false
+			cacheManager.Settings.groupServiceExpireAfterAccess = 240
+			cacheManager.Settings.groupServiceRefreshAfterWrite = 240
 		} else {
 			cacheManager.Settings.tickDuration = Conf.GetInt32("xconfwebconfig.xconf.cache_tickDuration", 60000)
 			cacheManager.Settings.retryCountUntilFullRefresh = Conf.GetInt32("xconfwebconfig.xconf.cache_retryCountUntilFullRefresh", 10)
@@ -188,6 +230,8 @@ func GetCacheManager() CacheManager {
 			cacheManager.Settings.keysetChunkSizeForMassCacheLoad = Conf.GetInt32("xconfwebconfig.xconf.cache_keysetChunkSizeForMassCacheLoad", 500)
 			cacheManager.Settings.cloneDataEnabled = Conf.GetBoolean("xconfwebconfig.xconf.cache_clone_data_enabled", false)
 			cacheManager.Settings.applicationCacheEnabled = Conf.GetBoolean("xconfwebconfig.xconf.application_cache_enabled", false)
+			cacheManager.Settings.groupServiceExpireAfterAccess = Conf.GetInt64(fmt.Sprintf("xconfwebconfig.%v.cache_expire_after_access_in_mins", Conf.GetString("xconfwebconfig.xconf.group_service_name")))
+			cacheManager.Settings.groupServiceRefreshAfterWrite = Conf.GetInt64(fmt.Sprintf("xconfwebconfig.%v.cache_refresh_after_write_in_mins", Conf.GetString("xconfwebconfig.xconf.group_service_name")))
 		}
 
 		// Initialize the cache
@@ -215,6 +259,14 @@ func GetCacheManager() CacheManager {
 			}
 			cacheManager.cacheMap[tableName] = CacheInfo{cache: loadingCache, Stats: &CacheStats{}}
 		}
+
+		// Initialize group service feature tags cache
+		cacheManager.groupServiceFeatureCache = cache.NewLoadingCache(
+			cache.LoaderFunc(GetGrpCacheLoadFunc()),
+			cache.WithMaximumSize(100),
+			cache.WithExpireAfterAccess(time.Duration(cacheManager.Settings.groupServiceExpireAfterAccess)*time.Minute),
+			cache.WithRefreshAfterWrite(time.Duration(cacheManager.Settings.groupServiceRefreshAfterWrite)*time.Minute),
+		)
 
 		cc, ok := GetDatabaseClient().(*CassandraClient)
 		if ok && !cc.IsTestOnly() {
@@ -316,6 +368,10 @@ func (cm CacheManager) getCache(tableName string) (cache.LoadingCache, error) {
 	return cacheInfo.cache, nil
 }
 
+func (cm CacheManager) ForceSyncChanges() {
+	cm.refreshCacheTask.doSyncChanges()
+}
+
 // Preloading caches
 func (cm CacheManager) initiatePrecaching() {
 	log.Debug("initializing cache...")
@@ -349,7 +405,7 @@ func (cm CacheManager) initiatePrecaching() {
 			var entries map[string]interface{}
 			var err error
 			if tableInfo.IsCompressAndSplit() {
-				entries, err = GetCompressingDataDao().GetAllAsMap(tableName)
+				entries, err = GetCompressingDataDao().GetAllAsMap(tableName, true)
 			} else {
 				entries, err = GetSimpleDao().GetAllAsMap(tableName, 0)
 			}
@@ -467,7 +523,6 @@ func (cm CacheManager) SyncChanges(startTime time.Time, endTime time.Time, apply
 	}
 
 	// Apply changes to cache
-	err = cm.applyChanges(changedList)
 	if apply {
 		log.Debugf("sync cache, getting changed keys [%v - %v]: %v", startTS, endTS, buildLogForRanges(ranges))
 		err = cm.applyChanges(changedList)
@@ -763,4 +818,49 @@ func (cm CacheManager) ApplicationCacheInvalidateAll() {
 
 func getApplicationCacheKey(tableName string, name string) string {
 	return fmt.Sprintf("%v::%v", tableName, name)
+}
+
+func isNotFoundError(err error) bool {
+	return strings.Contains(err.Error(), "404")
+}
+
+func (cm CacheManager) GetGroupServiceFeatureTags(cacheKey string) map[string]string {
+	featureTags, err := cm.groupServiceFeatureCache.(cache.LoadingCache).Get(cacheKey)
+	if err != nil {
+		if isNotFoundError(err) {
+			log.WithFields(log.Fields{"cacheKey": cacheKey}).Info("Cache miss for key")
+			return nil
+		}
+		log.WithFields(log.Fields{"cacheKey": cacheKey, "error": err}).Error("Error retrieving cache")
+		return nil
+	}
+
+	if featureTags == nil {
+		log.WithFields(log.Fields{"cacheKey": cacheKey}).Info("No feature tags found for key")
+		return nil
+	}
+	tags, ok := featureTags.(map[string]string)
+	if !ok {
+		log.WithFields(log.Fields{"key": cacheKey, "expected": "map[string]string", "actual": fmt.Sprintf("%T", featureTags)}).Error("Unexpected type")
+		return nil
+	}
+	return tags
+}
+
+func (cm CacheManager) SetGroupServiceFeatureTags(cacheKey string, tags map[string]string) error {
+	cm.groupServiceFeatureCache.Put(cacheKey, tags)
+	return nil
+}
+
+func (cm CacheManager) DeleteGroupServiceFeatureTags(cacheKey string) error {
+	cm.groupServiceFeatureCache.Invalidate(cacheKey)
+	return nil
+}
+
+func SetGrpCacheLoadFunc(f func(k cache.Key) (cache.Value, error)) {
+	grpCacheLoadfunc = f
+}
+
+func GetGrpCacheLoadFunc() func(k cache.Key) (cache.Value, error) {
+	return grpCacheLoadfunc
 }

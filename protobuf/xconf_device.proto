@@ -1,0 +1,27 @@
+// keyspace xd
+syntax= "proto3";
+package xdas;
+
+option go_package = ".;conversion";
+
+message XconfDevice {
+  string account_id = 1;
+  string partner = 2;
+  string model = 3;
+  string application_type = 4;
+  string env = 5;
+  string fw_version = 6;
+  bytes estb_ip = 7;
+  string experience = 8;
+  bytes rfc_hash = 9;
+  bytes telemetry_hash = 10;
+  bytes dcm_hash = 11;
+  bool is_at_warehouse = 12;
+  bytes rfc_primary_hash = 13;
+  bytes rfc_post_processing_hash = 14;
+  bytes t2_hash = 15;
+  bytes ctx_hash = 16;
+  string offered_fw_version = 17;
+  bytes offered_fw_rfc_hash = 18;
+  bytes offered_fw_rfc_primary_hash = 19;
+}

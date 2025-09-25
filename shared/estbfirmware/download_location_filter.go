@@ -23,12 +23,12 @@ import (
 	"math/rand"
 	"strings"
 
-	"xconfwebconfig/db"
-	"xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/firmware"
-	"xconfwebconfig/shared/logupload"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -37,7 +37,7 @@ import (
 type DownloadLocationRoundRobinFilterValue struct {
 	ID                  string               `json:"id" xml:"id"`
 	Updated             int64                `json:"updated" xml:"updated"`
-	Type                SingletonFilterClass `json:"type" xml:"type"`
+	Type                SingletonFilterClass `json:"type,omitempty" xml:"type"`
 	ApplicationType     string               `json:"applicationType" xml:"applicationType"`
 	Locations           []Location           `json:"locations" xml:"locations"`
 	Ipv6locations       []Location           `json:"ipv6locations" xml:"ipv6locations"`
@@ -88,6 +88,14 @@ func NewEmptyDownloadLocationRoundRobinFilterValue() *DownloadLocationRoundRobin
 		Locations:       []Location{},
 		Ipv6locations:   []Location{},
 	}
+}
+
+func (obj *DownloadLocationRoundRobinFilterValue) SetApplicationType(appType string) {
+	obj.ApplicationType = appType
+}
+
+func (obj *DownloadLocationRoundRobinFilterValue) GetApplicationType() string {
+	return obj.ApplicationType
 }
 
 func (obj *DownloadLocationRoundRobinFilterValue) Validate() error {

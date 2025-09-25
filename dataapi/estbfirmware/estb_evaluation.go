@@ -23,9 +23,9 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfwebconfig/shared"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 )
 
 // EvaluationResult ...
@@ -210,13 +210,13 @@ func fitsPercent(evaluationResult *EvaluationResult, context *coreef.ConvertedCo
 		} else {
 			accountId = mac
 		}
-		fitsPercent := fitsPercentByAccountId(accountId, float64(percentage))
+		fitsPercent := FitsPercentByAccountId(accountId, float64(percentage))
 		evaluationResult.AppliedVersionInfo["fitsPercent"] = strconv.FormatBool(fitsPercent)
 	}
 	return isInWhiteList || fitsPercent
 }
 
-func fitsPercentByAccountId(accountId string, percent float64) bool {
+func FitsPercentByAccountId(accountId string, percent float64) bool {
 	prange := math.MaxFloat32*2 + 1
 	//todo
 	//hashCode := (double) Hashing.sipHash24().hashString(accountId, Charsets.UTF_8).asLong() + offset // from 0 to (2 * Long.MAX_VALUE + 1)

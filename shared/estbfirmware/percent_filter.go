@@ -23,11 +23,11 @@ import (
 	"math"
 	"strings"
 
-	"xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -71,7 +71,12 @@ func NewEnvModelPercentage() *EnvModelPercentage {
 }
 
 func NewEmptyPercentFilterValue() *PercentFilterValue {
-	return &PercentFilterValue{}
+	return &PercentFilterValue{
+		ID:                  PERCENT_FILTER_SINGLETON_ID,
+		Type:                PercentFilterClass,
+		Percentage:          100.0,
+		Percent:             100,
+		EnvModelPercentages: map[string]EnvModelPercentage{}}
 }
 
 func NewPercentFilterValue(whiteList *shared.IpAddressGroup, percentage float32, envModelPercentages map[string]EnvModelPercentage) *PercentFilterValue {
@@ -80,6 +85,7 @@ func NewPercentFilterValue(whiteList *shared.IpAddressGroup, percentage float32,
 		Type:                PercentFilterClass,
 		Whitelist:           whiteList,
 		Percentage:          percentage,
+		Percent:             100,
 		EnvModelPercentages: envModelPercentages,
 	}
 }
@@ -97,9 +103,9 @@ func (p *PercentFilterValue) GetId() string {
 }
 
 type GlobalPercentage struct {
-	Whitelist       string
-	Percentage      float32
-	ApplicationType string
+	Whitelist       string  `json:"whitelist,omitempty"`
+	Percentage      float32 `json:"percentage,omitempty"`
+	ApplicationType string  `json:"applicationType,omitempty"`
 }
 
 func NewGlobalPercentage() *GlobalPercentage {
@@ -110,15 +116,15 @@ func NewGlobalPercentage() *GlobalPercentage {
 }
 
 type PercentFilterVo struct {
-	GlobalPercentage GlobalPercentage
-	PercentageBeans  []PercentageBean
+	GlobalPercentage *GlobalPercentage `json:"globalPercentage,omitempty"`
+	PercentageBeans  []PercentageBean  `json:"percentageBeans"`
 }
 
 func NewDefaultPercentFilterVo() *PercentFilterVo {
-	return &PercentFilterVo{}
+	return &PercentFilterVo{PercentageBeans: make([]PercentageBean, 0)}
 }
 
-func NewPercentFilterVo(globalPercentage GlobalPercentage, percentageBeans []PercentageBean) *PercentFilterVo {
+func NewPercentFilterVo(globalPercentage *GlobalPercentage, percentageBeans []PercentageBean) *PercentFilterVo {
 	return &PercentFilterVo{
 		GlobalPercentage: globalPercentage,
 		PercentageBeans:  percentageBeans,
@@ -249,6 +255,104 @@ func (p *PercentageBean) Validate() error {
 	return nil
 }
 
+func (p *PercentageBean) ValidateForAS() error {
+	if util.IsBlank(p.Name) {
+		return errors.New("Name could not be blank")
+	}
+	if util.IsBlank(p.Model) {
+		return errors.New("Model could not be blank")
+	}
+	if p.OptionalConditions != nil {
+		conditions := re.ToConditions(p.OptionalConditions)
+		for _, condition := range conditions {
+			if RuleFactoryENV.Equals(condition.FreeArg) || RuleFactoryMODEL.Equals(condition.FreeArg) {
+				return fmt.Errorf("Optional condition should not contain %s", condition.FreeArg.Name)
+			}
+		}
+	}
+	if err := shared.ValidateApplicationType(p.ApplicationType); err != nil {
+		return err
+	}
+	if p.FirmwareCheckRequired && len(p.FirmwareVersions) == 0 {
+		return errors.New("Please select at least one version or disable firmware check")
+	}
+	if err := validateDistributionDuplicatesForAS(p.Distributions); err != nil {
+		return err
+	}
+
+	var totalPercentage float64 = 0
+	for _, entry := range p.Distributions {
+		if entry != nil {
+			if err := validatePercentageRangeForAS(entry.Percentage, "Percentage"); err != nil {
+				return err
+			}
+			if err := validatePercentageRangeForAS(entry.StartPercentRange, "StartPercentRange"); err != nil {
+				return err
+			}
+			if err := validatePercentageRangeForAS(entry.EndPercentRange, "EndPercentRange"); err != nil {
+				return err
+			}
+			if err := validateDistributionOverlapping(entry, p.Distributions); err != nil {
+				return err
+			}
+			if entry.StartPercentRange > 0 && entry.EndPercentRange > 0 && entry.StartPercentRange >= entry.EndPercentRange {
+				return errors.New("StartPercentRange should be less than EndPercentRange")
+			}
+
+			config, err := GetFirmwareConfigOneDB(entry.ConfigId)
+			if err != nil {
+				return fmt.Errorf("FirmwareConfig with id %s does not exist", entry.ConfigId)
+			}
+			if p.FirmwareCheckRequired && !util.Contains(p.FirmwareVersions, config.FirmwareVersion) {
+				return errors.New("Distribution version should be selected in MinCheck list")
+			}
+			if p.ApplicationType != config.ApplicationType {
+				return errors.New("ApplicationTypes of FirmwareConfig and PercentageBean do not match")
+			}
+
+			totalPercentage += entry.Percentage
+		}
+	}
+	if totalPercentage > 100 {
+		return errors.New("Distribution total percentage > 100")
+	}
+
+	if !util.IsBlank(p.LastKnownGood) {
+		lkgConfig, err := GetFirmwareConfigOneDB(p.LastKnownGood)
+		if err != nil {
+			return fmt.Errorf("LastKnownGood: config with id %s does not exist", p.LastKnownGood)
+		}
+		if p.ApplicationType != lkgConfig.ApplicationType {
+			return errors.New("ApplicationTypes of FirmwareConfig and PercentageBean do not match")
+		}
+		if !util.Contains(p.FirmwareVersions, lkgConfig.FirmwareVersion) {
+			return errors.New("LastKnownGood should be selected in min check list")
+		}
+		if math.Abs(totalPercentage-100.0) < 1.0e-8 {
+			return errors.New("Can't set LastKnownGood when percentage=100")
+		}
+	}
+
+	if p.Active && len(p.Distributions) > 0 && totalPercentage < 100 && util.IsBlank(p.LastKnownGood) {
+		return errors.New("LastKnownGood is required when percentage < 100")
+	}
+
+	if !util.IsBlank(p.IntermediateVersion) {
+		if !p.FirmwareCheckRequired {
+			return errors.New("Can't set IntermediateVersion when firmware check is disabled")
+		}
+		intermediateConfig, err := GetFirmwareConfigOneDB(p.IntermediateVersion)
+		if err != nil {
+			return fmt.Errorf("IntermediateVersion: config with id %s does not exist", p.LastKnownGood)
+		}
+		if p.ApplicationType != intermediateConfig.ApplicationType {
+			return errors.New("ApplicationTypes of FirmwareConfig and PercentageBean do not match")
+		}
+	}
+
+	return nil
+}
+
 func (p *PercentageBean) GetTemplateId() string {
 	return "ENV_MODEL_RULE"
 }
@@ -313,12 +417,35 @@ func validateDistributionDuplicates(configEntries []*firmware.ConfigEntry) error
 	return nil
 }
 
+func validateDistributionDuplicatesForAS(configEntries []*firmware.ConfigEntry) error {
+	newDistributions := make(map[firmware.ConfigEntry]bool)
+	for _, configEntry := range configEntries {
+		if configEntry != nil {
+			if newDistributions[*configEntry] {
+				return errors.New("Distributions contain duplicates")
+			} else {
+				newDistributions[*configEntry] = true
+			}
+		}
+	}
+
+	return nil
+}
+
 func validatePercentageRange(value float64, name string) error {
 	if value < 0 {
 		fmt.Errorf("%s filter contains negative value", name)
 	}
 	if value > 100 {
 		fmt.Errorf("%s should be within [0, 100]", name)
+	}
+
+	return nil
+}
+
+func validatePercentageRangeForAS(value float64, name string) error {
+	if value < 0 || value > 100 {
+		return fmt.Errorf("%s should be within [0, 100]", name)
 	}
 
 	return nil

@@ -32,7 +32,7 @@ Retrieving and processing Xconf data:
 
 The following code illustrates how to retrieve a specific Model from the Model table:
 
-    import 	"xconfwebconfig/db"
+    import 	"github.com/rdkcentral/xconfwebconfig/db"
 
 	obj, err := db.GetCachedSimpleDao().GetOne("Model", "PX013ANM")
 	if err != nil {
@@ -329,7 +329,7 @@ func (csd cachedSimpleDaoImpl) RefreshAll(tableName string) error {
 
 	var entries map[string]interface{}
 	if tableInfo.IsCompressAndSplit() {
-		entries, err = GetCompressingDataDao().GetAllAsMap(tableName)
+		entries, err = GetCompressingDataDao().GetAllAsMap(tableName, true)
 	} else {
 		entries, err = GetSimpleDao().GetAllAsMap(tableName, 0)
 	}

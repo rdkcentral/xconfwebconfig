@@ -23,13 +23,14 @@ import (
 
 	"github.com/google/uuid"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	sharedef "xconfwebconfig/shared/estbfirmware"
-	sharedfw "xconfwebconfig/shared/firmware"
-	util "xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	sharedef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	sharedfw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	util "github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -40,22 +41,20 @@ type IpRuleService struct {
 
 // GetByApplicationTyp ...
 func (i *IpRuleService) GetByApplicationType(applicationType string) []*sharedef.IpRuleBean {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDB()
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		log.Error(fmt.Sprintf("GetByApplicationType: %v", err))
 		return []*sharedef.IpRuleBean{}
 	}
 	result := []*sharedef.IpRuleBean{}
-	resultNameSet := map[string]struct{}{} // as Set
 	for _, frule := range insts {
-		if frule.ApplicationType != applicationType && frule.ApplicationType != shared.ALL && applicationType != "" {
+		if frule.ApplicationType != applicationType {
 			continue
 		}
 		if frule.Type != sharedfw.IP_RULE {
 			continue
 		}
 		ipfilter := i.ConvertToIpRuleOrReturnNull(frule)
-		resultNameSet[ipfilter.Name] = struct{}{}
 		result = append(result, ipfilter)
 	}
 	return result
@@ -63,7 +62,7 @@ func (i *IpRuleService) GetByApplicationType(applicationType string) []*sharedef
 
 // ConvertToIpRuleOrReturnNull ...
 func (i *IpRuleService) ConvertToIpRuleOrReturnNull(firmwareRule *sharedfw.FirmwareRule) *sharedef.IpRuleBean {
-	bean := sharedef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule)
+	bean, _ := sharedef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule)
 	if bean == nil {
 		log.Error("Could not convert: ")
 		//return &sharedef.IpRuleBean{} // or return nil
@@ -73,7 +72,7 @@ func (i *IpRuleService) ConvertToIpRuleOrReturnNull(firmwareRule *sharedfw.Firmw
 }
 
 // Save ...
-func (i *IpRuleService) Save(bean *sharedef.IpRuleBean, applicationType string) {
+func (i *IpRuleService) Save(bean *sharedef.IpRuleBean, applicationType string) error {
 	if len(bean.Id) == 0 {
 		bean.Id = uuid.New().String()
 	}
@@ -82,8 +81,11 @@ func (i *IpRuleService) Save(bean *sharedef.IpRuleBean, applicationType string) 
 	if len(applicationType) != 0 {
 		ipRule.ApplicationType = applicationType
 	}
+	if err := ipRule.Validate(); err != nil {
+		return err
+	}
 
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, ipRule.ID, ipRule)
+	return db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, ipRule.ID, ipRule)
 }
 
 // Delete ...
@@ -96,7 +98,11 @@ func (i *IpRuleService) getOne(id string) *sharedef.IpRuleBean {
 	if err != nil {
 		return nil
 	}
-	return sharedef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(frule)
+	bean, err := coreef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(frule)
+	if err != nil {
+		return nil
+	}
+	return bean
 }
 
 func NullifyUnwantedFields(config *sharedef.FirmwareConfig) *sharedef.FirmwareConfig {
@@ -131,7 +137,7 @@ func (i *IpFilterService) getIpFilterByName(name string, applicationType string)
 }
 
 func (i *IpFilterService) getByApplicationType(applicationType string) []*sharedef.IpFilter {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDB()
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		log.Error(fmt.Sprintf("getByApplicationType: %v", err))
 		return []*sharedef.IpFilter{}
@@ -217,7 +223,7 @@ type MacRuleService struct {
 }
 
 func (m *MacRuleService) GetFirmwareMacRules(applicationType string) []*sharedfw.FirmwareRule {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDB()
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		log.Error(fmt.Sprintf("GetRulesWithMacCondition: %v", err))
 		return []*sharedfw.FirmwareRule{}
@@ -240,7 +246,7 @@ func (m *MacRuleService) GetFirmwareMacRules(applicationType string) []*sharedfw
 }
 
 func (m *MacRuleService) GetByApplicationType(applicationType string) []*sharedef.MacRuleBean {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDB()
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		log.Error(fmt.Sprintf("GetByApplicationType: %v", err))
 		return []*sharedef.MacRuleBean{}
@@ -257,7 +263,6 @@ func (m *MacRuleService) GetByApplicationType(applicationType string) []*sharede
 			continue
 		}
 		if frule.Type != sharedfw.MAC_RULE {
-
 			continue
 		}
 		macRuleBean := convertFirmwareRuleToMacRuleBean(frule)
@@ -351,7 +356,7 @@ func isExistMacAddressInList(macAddresses *[]string, macPart string) bool {
 }
 
 func (m *MacRuleService) GetRulesWithMacCondition(applicationType string) []*sharedef.MacRuleBean {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDB()
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		log.Error(fmt.Sprintf("GetRulesWithMacCondition: %v", err))
 		return []*sharedef.MacRuleBean{}
@@ -407,7 +412,7 @@ type EnvModelRuleService struct {
 }
 
 func (em *EnvModelRuleService) GetByApplicationType(applicationType string) []*sharedef.EnvModelBean {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDB()
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
 	if err != nil {
 		log.Error(fmt.Sprintf("GetByApplicationType: %v", err))
 		return []*sharedef.EnvModelBean{}
@@ -419,7 +424,7 @@ func (em *EnvModelRuleService) GetByApplicationType(applicationType string) []*s
 		if frule.Type != sharedfw.ENV_MODEL_RULE {
 			continue
 		}
-		if frule.ApplicationType != applicationType && frule.ApplicationType != shared.ALL && applicationType != "" {
+		if frule.ApplicationType != applicationType {
 			continue
 		}
 		emRuleBean := sharedef.ConvertFirmwareRuleToEnvModelRuleBean(frule)

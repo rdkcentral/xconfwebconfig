@@ -19,15 +19,25 @@ package http
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/go-akka/configuration"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	deviceServiceName = "device_service"
+	getMeshPodUrlTemplate = "%s/api/v1/operational/mesh-pod/%s/account"
 )
+
+type DeviceServiceConnector interface {
+	DeviceServiceHost() string
+	SetDeviceServiceHost(host string)
+	GetMeshPodAccountBySerialNum(serialNum string, fields log.Fields) (DeviceServiceObject, error)
+}
 
 type DeviceServiceData struct {
 	AccountId string `json:"account_id"`
@@ -42,30 +52,53 @@ type DeviceServiceObject struct {
 	DeviceServiceData *DeviceServiceData `json:"data"`
 }
 
-type DeviceServiceConnector struct {
+type DefaultDeviceService struct {
 	*HttpClient
 	host string
 }
 
-func NewDeviceServiceConnector(conf *configuration.Config, tlsConfig *tls.Config) *DeviceServiceConnector {
-	confKey := fmt.Sprintf("xconfwebconfig.%v.host", deviceServiceName)
-	host := conf.GetString(confKey)
+var deviceServiceName string
 
-	return &DeviceServiceConnector{
-		HttpClient: NewHttpClient(conf, deviceServiceName, tlsConfig),
-		host:       host,
+func NewDeviceServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, externalDeviceConnector DeviceServiceConnector) DeviceServiceConnector {
+
+	if externalDeviceConnector != nil {
+		return externalDeviceConnector
+	} else {
+		deviceServiceName := conf.GetString("xconfwebconfig.xconf.device_service_name")
+		confKey := fmt.Sprintf("xconfwebconfig.%v.host", deviceServiceName)
+		host := conf.GetString(confKey)
+		if util.IsBlank(host) {
+			panic(fmt.Errorf("%s is required", confKey))
+		}
+
+		return &DefaultDeviceService{
+			HttpClient: NewHttpClient(conf, deviceServiceName, tlsConfig),
+			host:       host,
+		}
 	}
 }
 
-func (c *DeviceServiceConnector) DeviceServiceHost() string {
+func (c *DefaultDeviceService) DeviceServiceHost() string {
 	return c.host
 }
 
-func (c *DeviceServiceConnector) SetDeviceServiceHost(host string) {
+func (c *DefaultDeviceService) SetDeviceServiceHost(host string) {
 	c.host = host
 }
 
-func (c *DeviceServiceConnector) GetMeshPodAccountBySerialNum(serialNum string, fields log.Fields) (DeviceServiceObject, error) {
+func (c *DefaultDeviceService) GetMeshPodAccountBySerialNum(serialNum string, fields log.Fields) (DeviceServiceObject, error) {
+	url := fmt.Sprintf(getMeshPodUrlTemplate, c.DeviceServiceHost(), serialNum)
+	headers := map[string]string{
+		common.HeaderUserAgent: common.HeaderXconfDataService,
+	}
 	var deviceServiceObject DeviceServiceObject
+	rrbytes, err := c.DoWithRetries("GET", url, headers, nil, fields, deviceServiceName)
+	if err != nil {
+		return deviceServiceObject, err
+	}
+	err = json.Unmarshal(rrbytes, &deviceServiceObject)
+	if err != nil {
+		return deviceServiceObject, err
+	}
 	return deviceServiceObject, nil
 }

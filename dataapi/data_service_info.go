@@ -22,10 +22,10 @@ import (
 	"net/http"
 	"strings"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	xhttp "xconfwebconfig/http"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/gorilla/mux"
 )

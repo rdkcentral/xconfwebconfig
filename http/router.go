@@ -33,6 +33,9 @@ func (s *XconfServer) AddBaseRoutes(testOnly bool, router *mux.Router) {
 	r2 := router.Path("/version").Subrouter()
 	r2.HandleFunc("", s.VersionHandler).Methods("GET")
 
+	r3 := router.Path("/config").Subrouter()
+	r3.HandleFunc("", s.ServerConfigHandler).Methods("GET")
+
 	// register the notfound handler
 	router.NotFoundHandler = http.HandlerFunc(s.NotFoundHandler)
 }

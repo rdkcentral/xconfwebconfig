@@ -22,10 +22,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
+	"net"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/rdkcentral/xconfwebconfig/common"
+
+	"github.com/go-akka/configuration"
 	"github.com/gocql/gocql"
 	copy "github.com/mitchellh/copystructure"
 )
@@ -67,6 +71,10 @@ func GetTimestamp(args ...time.Time) int64 {
 		unixNano = args[0].UnixNano()
 	}
 	return unixNano / int64(time.Millisecond)
+}
+
+func IsValidAppSetting(key string) bool {
+	return Contains(common.AllAppSettings, key)
 }
 
 func RemoveNonAlphabeticSymbols(macAddress string) string {
@@ -170,4 +178,77 @@ func CreateKeyValuePairsFromMap(m map[string]string) string {
 		fmt.Fprintf(b, "%s=\"%s\"\n", key, value)
 	}
 	return b.String()
+}
+
+func GetEcmMacAddress(mac string) string {
+	// if the mac cannot be parsed, then return back the input
+	i, err := strconv.ParseInt(mac, 16, 64)
+	if err != nil {
+		return mac
+	}
+	return fmt.Sprintf("%012X", i-2)
+}
+
+// check ip address is Ipv4 or Ipv6
+func IsIPv4(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+	return ip.To4() != nil
+}
+
+func IsInSameNetwork(ip1Str, ip2Str string, mask net.IPMask) (bool, error) {
+	ip1 := net.ParseIP(ip1Str)
+	if ip1 == nil {
+		return false, fmt.Errorf("invalid IP address: %s", ip1Str)
+	}
+
+	ip2 := net.ParseIP(ip2Str)
+	if ip2 == nil {
+		return false, fmt.Errorf("invalid IP address: %s", ip1Str)
+	}
+
+	//mask := net.IPMask(maskStr)
+
+	if mask == nil {
+		return false, fmt.Errorf("invalid netmask")
+	}
+
+	ip1Network := ip1.Mask(mask)
+	ip2Network := ip2.Mask(mask)
+
+	return ip1Network.Equal(ip2Network), nil
+}
+
+// generate Ipv6 network mask string
+func Ipv6NetworkMask(prefixLength int) net.IPMask {
+	mask := net.CIDRMask(prefixLength, 128)
+	return mask
+}
+
+func Ipv4NetworkMask(prefixLength int) net.IPMask {
+	mask := net.CIDRMask(prefixLength, 32)
+	return mask
+}
+
+func CreateConfigMapStringBool(conf *configuration.Config, s string) map[string]bool {
+	m := map[string]bool{}
+	config := conf.GetNode(s)
+	if config != nil {
+		for key, val := range config.GetObject().Items() {
+			m[key] = val.GetBoolean()
+		}
+	}
+	return m
+}
+
+func CreateConfigMapStringString(conf *configuration.Config, s string) map[string]string {
+	m := map[string]string{}
+	config := conf.GetNode(s)
+	if config != nil {
+		for key, val := range config.GetObject().Items() {
+			m[key] = val.GetString()
+		}
+	}
+	return m
 }

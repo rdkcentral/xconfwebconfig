@@ -23,11 +23,11 @@ import (
 	"strconv"
 	"strings"
 
-	"xconfwebconfig/common"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -154,10 +154,13 @@ func ConvertIpRuleBeanToFirmwareRule(bean *IpRuleBean) *firmware.FirmwareRule {
 	ipRule.Type = IP_RULE
 	ipRule.ID = bean.Id
 	ipRule.Name = bean.Name
+	action := &firmware.ApplicableAction{}
+	action.ActionType = firmware.RULE
+	action.Type = firmware.RuleActionClass
 	if bean.FirmwareConfig != nil {
-		ipRule.ApplicableAction = firmware.NewApplicableAction(firmware.ApplicableActionClass, bean.FirmwareConfig.ID)
+		action.ConfigId = bean.FirmwareConfig.ID
 	}
-
+	ipRule.ApplicableAction = action
 	return &ipRule
 }
 
@@ -203,18 +206,18 @@ func containsAnyCondition(rule *re.Rule) bool {
 	return (rule != nil && rule.Condition != nil) || (rule != nil && rule.CompoundParts != nil && len(rule.CompoundParts) > 0)
 }
 
-// convertFirmwareRuleToIpRuleBeanAddFirmareConfig ...
-func ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule *firmware.FirmwareRule) *IpRuleBean {
-	bean := ConvertFirmwareRuleToIpRuleBean(firmwareRule)
+func ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule *firmware.FirmwareRule) (bean *IpRuleBean, err error) {
+	bean = ConvertFirmwareRuleToIpRuleBean(firmwareRule)
 	action := firmwareRule.ApplicableAction
-	if action.ConfigId != "" {
-		cfg, err := GetFirmwareConfigOneDB(action.ConfigId)
-		if err == nil {
+	if action == nil || action.ConfigId == "" {
+		err = fmt.Errorf("FirmwareRule [id=%s, name=%s] is corrupted: ApplicableAction is missing", firmwareRule.ID, firmwareRule.Name)
+		log.Error(err)
+	} else {
+		if cfg, e := GetFirmwareConfigOneDB(action.ConfigId); e == nil {
 			bean.FirmwareConfig = cfg
 		}
 	}
-
-	return bean
+	return bean, err
 }
 
 func ConvertFirmwareRuleToPercentageBean(firmwareRule *firmware.FirmwareRule) *PercentageBean {
@@ -293,7 +296,11 @@ func parseRuleAction(bean *PercentageBean, action *firmware.ApplicableAction) {
 	bean.Whitelist = action.Whitelist
 	bean.RebootImmediately = action.RebootImmediately
 	bean.FirmwareCheckRequired = action.FirmwareCheckRequired
-	bean.FirmwareVersions = action.FirmwareVersions
+	if len(action.FirmwareVersions) == 0 {
+		bean.FirmwareVersions = make([]string, 0)
+	} else {
+		bean.FirmwareVersions = action.FirmwareVersions
+	}
 	bean.IntermediateVersion = action.IntermediateVersion
 	bean.Distributions = ConvertIntoPercentRange(action.ConfigEntries)
 	bean.LastKnownGood = action.ConfigId
@@ -310,6 +317,8 @@ func ConvertIntoPercentRange(configEntries []firmware.ConfigEntry) []*firmware.C
 			Percentage:        configEntry.Percentage,
 			StartPercentRange: configEntry.StartPercentRange,
 			EndPercentRange:   configEntry.EndPercentRange,
+			IsCanaryDisabled:  configEntry.IsCanaryDisabled,
+			IsPaused:          configEntry.IsPaused,
 		}
 
 		if inst.StartPercentRange == 0 || inst.EndPercentRange == 0 {
@@ -366,7 +375,7 @@ func ConvertFirmwareRuleToMacRuleBeanWrapper(firmwareRule *firmware.FirmwareRule
 				macRuleBean.MacList = &value
 			} else if re.StandardOperationIs == condition.GetOperation() && condition.GetFixedArg().IsStringValue() {
 				value := condition.GetFixedArg().GetValue().(string)
-				if util.IsValidMacAddress(value) {
+				if util.IsValidMacAddressForAdminService(value) {
 					ar := []string{value}
 					macRuleBean.MacList = &ar
 				}
@@ -381,10 +390,12 @@ func ConvertFirmwareRuleToEnvModelRuleBean(firmwareRule *firmware.FirmwareRule) 
 	envModelRuleBean.Name = firmwareRule.Name
 	envModelRuleBean.Id = firmwareRule.ID
 	for _, condition := range re.ToConditions(&firmwareRule.Rule) {
-		if condition.GetFreeArg() == RuleFactoryENV {
-			envModelRuleBean.EnvironmentId = condition.GetFixedArg().GetValue().(string)
-		} else if condition.GetFreeArg() == RuleFactoryMODEL {
-			envModelRuleBean.ModelId = condition.GetFixedArg().GetValue().(string)
+		if condition.FreeArg != nil {
+			if condition.FreeArg.Equals(RuleFactoryENV) {
+				envModelRuleBean.EnvironmentId = condition.GetFixedArg().GetValue().(string)
+			} else if condition.FreeArg.Equals(RuleFactoryMODEL) {
+				envModelRuleBean.ModelId = condition.GetFixedArg().GetValue().(string)
+			}
 		}
 	}
 	action := firmwareRule.ApplicableAction
@@ -423,9 +434,9 @@ func NewGlobalPercentFilter(rule *re.Rule) *firmware.FirmwareRule {
 }
 
 func ConvertIntoGlobalPercentage(percentFilterValue *PercentFilterValue, applicationType string) *firmware.FirmwareRule {
-	percentage := percentFilterValue.Percentage
+	percentage := float64(percentFilterValue.Percentage)
 	//BigDecimal hundredPercentage = new BigDecimal(100);
-	var hundredPercentage float32 = 100.0
+	var hundredPercentage float64 = 100.0
 	whitelistName := GetWhitelistName(percentFilterValue.Whitelist)
 	if whitelistName == "" && percentage == 100.0 {
 		return nil
@@ -443,8 +454,13 @@ func ConvertIntoGlobalPercentageFirmwareRule(firmwareRule *firmware.FirmwareRule
 	conditions := re.ToConditions(&firmwareRule.Rule)
 	for _, condition := range conditions {
 		if condition.GetOperation() == re.StandardOperationPercent {
-			fixedArgValue := condition.FixedArg.GetValue().(string)
-			value, _ := strconv.ParseFloat(fixedArgValue, 32)
+			var value float64
+			if condition.FixedArg.IsStringValue() {
+				fixedArgValue := *condition.FixedArg.Bean.Value.JLString
+				value, _ = strconv.ParseFloat(fixedArgValue, 64)
+			} else {
+				value = condition.FixedArg.GetValue().(float64)
+			}
 			result.Percentage = 100 - float32(value)
 		} else if condition.GetOperation() == re.StandardOperationInList && RuleFactoryIP.Equals(condition.FreeArg) {
 			groupId := condition.FixedArg.GetValue().(string)

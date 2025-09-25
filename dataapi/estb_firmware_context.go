@@ -15,6 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package dataapi
 
 import (
@@ -26,14 +27,15 @@ import (
 	"strings"
 	"time"
 
-	"xconfwebconfig/dataapi/estbfirmware"
-	"xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 
-	"xconfwebconfig/common"
-	xhttp "xconfwebconfig/http"
-	coreef "xconfwebconfig/shared/estbfirmware"
-	"xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/agrison/go-commons-lang/stringUtils"
 	log "github.com/sirupsen/logrus"
@@ -66,6 +68,11 @@ var (
 		common.APPLICATION_TYPE,
 	}
 )
+
+type AuxiliaryFirmware struct {
+	Prefix    string
+	Extension string
+}
 
 func IsMacPresentAndValid(queryParams url.Values) (bool, string, string) {
 	var mac string
@@ -106,7 +113,7 @@ func GetTimeInLocalTimezone(currentTime time.Time, contextMap map[string]string)
 	contextMap[common.TIME] = currentTime.Format(common.DATE_TIME_FORMATTER)
 }
 
-func NormalizeEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap map[string]string, usePartnerAppType bool, shouldAddIp bool) {
+func NormalizeEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap map[string]string, usePartnerAppType bool, shouldAddIp bool, fields log.Fields) {
 	NormalizeCommonContext(contextMap, common.ESTB_MAC, common.ECM_MAC)
 	if contextMap[common.TIME] == "" {
 		GetTimeInLocalTimezone(time.Now().UTC(), contextMap)
@@ -116,8 +123,9 @@ func NormalizeEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contex
 		contextMap[common.BYPASS_FILTERS] = fmt.Sprintf("%s,%s", bypassFilters, firmware.GLOBAL_PERCENT)
 	}
 	if shouldAddIp {
-		ipAddress := util.GetIpAddress(r, contextMap[common.IP_ADDRESS])
+		ipAddress := util.GetIpAddress(r, contextMap[common.IP_ADDRESS], fields)
 		contextMap[common.IP_ADDRESS] = ipAddress
+		fields[common.IP_ADDRESS] = ipAddress
 	}
 	// check if request is for partner
 	if usePartnerAppType && contextMap[common.APPLICATION_TYPE] == shared.STB {
@@ -212,8 +220,9 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	} else {
 		fields = log.Fields{}
 	}
-	NormalizeEstbFirmwareContext(ws, r, contextMap, usePartnerAppType, shouldAddIp)
-
+	log.Debug(fmt.Sprintf("AddEstbFirmwareContext start ... contextMap %v", contextMap))
+	NormalizeEstbFirmwareContext(ws, r, contextMap, usePartnerAppType, shouldAddIp, fields)
+	AddGroupServiceContext(ws, contextMap, common.ESTB_MAC, fields)
 	// getting local sat token
 	localToken, err := xhttp.GetLocalSatToken(fields)
 	if err != nil {
@@ -228,8 +237,8 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			contextMap[common.PARTNER_ID] = partnerId
 		}
 	}
-	log.Debug(fmt.Sprintf("AddEstbFirmwareContext start ... contextMap %v", contextMap))
 	AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
+	AddGroupServiceFTContext(Ws, common.ESTB_MAC, contextMap, true, fields)
 	log.Debug(fmt.Sprintf("AddEstbFirmwareContext ... end contextMap %v", contextMap))
 	return nil
 }
@@ -255,14 +264,10 @@ func LogPreDisplayCleanup(lastConfigLog *coreef.ConfigChangeLog) {
 
 func LogResponse(contextMap map[string]string, convertedContext *coreef.ConvertedContext, explanation string, evaluationResult *estbfirmware.EvaluationResult, fields log.Fields) {
 	DoSplunkLog(contextMap, evaluationResult, fields)
-	doMetrics(contextMap, evaluationResult, fields)
-
-	if contextMap[common.FIRMWARE_VERSION] == "" {
-		log.Debug("No firmware version given, not writing to last log.")
-	} else {
-		go func() {
+	go func() {
+		mac := contextMap[common.ESTB_MAC]
+		if contextMap[common.FIRMWARE_VERSION] != "" {
 			log.Trace("Logging last config request.")
-			mac := contextMap[common.ESTB_MAC]
 			lastConfigLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, true)
 			err := coreef.SetLastConfigLog(mac, lastConfigLog)
 			if err != nil {
@@ -276,8 +281,47 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 					log.Error(fmt.Sprintf("Can't save config change log request: %+v", err))
 				}
 			}
-		}()
-	}
+		} else {
+			log.Debug("No firmware version given, not writing to last log.")
+		}
+		if Ws.Config.GetBoolean("xconfwebconfig.xconf.enable_fw_penetration_metrics", false) {
+			fwTs := time.Now().UnixNano() / 1000000
+			partner := contextMap[common.PARTNER_ID]
+			var fwVersion string
+			var fwAdditionalVerInfo string
+			if evaluationResult.FirmwareConfig != nil {
+				fwVersion = evaluationResult.FirmwareConfig.GetFirmwareVersion()
+				if fw, ok := evaluationResult.FirmwareConfig.Properties[common.ADDITIONAL_FW_VER_INFO]; ok {
+					if fwVal, isString := fw.(string); isString {
+						fwAdditionalVerInfo = fwVal
+					}
+				}
+			}
+			var fwAppliedRule string
+			if evaluationResult.MatchedRule != nil {
+				fwAppliedRule = evaluationResult.MatchedRule.GetName()
+			}
+
+			pTable := &db.FwPenetrationMetrics{
+				EstbMac:                 mac,
+				Partner:                 partner,
+				Model:                   contextMap[common.MODEL],
+				FwVersion:               fwVersion,
+				FwReportedVersion:       contextMap[common.FIRMWARE_VERSION],
+				FwAdditionalVersionInfo: fwAdditionalVerInfo,
+				FwAppliedRule:           fwAppliedRule,
+				FwTs:                    fwTs,
+				ClientCertExpiry:        contextMap[common.CLIENT_CERT_EXPIRY],
+				RecoveryCertExpiry:      contextMap[common.RECOVERY_CERT_EXPIRY],
+			}
+
+			err := db.GetDatabaseClient().SetFwPenetrationMetrics(pTable)
+			if err != nil {
+				log.Error(fmt.Sprintf("Can't save FW penetration metrics, estbMac=%s, error=%+v", mac, err))
+			}
+		}
+	}()
+
 }
 
 func IsCustomField(key string) bool {
@@ -304,13 +348,21 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 		}
 	}
 
+	if contextMap[common.CLIENT_CERT_EXPIRY] != "" {
+		fields["clientCertExpiry"] = contextMap[common.CLIENT_CERT_EXPIRY]
+	} else if contextMap[common.RECOVERY_CERT_EXPIRY] != "" {
+		fields["recoveryCertExpiry"] = contextMap[common.RECOVERY_CERT_EXPIRY]
+	}
+
 	if evaluationResult != nil {
 		if evaluationResult.MatchedRule != nil {
 			fields["appliedRule"] = evaluationResult.MatchedRule.Name
 			fields["ruleType"] = evaluationResult.MatchedRule.Type
 		}
+		var firmwareVersion string
 		if evaluationResult.FirmwareConfig != nil {
-			fields["firmwareVersion"] = evaluationResult.FirmwareConfig.GetFirmwareVersion()
+			firmwareVersion = evaluationResult.FirmwareConfig.GetFirmwareVersion()
+			fields["firmwareVersion"] = firmwareVersion
 			fields["firmwareDownloadProtocol"] = evaluationResult.FirmwareConfig.GetFirmwareDownloadProtocol()
 			fields["firmwareLocation"] = evaluationResult.FirmwareConfig.GetFirmwareLocation()
 			fields["rebootImmediately"] = evaluationResult.FirmwareConfig.GetRebootImmediately()
@@ -319,12 +371,30 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 				if IsAdditionalProperty(key) {
 					fields[key] = value
 				}
+
+				//added offeredCertBundle to the fields
+				if strings.ToUpper(key) == "DLCERTBUNDLE" {
+					fields["offeredDlCertBundle"] = value
+				}
 			}
 		} else if evaluationResult.Blocked {
-			fields["firmwareVersion"] = estbfirmware.BLOCKED
+			firmwareVersion = string(estbfirmware.BLOCKED)
+			fields["firmwareVersion"] = firmwareVersion
 		} else {
-			fields["firmwareVersion"] = estbfirmware.NOMATCH
+			firmwareVersion = string(estbfirmware.NOMATCH)
+			fields["firmwareVersion"] = firmwareVersion
 		}
+
+		// Add newFWOffer flag logic
+		reportedFirmwareVersion := contextMap[common.FIRMWARE_VERSION]
+		if firmwareVersion == string(estbfirmware.NOMATCH) || firmwareVersion == string(estbfirmware.BLOCKED) {
+			fields["newFWOffer"] = false
+		} else if reportedFirmwareVersion != "" && firmwareVersion != "" && reportedFirmwareVersion != firmwareVersion {
+			fields["newFWOffer"] = true
+		} else {
+			fields["newFWOffer"] = false
+		}
+
 		for key, value := range evaluationResult.AppliedVersionInfo {
 			fields[key] = value
 		}
@@ -342,6 +412,8 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 				case *coreef.PercentFilterValue:
 					d = util.Dict{
 						"type": "PercentFilter",
+						// For debugging, log the full object value
+						"value": fmt.Sprintf("PercentFilterValue=%v", v),
 					}
 				case *coreef.DownloadLocationRoundRobinFilterValue:
 					d = util.Dict{
@@ -362,32 +434,8 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 			fields["appliedFilters"] = appliedFilters
 		}
 	}
-	log.WithFields(fields).Info("EstbFirmwareService XCONF_LOG")
+	log.WithFields(common.FilterLogFields(fields)).Info("EstbFirmwareService XCONF_LOG")
 	xhttp.UpdateLogCounter("EstbFirmwareService")
-}
-
-// doMetrics updates the fw penetration counts
-// Duplicate some code here from DoSplunkLog
-func doMetrics(contextMap map[string]string, evaluationResult *estbfirmware.EvaluationResult, fields log.Fields) {
-	partner := contextMap[common.PARTNER_ID]
-	model := contextMap[common.MODEL]
-
-	fwVersion := contextMap[common.FIRMWARE_VERSION]
-	if evaluationResult != nil {
-		if evaluationResult.FirmwareConfig != nil {
-			fwVersion = evaluationResult.FirmwareConfig.GetFirmwareVersion()
-		} else if evaluationResult.Blocked {
-			// Force this to a string
-			fwVersion = string(estbfirmware.BLOCKED)
-		} else {
-			fwVersion = string(estbfirmware.NOMATCH)
-		}
-	}
-	xhttp.UpdateFirmwarePenetrationCounts(partner, model, fwVersion)
-	fields["partner"] = partner
-	fields["model"] = model
-	fields["firmware_version"] = fwVersion
-	log.WithFields(fields).Debug("Firmware Penetration")
 }
 
 func GetFirstElementsInContextMap(contextMap map[string]string) {

@@ -24,9 +24,10 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	"xconfwebconfig/util"
+
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -170,7 +171,7 @@ func GetOneEnvironment(id string) *Environment {
 }
 
 func SetOneEnvironment(env *Environment) (*Environment, error) {
-	env.Updated = util.GetTimestamp(time.Now())
+	env.Updated = util.GetTimestamp()
 	err := db.GetCachedSimpleDao().SetOne(db.TABLE_ENVIRONMENT, env.ID, env)
 	if err != nil {
 		return nil, err
@@ -202,14 +203,14 @@ func (obj *Model) Clone() (*Model, error) {
 }
 
 func (obj *Model) Validate() error {
-	if len(strings.TrimSpace(obj.ID)) > 0 {
+	if len(obj.ID) > 0 {
 		match, _ := regexp.MatchString("^[-a-zA-Z0-9_.' ]+$", obj.ID)
 		if match {
 			return nil
 		}
 	}
 
-	return errors.New("Id is invalid")
+	return errors.New("Id is invalid. Valid Characters: alphanumeric _ . -")
 }
 
 // NewModelInf constructor
@@ -307,4 +308,124 @@ func (obj *AppSetting) Clone() (*AppSetting, error) {
 // NewAppSettingInf constructor
 func NewAppSettingInf() interface{} {
 	return &AppSetting{}
+}
+
+func GetBooleanAppSetting(key string, vargs ...bool) bool {
+	defaultVal := false
+	if len(vargs) > 0 {
+		defaultVal = vargs[0]
+	}
+
+	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
+	if err != nil {
+		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
+		return defaultVal
+	}
+
+	setting := inst.(*AppSetting)
+	return setting.Value.(bool)
+}
+
+func GetIntAppSetting(key string, vargs ...int) int {
+	defaultVal := -1
+	if len(vargs) > 0 {
+		defaultVal = vargs[0]
+	}
+
+	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
+	if err != nil {
+		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
+		return defaultVal
+	}
+
+	setting := inst.(*AppSetting)
+
+	// Note: json.Unmarshal numbers into float64 when target type is of type interface{}
+	if val, ok := setting.Value.(float64); ok {
+		return int(val)
+	} else {
+		return setting.Value.(int)
+	}
+}
+
+func GetFloat64AppSetting(key string, vargs ...float64) float64 {
+	defaultVal := -1.0
+	if len(vargs) > 0 {
+		defaultVal = vargs[0]
+	}
+
+	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
+	if err != nil {
+		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
+		return defaultVal
+	}
+
+	setting := inst.(*AppSetting)
+	return setting.Value.(float64)
+}
+
+func GetTimeAppSetting(key string, vargs ...time.Time) time.Time {
+	var defaultVal time.Time
+	if len(vargs) > 0 {
+		defaultVal = vargs[0]
+	}
+
+	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
+	if err != nil {
+		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
+		return defaultVal
+	}
+
+	setting := inst.(*AppSetting)
+	timeStr := setting.Value.(string)
+	time, err := time.Parse(time.RFC3339, timeStr)
+	if err != nil {
+		log.Error(fmt.Sprintf("error getting AppSetting for %s: %s ", key, err.Error()))
+	}
+
+	return time
+}
+
+func GetStringAppSetting(key string, vargs ...string) string {
+	defaultVal := ""
+	if len(vargs) > 0 {
+		defaultVal = vargs[0]
+	}
+
+	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
+	if err != nil {
+		log.Warn(fmt.Sprintf("no AppSetting found for " + key))
+		return defaultVal
+	}
+
+	setting := inst.(*AppSetting)
+	return setting.Value.(string)
+}
+
+func GetAppSettings() (map[string]interface{}, error) {
+	settings := make(map[string]interface{})
+
+	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_APP_SETTINGS, 0)
+	if err != nil {
+		return settings, err
+	}
+	for _, v := range list {
+		p := *v.(*AppSetting)
+		settings[p.ID] = p.Value
+	}
+	return settings, nil
+}
+
+func SetAppSetting(key string, value interface{}) (*AppSetting, error) {
+	setting := AppSetting{
+		ID:      key,
+		Updated: util.GetTimestamp(time.Now()),
+		Value:   value,
+	}
+
+	err := db.GetCachedSimpleDao().SetOne(db.TABLE_APP_SETTINGS, setting.ID, &setting)
+	if err != nil {
+		return nil, err
+	}
+	return &setting, nil
 }

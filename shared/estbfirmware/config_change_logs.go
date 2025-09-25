@@ -26,9 +26,9 @@ import (
 	"strings"
 	"time"
 
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared/firmware"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 const (
@@ -54,7 +54,7 @@ type RuleInfo struct {
 	Type     string `json:"type,omitempty"`
 	Name     string `json:"name,omitempty"`
 	NoOp     bool   `json:"noop"`
-	Blocking bool   `json:"blocking"`
+	Blocking bool   `json:"blocking,omitempty"`
 }
 
 // ConfigChangeLog Logs2 table

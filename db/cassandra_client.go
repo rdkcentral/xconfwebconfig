@@ -21,44 +21,61 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/go-akka/configuration"
 	"github.com/gocql/gocql"
 
-	"xconfwebconfig/security"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/security"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	ProtocolVersion               = 4
-	DefaultKeyspace               = "ApplicationsDiscoveryDataService"
-	DefaultTestKeyspace           = "ApplicationsDiscoveryDataServiceTest"
-	DefaultDeviceKeyspace         = "odp"
-	DefaultDeviceTestKeyspace     = "odp_test_keyspace"
-	DefaultDevicePodTableName     = "pod_cpe_account"
-	PenetrationMetricsTable       = "PenetrationMetrics"
-	EstbMacColumnValue            = "estb_mac"
-	DisableInitialHostLookup      = false
-	DefaultSleepTimeInMillisecond = 10
-	DefaultConnections            = 2
-	DefaultColumnValue            = "data"
-	NamedListPartColumnValue      = "NamedListData_part_"
-	NamedListCountColumnValue     = "NamedListData_parts_count"
+	ProtocolVersion                      = 4
+	DefaultKeyspace                      = "ApplicationsDiscoveryDataService"
+	DefaultTestKeyspace                  = "ApplicationsDiscoveryDataServiceTest"
+	DefaultDeviceKeyspace                = "odp"
+	DefaultDeviceTestKeyspace            = "odp_test_keyspace"
+	DefaultDevicePodTableName            = "pod_cpe_account"
+	DisableInitialHostLookup             = false
+	DefaultSleepTimeInMillisecond        = 10
+	DefaultConnections                   = 2
+	DefaultColumnValue                   = "data"
+	NamedListPartColumnValue             = "NamedListData_part_"
+	NamedListCountColumnValue            = "NamedListData_parts_count"
+	DefaultXpcKeyspace                   = "xpc"
+	DefaultXpcTestKeyspace               = "xpc_test_keyspace"
+	DefaultXpcPrecookTableName           = "reference_document"
+	DefaultXconfRecookingStatusTableName = "RecookingStatus"
 )
+
+// Interface used for connecting to Cassandra in a cloud environment
+type CassandraConnector interface {
+	NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraClient, error)
+}
+
+// example Default connector
+type DefaultCassandraConnection struct {
+	Connection_type string
+}
 
 type CassandraClient struct {
 	*gocql.Session
 	*gocql.ClusterConfig
-	sleepTime          int32
-	concurrentQueries  chan bool
-	localDc            string
-	deviceKeyspace     string
-	devicePodTableName string
-	testOnly           bool
+	SleepTime                     int32
+	ConcurrentQueries             chan bool
+	LocalDc                       string
+	DeviceKeyspace                string
+	DevicePodTableName            string
+	TestOnly                      bool
+	Connection_type               string
+	xpcKeyspace                   string
+	xpcPrecookTableName           string
+	xconfRecookingStatusTableName string
 }
 
 type PenetrationMetrics struct {
@@ -75,8 +92,11 @@ type PenetrationMetrics struct {
 	RfcTs                   time.Time
 }
 
-func NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraClient, error) {
+func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraClient, error) {
+
+	var xpcKeyspace string
 	// init
+	log.Debug("Connecting to Cassandra with DefaultCassandraConnection")
 	hosts := conf.GetStringList("xconfwebconfig.database.hosts")
 	cluster := gocql.NewCluster(hosts...)
 
@@ -100,24 +120,57 @@ func NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraCl
 		cluster.PoolConfig.HostSelectionPolicy = gocql.DCAwareRoundRobinPolicy(localDc)
 	}
 
-	user := conf.GetString("xconfwebconfig.database.user")
-	encryptedPassword := conf.GetString("xconfwebconfig.database.encrypted_password")
 	isSslEnabled := conf.GetBoolean("xconfwebconfig.database.is_ssl_enabled")
 
-	//build codec
-	codec := security.NewAesCodec()
+	// credentials from environment takes precedence over config file
+	user := os.Getenv("DATABASE_USER")
+	if util.IsBlank(user) {
+		user = conf.GetString("xconfwebconfig.database.user")
+		if util.IsBlank(user) {
+			return nil, errors.New("no env DATABASE_USER")
+		}
+	}
 
 	var password string
 	var err error
 
-	if encryptedPassword != "" {
+	encryptedPassword := os.Getenv("DATABASE_ENCRYPTED_PASSWORD")
+	if util.IsBlank(encryptedPassword) {
+		encryptedPassword = conf.GetString("xconfwebconfig.database.encrypted_password")
+	}
+	if util.IsBlank(encryptedPassword) {
+		password = os.Getenv("DATABASE_PASSWORD")
+		if util.IsBlank(password) {
+			password = conf.GetString("xconfwebconfig.database.password")
+			if util.IsBlank(password) {
+				return nil, errors.New("no env DATABASE_PASSWORD or DATABASE_ENCRYPTED_PASSWORD")
+			}
+		}
+	} else {
+		xpckeyB64 := ""
+
+		envs := os.Environ()
+		for _, line := range envs {
+			if len(line) > 8 {
+				prefix := line[:8]
+				if prefix == "XPC_KEY=" {
+					xpckeyB64 = line[8:]
+					break
+				}
+			}
+			// fmt.Println(v)
+		}
+
+		if xpckeyB64 == "" {
+			panic(fmt.Errorf("missing env XPC_KEY"))
+		}
+
+		codec := security.NewAesCodec(xpckeyB64)
 		password, err = codec.Decrypt(encryptedPassword)
 		if err != nil {
 			log.Error(err.Error())
 			return nil, err
 		}
-	} else {
-		password = conf.GetString("xconfwebconfig.database.password")
 	}
 
 	cluster.Authenticator = gocql.PasswordAuthenticator{
@@ -134,39 +187,63 @@ func NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraCl
 
 	// Use the appropriate keyspace
 	var deviceKeyspace string
+	var session *gocql.Session
+
+	// now point to the real keyspace
 	if testOnly {
 		cluster.Keyspace = conf.GetString("xconfwebconfig.database.test_keyspace", DefaultTestKeyspace)
-		deviceKeyspace = conf.GetString("webconfig.database.device_test_keyspace", DefaultDeviceTestKeyspace)
+		deviceKeyspace = conf.GetString("xconfwebconfig.database.device_test_keyspace", DefaultDeviceTestKeyspace)
 	} else {
 		cluster.Keyspace = conf.GetString("xconfwebconfig.database.keyspace", DefaultKeyspace)
-		deviceKeyspace = conf.GetString("webconfig.database.device_keyspace", DefaultDeviceKeyspace)
+		deviceKeyspace = conf.GetString("xconfwebconfig.database.device_keyspace", DefaultDeviceKeyspace)
 	}
 	log.Debug(fmt.Sprintf("Init CassandraClient with keyspace: %v", cluster.Keyspace))
 
-	session, err := cluster.CreateSession()
+	xpcKeyspace = conf.GetString("xconfwebconfig.database.xpc_keyspace", DefaultXpcKeyspace)
+	xpcPrecookTableName := conf.GetString("xconfwebconfig.database.xpc_precook_table_name", DefaultXpcPrecookTableName)
+	xconfRecookingStatusTableName := conf.GetString("xconfwebconfig.database.xconf_recooking_status_table_name", DefaultXconfRecookingStatusTableName)
+
+	session, err = cluster.CreateSession()
 	if err != nil {
 		return nil, err
 	}
 
-	devicePodTableName := conf.GetString("webconfig.database.device_pod_table_name", DefaultDevicePodTableName)
+	devicePodTableName := conf.GetString("xconfwebconfig.database.device_pod_table_name", DefaultDevicePodTableName)
 
 	return &CassandraClient{
-		Session:            session,
-		ClusterConfig:      cluster,
-		sleepTime:          conf.GetInt32("xconfwebconfig.perftest.sleep_in_msecs", DefaultSleepTimeInMillisecond),
-		concurrentQueries:  make(chan bool, conf.GetInt32("xconfwebconfig.database.concurrent_queries", 500)),
-		localDc:            localDc,
-		deviceKeyspace:     deviceKeyspace,
-		devicePodTableName: devicePodTableName,
-		testOnly:           testOnly,
+		Session:                       session,
+		ClusterConfig:                 cluster,
+		SleepTime:                     conf.GetInt32("xconfwebconfig.perftest.sleep_in_msecs", DefaultSleepTimeInMillisecond),
+		ConcurrentQueries:             make(chan bool, conf.GetInt32("xconfwebconfig.database.concurrent_queries", 500)),
+		LocalDc:                       localDc,
+		DeviceKeyspace:                deviceKeyspace,
+		DevicePodTableName:            devicePodTableName,
+		TestOnly:                      testOnly,
+		Connection_type:               ca.Connection_type,
+		xpcKeyspace:                   xpcKeyspace,
+		xpcPrecookTableName:           xpcPrecookTableName,
+		xconfRecookingStatusTableName: xconfRecookingStatusTableName,
 	}, nil
 }
 
+func (c *CassandraClient) XpcKeyspace() string {
+	return c.xpcKeyspace
+}
+
+func (c *CassandraClient) XpcPrecookTableName() string {
+	return c.xpcPrecookTableName
+}
+
+func (c *CassandraClient) XconfRecookingStatusTableName() string {
+	return c.xconfRecookingStatusTableName
+}
+
 // Cassandra Impl of DatabaseClient
+
 func (c *CassandraClient) GetPenetrationMetrics(estbMac string) (map[string]interface{}, error) {
 	dict := util.Dict{}
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 	stmt := fmt.Sprintf("SELECT * FROM \"%s\" WHERE %s=?", PenetrationMetricsTable, EstbMacColumnValue)
 	qry := c.Query(stmt, estbMac)
 	err := qry.MapScan(dict)
@@ -181,8 +258,8 @@ func (c *CassandraClient) GetPenetrationMetrics(estbMac string) (map[string]inte
 func (c *CassandraClient) SetPenetrationMetrics(pMetrics *PenetrationMetrics) error {
 	values := []interface{}{pMetrics.EstbMac, pMetrics.Partner, pMetrics.Model, pMetrics.FwVersion, pMetrics.FwReportedVersion, pMetrics.FwAdditionalVersionInfo, pMetrics.FwAppliedRule, pMetrics.FwTs, pMetrics.RfcAppliedRules, pMetrics.RfcFeatures, pMetrics.RfcTs}
 	stmt := fmt.Sprintf(`INSERT INTO "%s" (estb_mac,partner,model,fw_version,fw_reported_version,fw_additional_version_info,fw_applied_rule,fw_ts,rfc_features,rfc_applied_rules,rfc_ts) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, PenetrationMetricsTable)
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 	qry := c.Query(stmt, values...)
 	err := qry.Exec()
 
@@ -193,11 +270,11 @@ func (c *CassandraClient) SetPenetrationMetrics(pMetrics *PenetrationMetrics) er
 }
 
 func (c *CassandraClient) Sleep() {
-	time.Sleep(time.Duration(c.sleepTime) * time.Millisecond)
+	time.Sleep(time.Duration(c.SleepTime) * time.Millisecond)
 }
 
-func (c *CassandraClient) LocalDc() string {
-	return c.localDc
+func (c *CassandraClient) GetLocalDc() string {
+	return c.LocalDc
 }
 
 func (c *CassandraClient) Close() error {
@@ -210,21 +287,21 @@ func (c *CassandraClient) IsDbNotFound(err error) bool {
 }
 
 func (c *CassandraClient) IsTestOnly() bool {
-	return c.testOnly
+	return c.TestOnly
 }
 
-func (c *CassandraClient) DeviceKeyspace() string {
-	return c.deviceKeyspace
+func (c *CassandraClient) GetDeviceKeyspace() string {
+	return c.DeviceKeyspace
 }
 
-func (c *CassandraClient) DevicePodTableName() string {
-	return c.devicePodTableName
+func (c *CassandraClient) GetDevicePodTableName() string {
+	return c.DevicePodTableName
 }
 
 // SetXconfData Create XconfData for the specified key and value, where value is JSON data
 func (c *CassandraClient) SetXconfData(tableName string, rowKey string, value []byte, ttl int) error {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var stmt string
 	if ttl > 0 {
@@ -244,8 +321,8 @@ func (c *CassandraClient) SetXconfData(tableName string, rowKey string, value []
 func (c *CassandraClient) GetXconfData(tableName string, rowKey string) ([]byte, error) {
 	start := time.Now()
 
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var value []byte
 
@@ -264,8 +341,8 @@ func (c *CassandraClient) GetXconfData(tableName string, rowKey string) ([]byte,
 func (c *CassandraClient) GetAllXconfDataByKeys(tableName string, rowKeys []string) [][]byte {
 	start := time.Now()
 
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData [][]byte
 
@@ -288,8 +365,8 @@ func (c *CassandraClient) GetAllXconfDataByKeys(tableName string, rowKeys []stri
 func (c *CassandraClient) GetAllXconfKeys(tableName string) []string {
 	start := time.Now()
 
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData []string
 
@@ -312,8 +389,8 @@ func (c *CassandraClient) GetAllXconfKeys(tableName string) []string {
 func (c *CassandraClient) GetAllXconfDataAsList(tableName string, maxResults int) [][]byte {
 	start := time.Now()
 
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData [][]byte
 	var stmt string
@@ -341,8 +418,8 @@ func (c *CassandraClient) GetAllXconfDataAsList(tableName string, maxResults int
 func (c *CassandraClient) GetAllXconfDataAsMap(tableName string, maxResults int) map[string][]byte {
 	start := time.Now()
 
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData = make(map[string][]byte)
 	var stmt string
@@ -368,8 +445,8 @@ func (c *CassandraClient) GetAllXconfDataAsMap(tableName string, maxResults int)
 
 // DeleteXconfData Delete XconfData for the specified key
 func (c *CassandraClient) DeleteXconfData(tableName string, rowKey string) error {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE key = ?`, tableName)
 	if err := c.Query(stmt, rowKey).Exec(); err != nil {
@@ -381,8 +458,8 @@ func (c *CassandraClient) DeleteXconfData(tableName string, rowKey string) error
 
 // DeleteAllXconfData Delete all XconfData
 func (c *CassandraClient) DeleteAllXconfData(tableName string) error {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	stmt := fmt.Sprintf(`TRUNCATE "%s"`, tableName)
 	if err := c.Query(stmt).Exec(); err != nil {
@@ -398,8 +475,8 @@ func (c *CassandraClient) DeleteAllXconfData(tableName string) error {
 func (c *CassandraClient) GetAllXconfData(tableName string, rowKey string) [][]byte {
 	start := time.Now()
 
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData [][]byte
 
@@ -420,8 +497,8 @@ func (c *CassandraClient) GetAllXconfData(tableName string, rowKey string) [][]b
 
 // GetAllXconfDataTwoKeysRange Get multiple rows for the specified key and key2 range as list of values, where value is JSON data
 func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tableName string, rowKey interface{}, key2FieldName string, rangeInfo *RangeInfo) [][]byte {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData [][]byte
 	var stmt string
@@ -467,8 +544,8 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tableName string, rowKey i
 
 // GetAllXconfDataTwoKeysAsMap Get multiple rows for the specified key and key2 list as map of values, where value is JSON data
 func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tableName string, rowKey string, key2FieldName string, key2List []interface{}) map[interface{}][]byte {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData = make(map[interface{}][]byte)
 
@@ -487,8 +564,8 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tableName string, rowKey s
 
 // SetXconfDataTwoKeys Create XconfData for the specified two keys and value, where value is JSON data
 func (c *CassandraClient) SetXconfDataTwoKeys(tableName string, rowKey interface{}, key2FieldName string, key2 interface{}, value []byte, ttl int) error {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var stmt string
 	if ttl > 0 {
@@ -506,8 +583,8 @@ func (c *CassandraClient) SetXconfDataTwoKeys(tableName string, rowKey interface
 
 // GetXconfDataTwoKeys Get one row where return value is JSON data
 func (c *CassandraClient) GetXconfDataTwoKeys(tableName string, rowKey string, key2FieldName string, key2 interface{}) ([]byte, error) {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var value []byte
 
@@ -522,8 +599,8 @@ func (c *CassandraClient) GetXconfDataTwoKeys(tableName string, rowKey string, k
 
 // DeleteXconfDataTwoKeys Delete XconfData for the specified two keys
 func (c *CassandraClient) DeleteXconfDataTwoKeys(tableName string, rowKey string, key2FieldName string, key2 interface{}) error {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE key = ? AND %s = ?`, tableName, key2FieldName)
 	if err := c.Query(stmt, rowKey, key2).Exec(); err != nil {
@@ -535,8 +612,8 @@ func (c *CassandraClient) DeleteXconfDataTwoKeys(tableName string, rowKey string
 
 // GetAllXconfTwoKeys Get all TwoKeys
 func (c *CassandraClient) GetAllXconfTwoKeys(tableName string, key2FieldName string) []TwoKeys {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData []TwoKeys
 
@@ -560,8 +637,8 @@ func (c *CassandraClient) GetAllXconfTwoKeys(tableName string, key2FieldName str
 
 // GetAllXconfKey2s Get a list of Xconf key2 for the specified rowKey
 func (c *CassandraClient) GetAllXconfKey2s(tableName string, rowKey string, key2FieldName string) []interface{} {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData []interface{}
 
@@ -580,8 +657,8 @@ func (c *CassandraClient) GetAllXconfKey2s(tableName string, rowKey string, key2
 
 // SetXconfCompressedData Create XconfData for the specified key and values, where values is compressed JSON data
 func (c *CassandraClient) SetXconfCompressedData(tableName string, rowKey string, values [][]byte, ttl int) error {
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	batch := c.NewBatch(gocql.LoggedBatch)
 
@@ -616,8 +693,8 @@ func (c *CassandraClient) SetXconfCompressedData(tableName string, rowKey string
 func (c *CassandraClient) GetXconfCompressedData(tableName string, rowKey string) ([]byte, error) {
 	start := time.Now()
 
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	// Get the number of compressed data chunks
 	var partsCount int
@@ -644,9 +721,10 @@ func (c *CassandraClient) GetXconfCompressedData(tableName string, rowKey string
 	}
 
 	// Ensure all the parts are loaded
-	if partsCount != len(partsMap) {
+	if partsCount > len(partsMap) {
 		err := fmt.Errorf("Inconsistent compressed data for key '%v' from '%v': expected %v record(s) got %v",
 			rowKey, tableName, partsCount, len(partsMap))
+		log.Error(err)
 		return nil, err
 	}
 
@@ -654,8 +732,14 @@ func (c *CassandraClient) GetXconfCompressedData(tableName string, rowKey string
 	var chunks [][]byte
 	for i := 0; i < partsCount; i++ {
 		key := NamedListPartColumnValue + strconv.Itoa(i)
-		chunk := partsMap[key]
-		chunks = append(chunks, chunk)
+		if chunk, exists := partsMap[key]; exists {
+			chunks = append(chunks, chunk)
+		} else {
+			err := fmt.Errorf("Inconsistent compressed data for key '%v' from '%v': missing part '%v'",
+				rowKey, tableName, key)
+			log.Error(err)
+			return nil, err
+		}
 	}
 
 	resultData := bytes.Join(chunks, []byte(""))
@@ -703,8 +787,8 @@ func (c *CassandraClient) GetAllXconfCompressedDataAsMap(tableName string) map[s
 func (c *CassandraClient) GetXconfCompressedDataRaw(tableName string) map[string]map[string][]byte {
 	start := time.Now()
 
-	c.concurrentQueries <- true
-	defer func() { <-c.concurrentQueries }()
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData = make(map[string]map[string][]byte)
 	var countMap = make(map[string]int)

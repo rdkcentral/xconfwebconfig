@@ -23,9 +23,9 @@ import (
 	"sort"
 	"time"
 
-	common "xconfwebconfig/common"
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/shared/logupload"
+	common "github.com/rdkcentral/xconfwebconfig/common"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
 	scheduler "github.com/carlescere/scheduler"
 	log "github.com/sirupsen/logrus"
@@ -251,13 +251,33 @@ func (t *TelemetryProfileService) ProcessTelemetryTwoRules(context map[string]st
 	return matched
 }
 
+func (t *TelemetryProfileService) ProcessTelemetryTwoRulesForAS(context map[string]string) []*logupload.TelemetryTwoRule {
+	//all type of []*TelemetryTwoRule
+	all := logupload.GetTelemetryTwoRuleListForAS()
+	if all == nil {
+		return nil
+	}
+	ruleProcessorFactory := NewRuleProcessorFactoryFunc()
+	processor := ruleProcessorFactory.Processor
+	matched := []*logupload.TelemetryTwoRule{}
+	for _, tRule := range all {
+		if processor.Evaluate(&tRule.Rule, context, log.Fields{}) {
+			matched = append(matched, tRule)
+		}
+	}
+	return matched
+}
+
 var GetOneTelemetryTwoProfileFunc = logupload.GetOneTelemetryTwoProfile
 
-func (t *TelemetryProfileService) GetTelemetryTwoProfileByTelemetryRules(telemetryTwoRules []*logupload.TelemetryTwoRule) []*logupload.TelemetryTwoProfile {
-	var telemetryTwoProfiles []*logupload.TelemetryTwoProfile
-	telemetryTwoProfiles = make([]*logupload.TelemetryTwoProfile, 0)
+func (t *TelemetryProfileService) GetTelemetryTwoProfileByTelemetryRules(telemetryTwoRules []*logupload.TelemetryTwoRule, fields log.Fields) []*logupload.TelemetryTwoProfile {
+	telemetryTwoProfiles := make([]*logupload.TelemetryTwoProfile, 0, len(telemetryTwoRules))
+	telemetryRuleNames := make([]string, 0, len(telemetryTwoRules))
 	for _, telemetryTwoRule := range telemetryTwoRules {
-		if telemetryTwoRule != nil && len(telemetryTwoRule.BoundTelemetryIDs) > 0 {
+		if telemetryTwoRule != nil &&
+			!telemetryTwoRule.NoOp &&
+			len(telemetryTwoRule.BoundTelemetryIDs) > 0 {
+			telemetryRuleNames = append(telemetryRuleNames, telemetryTwoRule.Name)
 			for _, boundTelemetryId := range telemetryTwoRule.BoundTelemetryIDs {
 				if len(boundTelemetryId) < 1 {
 					continue
@@ -271,14 +291,18 @@ func (t *TelemetryProfileService) GetTelemetryTwoProfileByTelemetryRules(telemet
 		}
 	}
 	nameMap := make(map[string]bool)
-	uniqueTelemetryTwoProfiles := make([]*logupload.TelemetryTwoProfile, 0)
+	uniqueTelemetryTwoProfiles := make([]*logupload.TelemetryTwoProfile, 0, len(telemetryTwoProfiles))
+	telemetryProfileNames := make([]string, 0, len(telemetryTwoProfiles))
 	for _, telemetryTwoProfile := range telemetryTwoProfiles {
 		if _, ok := nameMap[telemetryTwoProfile.Name]; ok {
 			continue
 		} else {
 			nameMap[telemetryTwoProfile.Name] = true
 			uniqueTelemetryTwoProfiles = append(uniqueTelemetryTwoProfiles, telemetryTwoProfile)
+			telemetryProfileNames = append(telemetryProfileNames, telemetryTwoProfile.Name)
 		}
 	}
+	fields["telemetryTwoRules"] = telemetryRuleNames
+	fields["telemetryTwoProfiles"] = telemetryProfileNames
 	return uniqueTelemetryTwoProfiles
 }

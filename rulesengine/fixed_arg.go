@@ -18,43 +18,79 @@
 package rulesengine
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 
 	copy "github.com/mitchellh/copystructure"
+	log "github.com/sirupsen/logrus"
 )
 
 // TODO use fixed fields for simplicity for now
 type Value struct {
-	JLString string  `json:"java.lang.String,omitempty"`
-	JLDouble float64 `json:"java.lang.Double,omitempty"`
+	JLString *string  `json:"java.lang.String,omitempty"`
+	JLDouble *float64 `json:"java.lang.Double,omitempty"`
 }
 
 type Bean struct {
 	Value Value `json:"value"`
 }
 
-func (a *FixedArg) IsValid() bool {
-	isCollection := &a.Collection != nil
-	isBean := &a.Bean != nil
-	if isCollection {
-		if isBean {
-			return false // cannot be both collection and bean
+type Collection struct {
+	// Cannot specify omitempty for this field otherwise XConf Java will not be able to deserialize the JSON
+	Value []string `json:"value"`
+}
+
+func (c *Collection) MarshalJSON() ([]byte, error) {
+	buf := bytes.Buffer{}
+	if c.Value == nil {
+		// If slice is nil then output will be "value":null
+		// which XConf Java will not be able to deserialize the JSON.
+		// Output has to be an empty slice, i.e. "value":[]
+		buf.WriteString("{\"value\":[]}")
+	} else {
+		buf.WriteString("{\"value\":")
+		// marshal value
+		val, err := json.Marshal(c.Value)
+		if err != nil {
+			return nil, err
 		}
-		return isCollection
+		buf.Write(val)
+		buf.WriteByte('}')
 	}
 
-	if isBean {
-		isString := &a.Bean.Value.JLString != nil
-		isDouble := &a.Bean.Value.JLDouble != nil
-		if isString && isDouble {
-			return false // cannot be both string and double
+	return buf.Bytes(), nil
+}
+
+func (c *Condition) MarshalJSON() ([]byte, error) {
+	if c != nil && c.Operation == StandardOperationPercent && c.FixedArg != nil && c.FixedArg.Bean != nil {
+		jlString := c.FixedArg.Bean.Value.JLString
+		if jlString != nil {
+			if jlDouble, err := strconv.ParseFloat(*jlString, 64); err == nil {
+				c.FixedArg.Bean.Value.JLDouble = &jlDouble
+				c.FixedArg.Bean.Value.JLString = nil
+			} else {
+				log.Errorf("json.Marshal: parsing float condition error: %v", err)
+			}
 		}
-		return isString || isDouble
 	}
 
-	return false
+	return json.Marshal(struct {
+		FreeArg   *FreeArg  `json:"freeArg,omitempty"`
+		Operation string    `json:"operation,omitempty"`
+		FixedArg  *FixedArg `json:"fixedArg,omitempty"`
+	}{
+		FreeArg:   c.FreeArg,
+		FixedArg:  c.FixedArg,
+		Operation: c.Operation,
+	})
+}
+
+type FixedArg struct {
+	Bean       *Bean       `json:"bean,omitempty"`
+	Collection *Collection `json:"collection,omitempty"`
 }
 
 func (b *Bean) UnmarshalJSON(bbytes []byte) error {
@@ -66,54 +102,42 @@ func (b *Bean) UnmarshalJSON(bbytes []byte) error {
 	if val, ok := dict["value"]; ok {
 		if innerItf, ok := val.(map[string]interface{}); ok {
 			if jsvItf, ok := innerItf["java.lang.String"]; ok {
-				b.Value.JLString = jsvItf.(string)
+				var tmp = jsvItf.(string)
+				b.Value.JLString = &tmp
 			}
 			if jdvItf, ok := innerItf["java.lang.Double"]; ok {
-				b.Value.JLDouble = jdvItf.(float64)
+				var tmp = jdvItf.(float64)
+				b.Value.JLDouble = &tmp
 			}
 		}
 		if valueStr, ok := val.(string); ok {
-			b.Value.JLString = valueStr
+			b.Value.JLString = &valueStr
 		}
 	}
 	return nil
-}
-
-type ValueList struct {
-	JLArrayList []string `json:"java.lang.ArrayList,omitempty"`
-}
-
-type Collection struct {
-	//Value ValueList `json:"value,omitempty"`
-	Value []string `json:"value,omitempty"`
-}
-
-type FixedArg struct {
-	Bean       Bean       `json:"bean"`
-	Collection Collection `json:"collection"`
 }
 
 func NewFixedArg(itf interface{}) *FixedArg {
 	switch ty := itf.(type) {
 	case string:
 		return &FixedArg{
-			Bean: Bean{
+			Bean: &Bean{
 				Value: Value{
-					JLString: ty,
+					JLString: &ty,
 				},
 			},
 		}
 	case float64:
 		return &FixedArg{
-			Bean: Bean{
+			Bean: &Bean{
 				Value: Value{
-					JLDouble: ty,
+					JLDouble: &ty,
 				},
 			},
 		}
 	case []string:
 		return &FixedArg{
-			Collection: Collection{
+			Collection: &Collection{
 				Value: ty,
 			},
 		}
@@ -122,51 +146,67 @@ func NewFixedArg(itf interface{}) *FixedArg {
 	return nil
 }
 
+func (a *FixedArg) IsValid() bool {
+	isCollection := a.Collection != nil
+	isBean := a.Bean != nil
+	if isCollection {
+		if isBean {
+			return false // cannot be both collection and bean
+		}
+		return isCollection
+	}
+
+	if isBean {
+		isString := a.Bean.Value.JLString != nil
+		isDouble := a.Bean.Value.JLDouble != nil
+		if isString && isDouble {
+			return false // cannot be both string and double
+		}
+		return isString || isDouble
+	}
+
+	return false
+}
+
 func (a *FixedArg) GetValue() interface{} {
 	if a == nil {
 		return nil
 	}
-	if a.Collection.Value != nil && len(a.Collection.Value) > 0 {
+	if a.Collection != nil && len(a.Collection.Value) > 0 {
 		return a.Collection.Value
 	}
-	if len(a.Bean.Value.JLString) > 0 {
-		return a.Bean.Value.JLString
-	}
-	if a.Bean.Value.JLDouble != float64(0) {
-		return a.Bean.Value.JLDouble
+	if a.Bean != nil {
+		if a.Bean.Value.JLString != nil {
+			return *a.Bean.Value.JLString
+		}
+		if a.Bean.Value.JLDouble != nil {
+			return *a.Bean.Value.JLDouble
+		}
 	}
 	return nil
 }
 
 func (a *FixedArg) IsCollectionValue() bool {
-	if a.Collection.Value != nil && len(a.Collection.Value) > 0 {
+	if a.Collection != nil && len(a.Collection.Value) > 0 {
 		return true
 	}
 	return false
-}
-
-func (a *FixedArg) IsDoubleValue() bool {
-	return &a.Bean != nil && &a.Bean.Value.JLDouble != nil
 }
 
 func (a *FixedArg) IsStringValue() bool {
-	if len(a.Bean.Value.JLString) > 0 {
-		return true
-	}
-	return false
+	return a.Bean != nil && a.Bean.Value.JLString != nil
+}
+
+func (a *FixedArg) IsDoubleValue() bool {
+	return a.Bean != nil && a.Bean.Value.JLDouble != nil
 }
 
 func (a *FixedArg) String() string {
-	if len(a.Collection.Value) > 0 {
-		return fmt.Sprintf("'%v'", a.Collection.Value)
+	val := a.GetValue()
+	if val != nil {
+		return fmt.Sprintf("'%v'", val)
 	}
-
-	if len(a.Bean.Value.JLString) == 0 {
-		// return fmt.Sprintf("FixedArg('%v')", a.Bean.Value.JLDouble)
-		return fmt.Sprintf("'%v'", a.Bean.Value.JLDouble)
-	}
-	// return fmt.Sprintf("FixedArg('%v')", a.Bean.Value.JLString)
-	return fmt.Sprintf("'%v'", a.Bean.Value.JLString)
+	return "''"
 }
 
 func (a *FixedArg) Copy() *FixedArg {
@@ -175,7 +215,7 @@ func (a *FixedArg) Copy() *FixedArg {
 }
 
 func (a *FixedArg) Equals(x *FixedArg) bool {
-	if a.Collection.Value != nil && len(a.Collection.Value) > 0 && x.Collection.Value != nil && len(x.Collection.Value) > 0 {
+	if x.Collection != nil && a.Collection != nil && len(a.Collection.Value) > 0 && len(x.Collection.Value) > 0 {
 		// Two Collections can be equal when their contents are same. Order does not matter.
 		// Equality testing should not alter the objects being compared. So sort a copy of the objects
 		atmp := a.Collection.Value

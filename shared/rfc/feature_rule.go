@@ -18,8 +18,8 @@
 package rfc
 
 import (
-	re "xconfwebconfig/rulesengine"
-	"xconfwebconfig/util"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 // FeatureRule FeatureControlRule2 table
@@ -30,6 +30,14 @@ type FeatureRule struct {
 	Priority        int      `json:"priority"`
 	FeatureIds      []string `json:"featureIds"`
 	ApplicationType string   `json:"applicationType"`
+}
+
+func (obj *FeatureRule) SetApplicationType(appType string) {
+	obj.ApplicationType = appType
+}
+
+func (obj *FeatureRule) GetApplicationType() string {
+	return obj.ApplicationType
 }
 
 func (obj *FeatureRule) Clone() (*FeatureRule, error) {
@@ -47,6 +55,18 @@ func NewFeatureRuleInf() interface{} {
 // GetId XRule interface
 func (r *FeatureRule) GetId() string {
 	return r.Id
+}
+
+func (r *FeatureRule) GetID() string {
+	return r.Id
+}
+
+func (r *FeatureRule) GetPriority() int {
+	return r.Priority
+}
+
+func (r *FeatureRule) SetPriority(priority int) {
+	r.Priority = priority
 }
 
 // GetRule XRule interface

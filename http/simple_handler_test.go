@@ -61,4 +61,20 @@ func TestSimpleHandler(t *testing.T) {
 	assert.NilError(t, err)
 	res.Body.Close()
 	assert.Equal(t, len(rbytes), 0)
+
+	// ==== test server config api ====
+	req, err = http.NewRequest("GET", "/config", nil)
+	assert.NilError(t, err)
+	res = ExecuteRequest(req, router).Result()
+	assert.Equal(t, res.StatusCode, 200)
+
+	rbytes, err = ioutil.ReadAll(res.Body)
+	assert.NilError(t, err)
+	res.Body.Close()
+	t.Log(string(rbytes))
+
+	// get the expected config file
+	configBytes, err := ioutil.ReadFile(testConfigFile)
+	assert.NilError(t, err)
+	assert.DeepEqual(t, rbytes, configBytes)
 }

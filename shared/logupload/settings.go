@@ -21,12 +21,24 @@ import (
 	"fmt"
 	"strings"
 
-	"xconfwebconfig/db"
-	re "xconfwebconfig/rulesengine"
-	util "xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	util "github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
+
+var SettingTypes = [...]string{"PARTNER_SETTINGS", "EPON", "partnersettings", "epon"}
+
+func IsValidSettingType(str string) bool {
+	for _, v := range SettingTypes {
+		if v == str {
+			return true
+		}
+	}
+	return false
+}
 
 // Enum for SettingType
 const (
@@ -64,7 +76,9 @@ func (obj *SettingProfiles) Clone() (*SettingProfiles, error) {
 
 // NewSettingProfilesInf constructor
 func NewSettingProfilesInf() interface{} {
-	return &SettingProfiles{}
+	return &SettingProfiles{
+		ApplicationType: shared.STB,
+	}
 }
 
 type FormulaWithSettings struct {
@@ -96,7 +110,9 @@ func (obj *VodSettings) Clone() (*VodSettings, error) {
 
 // NewVodSettingsInf constructor
 func NewVodSettingsInf() interface{} {
-	return &VodSettings{}
+	return &VodSettings{
+		ApplicationType: shared.STB,
+	}
 }
 
 // SettingRule SettingRules table
@@ -151,7 +167,9 @@ func (r *SettingRule) GetRuleType() string {
 
 // NewSettingRulesInf constructor
 func NewSettingRulesInf() interface{} {
-	return &SettingRule{}
+	return &SettingRule{
+		ApplicationType: shared.STB,
+	}
 }
 
 const (
@@ -409,7 +427,7 @@ type DeviceSettings struct {
 	Updated                 int64                   `json:"updated"`
 	Name                    string                  `json:"name"`
 	CheckOnReboot           bool                    `json:"checkOnReboot"`
-	ConfigurationServiceURL ConfigurationServiceURL `json:"configurationServiceURL"`
+	ConfigurationServiceURL ConfigurationServiceURL `json:"configurationServiceURL,omitempty"`
 	SettingsAreActive       bool                    `json:"settingsAreActive"`
 	Schedule                Schedule                `json:"schedule"`
 	ApplicationType         string                  `json:"applicationType"`
@@ -425,7 +443,9 @@ func (obj *DeviceSettings) Clone() (*DeviceSettings, error) {
 
 // NewDeviceSettingsInf constructor
 func NewDeviceSettingsInf() interface{} {
-	return &DeviceSettings{}
+	return &DeviceSettings{
+		ApplicationType: shared.STB,
+	}
 }
 
 const (
@@ -463,7 +483,9 @@ func (obj *LogUploadSettings) Clone() (*LogUploadSettings, error) {
 
 // NewLogUploadSettingsInf constructor
 func NewLogUploadSettingsInf() interface{} {
-	return &LogUploadSettings{}
+	return &LogUploadSettings{
+		ApplicationType: shared.STB,
+	}
 }
 
 func GetOneDeviceSettings(id string) *DeviceSettings {
@@ -503,7 +525,7 @@ func GetLogFileList(size int) []*LogFile {
 	var logFiles []*LogFile
 	logFileListInst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_LOG_FILE, size)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no logFiles found "))
+		log.Warn("no logFiles found ")
 		return nil
 	}
 	for idx := range logFileListInst {

@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 const (
@@ -61,6 +62,7 @@ func NewResponseEntity(status int, err error, data interface{}) *ResponseEntity 
 }
 
 func writeByMarshal(w http.ResponseWriter, status int, o interface{}) {
+	addMoracideTagsAsResponseHeaders(w)
 	if rbytes, err := util.JSONMarshal(o); err == nil {
 		w.Header().Set("Content-type", "application/json")
 		w.WriteHeader(status)
@@ -84,6 +86,7 @@ func WriteOkResponse(w http.ResponseWriter, r *http.Request, data interface{}) {
 func WriteOkResponseByTemplate(w http.ResponseWriter, r *http.Request, dataStr string) {
 	rbytes := []byte(fmt.Sprintf(OkResponseTemplate, dataStr))
 	w.Header().Set("Content-type", "application/json")
+	addMoracideTagsAsResponseHeaders(w)
 	w.WriteHeader(http.StatusOK)
 	w.Write(rbytes)
 }
@@ -91,6 +94,7 @@ func WriteOkResponseByTemplate(w http.ResponseWriter, r *http.Request, dataStr s
 func WriteTR181Response(w http.ResponseWriter, r *http.Request, params string, version string) {
 	w.Header().Set("Content-type", "application/json")
 	w.Header().Set("ETag", version)
+	addMoracideTagsAsResponseHeaders(w)
 	w.WriteHeader(http.StatusOK)
 	rbytes := []byte(fmt.Sprintf(TR181ResponseTemplate, params, version))
 	w.Write(rbytes)
@@ -100,6 +104,7 @@ func WriteTR181Response(w http.ResponseWriter, r *http.Request, params string, v
 func WriteContentTypeAndResponse(w http.ResponseWriter, r *http.Request, rbytes []byte, version string, contentType string) {
 	w.Header().Set("Content-type", contentType)
 	w.Header().Set("ETag", version)
+	addMoracideTagsAsResponseHeaders(w)
 	w.WriteHeader(http.StatusOK)
 	w.Write(rbytes)
 }
@@ -121,6 +126,7 @@ func WriteErrorResponse(w http.ResponseWriter, status int, err error) {
 func Error(w http.ResponseWriter, status int, err error) {
 	switch status {
 	case http.StatusNoContent, http.StatusNotModified, http.StatusForbidden:
+		addMoracideTagsAsResponseHeaders(w)
 		w.WriteHeader(status)
 	default:
 		WriteErrorResponse(w, status, err)
@@ -131,18 +137,21 @@ func WriteResponseBytes(w http.ResponseWriter, rbytes []byte, statusCode int, va
 	if len(vargs) > 0 {
 		w.Header().Set("Content-type", vargs[0])
 	}
+	addMoracideTagsAsResponseHeaders(w)
 	w.WriteHeader(statusCode)
 	w.Write(rbytes)
 }
 
 func WriteXconfResponse(w http.ResponseWriter, status int, data []byte) {
 	w.Header().Set("Content-type", "application/json")
+	addMoracideTagsAsResponseHeaders(w)
 	w.WriteHeader(status)
 	w.Write(data)
 }
 
 func WriteXconfResponseAsText(w http.ResponseWriter, status int, data []byte) {
 	w.Header().Set("Content-type", "text/plain")
+	addMoracideTagsAsResponseHeaders(w)
 	w.WriteHeader(status)
 	w.Write(data)
 }
@@ -152,6 +161,7 @@ func WriteXconfResponseWithHeaders(w http.ResponseWriter, headers map[string]str
 	for k, v := range headers {
 		w.Header()[k] = []string{v}
 	}
+	addMoracideTagsAsResponseHeaders(w)
 	w.WriteHeader(status)
 	w.Write(data)
 }
@@ -161,6 +171,26 @@ func WriteXconfResponseHtmlWithHeaders(w http.ResponseWriter, headers map[string
 	for k, v := range headers {
 		w.Header().Set(k, v)
 	}
+	addMoracideTagsAsResponseHeaders(w)
 	w.WriteHeader(status)
 	w.Write(data)
+}
+
+func addMoracideTagsAsResponseHeaders(w http.ResponseWriter) {
+	xw, ok := w.(*XResponseWriter)
+	if !ok {
+		return
+	}
+	fields := xw.Audit()
+	if fields == nil {
+		return
+	}
+
+	moracide := common.FieldsGetString(fields, "resp_moracide_tag")
+	if len(moracide) == 0 {
+		moracide = common.FieldsGetString(fields, "req_moracide_tag")
+	}
+	if len(moracide) > 0 {
+		w.Header().Set(common.HeaderMoracide, moracide)
+	}
 }

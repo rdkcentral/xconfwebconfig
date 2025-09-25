@@ -151,6 +151,13 @@ func (r *Rule) Equals(x *Rule) bool {
 		return false
 	}
 
+	if r.Condition == nil && !r.IsCompoundPartsEmpty() && len(r.CompoundParts) == 1 {
+		r = &r.CompoundParts[0]
+	}
+	if x.Condition == nil && !x.IsCompoundPartsEmpty() && len(x.CompoundParts) == 1 {
+		x = &x.CompoundParts[0]
+	}
+
 	if r.GetCondition() == nil && x.GetCondition() != nil {
 		return false
 	}
@@ -162,14 +169,13 @@ func (r *Rule) Equals(x *Rule) bool {
 			return false
 		}
 	}
-
-	if r.GetCompoundParts() == nil && x.GetCompoundParts() != nil {
+	if r.IsCompoundPartsEmpty() && !x.IsCompoundPartsEmpty() {
 		return false
 	}
-	if r.GetCompoundParts() != nil && x.GetCompoundParts() == nil {
+	if !r.IsCompoundPartsEmpty() && x.IsCompoundPartsEmpty() {
 		return false
 	}
-	if r.GetCompoundParts() != nil && x.GetCompoundParts() != nil {
+	if !r.IsCompoundPartsEmpty() && !x.IsCompoundPartsEmpty() {
 		if len(r.GetCompoundParts()) != len(x.GetCompoundParts()) {
 			return false
 		}

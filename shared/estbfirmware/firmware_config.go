@@ -24,12 +24,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/db"
-	"xconfwebconfig/shared"
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -109,19 +108,27 @@ type FirmwareConfigForMacRuleBeanResponse struct {
 // FirmwareConfig table
 type FirmwareConfig struct {
 	ID                       string            `json:"id"`
-	Updated                  int64             `json:"updated"`
+	Updated                  int64             `json:"updated,omitempty"`
 	Description              string            `json:"description"`
 	SupportedModelIds        []string          `json:"supportedModelIds"`
 	FirmwareFilename         string            `json:"firmwareFilename"`
 	FirmwareVersion          string            `json:"firmwareVersion"`
-	ApplicationType          string            `json:"applicationType"`
-	FirmwareDownloadProtocol string            `json:"firmwareDownloadProtocol"`
-	FirmwareLocation         string            `json:"firmwareLocation"`
-	Ipv6FirmwareLocation     string            `json:"ipv6FirmwareLocation"`
-	UpgradeDelay             int64             `json:"upgradeDelay"`
+	ApplicationType          string            `json:"applicationType,omitempty"`
+	FirmwareDownloadProtocol string            `json:"firmwareDownloadProtocol,omitempty"`
+	FirmwareLocation         string            `json:"firmwareLocation,omitempty"`
+	Ipv6FirmwareLocation     string            `json:"ipv6FirmwareLocation,omitempty"`
+	UpgradeDelay             int64             `json:"upgradeDelay,omitempty"`
 	RebootImmediately        bool              `json:"rebootImmediately"`
-	MandatoryUpdate          bool              `json:"mandatoryUpdate"`
-	Properties               map[string]string `json:"properties"`
+	MandatoryUpdate          bool              `json:"mandatoryUpdate,omitempty"`
+	Properties               map[string]string `json:"properties,omitempty"`
+}
+
+func (obj *FirmwareConfig) SetApplicationType(appType string) {
+	obj.ApplicationType = appType
+}
+
+func (obj *FirmwareConfig) GetApplicationType() string {
+	return obj.ApplicationType
 }
 
 type MacRuleBeanResponse struct {
@@ -199,6 +206,13 @@ func (obj *FirmwareConfig) Validate() error {
 		}
 	}
 
+	if !util.IsBlank(obj.FirmwareDownloadProtocol) {
+		downloadProtocols := []string{"tftp", "http", "https"}
+		if !util.Contains(downloadProtocols, obj.FirmwareDownloadProtocol) {
+			return fmt.Errorf("FirmwareDownloadProtocol must be one of %v ", downloadProtocols)
+		}
+	}
+
 	if len(obj.Properties) > MAX_ALLOWED_NUMBER_OF_PROPERTIES {
 		return fmt.Errorf("Max allowed number of properties is %v", MAX_ALLOWED_NUMBER_OF_PROPERTIES)
 	}
@@ -227,8 +241,11 @@ func (obj *FirmwareConfig) ValidateName() error {
 	}
 
 	for _, config := range list {
-		if config != nil && strings.EqualFold(config.Description, obj.Description) && obj.ID != config.ID {
-			return errors.New("This description is already used")
+		if config == nil || obj.ID == config.ID || obj.ApplicationType != config.ApplicationType {
+			continue
+		}
+		if strings.ToUpper(config.Description) == strings.ToUpper(obj.Description) {
+			return errors.New("This description is already used in " + config.ID)
 		}
 	}
 
@@ -268,8 +285,9 @@ func IsRedundantEntry(key string) bool {
 
 func NewEmptyFirmwareConfig() *FirmwareConfig {
 	return &FirmwareConfig{
-		RebootImmediately: false,
-		ApplicationType:   "stb",
+		RebootImmediately:        false,
+		ApplicationType:          "stb",
+		FirmwareDownloadProtocol: "tftp",
 	}
 }
 
@@ -294,7 +312,7 @@ func NewFirmwareConfigFromMap(dataMap map[string]interface{}) *FirmwareConfig {
 		case common.FIRMWARE_DOWNLOAD_PROTOCOL:
 			fc.FirmwareDownloadProtocol = v.(string)
 		case common.UPDATED:
-			fc.Updated = v.(int64)
+			fc.Updated = int64(v.(float64))
 		case common.UPGRADE_DELAY:
 			fc.UpgradeDelay = v.(int64)
 		case common.REBOOT_IMMEDIATELY:
@@ -324,7 +342,11 @@ func NewFirmwareConfigFromMap(dataMap map[string]interface{}) *FirmwareConfig {
 				}
 			}
 		case common.SUPPORTED_MODEL_IDS:
-			fc.SupportedModelIds = v.([]string)
+			aInterface := v.([]interface{})
+			fc.SupportedModelIds = make([]string, len(aInterface))
+			for i, val := range aInterface {
+				fc.SupportedModelIds[i] = val.(string)
+			}
 		default:
 			log.Debug(fmt.Sprintf("FirmwareConfigFacade.UnmarshalJSON ignored property %s:%v", k, v))
 		}
@@ -334,11 +356,12 @@ func NewFirmwareConfigFromMap(dataMap map[string]interface{}) *FirmwareConfig {
 }
 
 type FirmwareConfigResponse struct {
-	ID                string   `json:"id"`
-	Description       string   `json:"description,omitempty"`
-	SupportedModelIds []string `json:"supportedModelIds,omitempty"`
-	FirmwareFilename  string   `json:"firmwareFilename,omitempty"`
-	FirmwareVersion   string   `json:"firmwareVersion,omitempty"`
+	ID                string            `json:"id"`
+	Description       string            `json:"description,omitempty"`
+	SupportedModelIds []string          `json:"supportedModelIds,omitempty"`
+	FirmwareFilename  string            `json:"firmwareFilename,omitempty"`
+	FirmwareVersion   string            `json:"firmwareVersion,omitempty"`
+	Properties        map[string]string `json:"properties,omitempty"`
 }
 
 func (fc *FirmwareConfig) CreateFirmwareConfigResponse() *FirmwareConfigResponse {
@@ -348,14 +371,18 @@ func (fc *FirmwareConfig) CreateFirmwareConfigResponse() *FirmwareConfigResponse
 		SupportedModelIds: fc.SupportedModelIds,
 		FirmwareFilename:  fc.FirmwareFilename,
 		FirmwareVersion:   fc.FirmwareVersion,
+		Properties:        fc.Properties,
 	}
 }
 
 // NewFirmwareConfigInf constructor
 func NewFirmwareConfigInf() interface{} {
 	return &FirmwareConfig{
-		RebootImmediately: false,
-		ApplicationType:   "stb",
+		RebootImmediately:        false,
+		ApplicationType:          shared.STB,
+		SupportedModelIds:        []string{},
+		Properties:               map[string]string{},
+		FirmwareDownloadProtocol: "tftp",
 	}
 }
 
@@ -510,18 +537,14 @@ func (m *ModelFirmwareConfiguration) ToString() string {
 
 // IpRuleBean ...
 type IpRuleBean struct {
-	Id string
-
-	FirmwareConfig *FirmwareConfig
-
-	Name string
-
-	IpAddressGroup *shared.IpAddressGroup
-
-	EnvironmentId string
-	ModelId       string
-	Expression    *Expression
-	Noop          bool
+	Id             string                 `json:"id"`
+	FirmwareConfig *FirmwareConfig        `json:"firmwareConfig"`
+	Name           string                 `json:"name"`
+	IpAddressGroup *shared.IpAddressGroup `json:"ipAddressGroup"`
+	EnvironmentId  string                 `json:"environmentId"`
+	ModelId        string                 `json:"modelId"`
+	Expression     *Expression            `json:"expression"`
+	Noop           bool                   `json:"noop"`
 }
 
 // NewFirmwareConfigFacade ...
@@ -653,6 +676,9 @@ func GetFirmwareConfigOneDB(id string) (*FirmwareConfig, error) {
 	if !ok {
 		return nil, common.NotFirmwareConfig
 	}
+	if fc.ApplicationType == "" {
+		fc.ApplicationType = shared.STB
+	}
 	return fc, nil
 }
 
@@ -661,7 +687,7 @@ func CreateFirmwareConfigOneDB(fc *FirmwareConfig) error {
 	if util.IsBlank(fc.ID) {
 		fc.ID = uuid.New().String()
 	}
-	fc.Updated = util.GetTimestamp(time.Now())
+	fc.Updated = util.GetTimestamp()
 	return db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
 }
 
@@ -670,31 +696,20 @@ func DeleteOneFirmwareConfig(id string) error {
 }
 
 func GetFirmwareConfigAsListDB() ([]*FirmwareConfig, error) {
-	cm := db.GetCacheManager()
-	cacheKey := "FirmwareConfigList"
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_FIRMWARE_CONFIG, cacheKey)
-	if cacheInst != nil {
-		return cacheInst.([]*FirmwareConfig), nil
-	}
-
-	// pass 0 or -1 as unlimit
 	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_CONFIG, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(rulelst) == 0 {
-		return nil, common.NotFound
-	}
-
-	lst := make([]*FirmwareConfig, 0, len(rulelst))
+	var lst []*FirmwareConfig
 
 	for _, r := range rulelst {
-		cfg := r.(*FirmwareConfig)
+		cfg, ok := r.(*FirmwareConfig)
+		if !ok {
+			continue
+		}
 		lst = append(lst, cfg)
 	}
-
-	cm.ApplicationCacheSet(db.TABLE_FIRMWARE_CONFIG, cacheKey, lst)
 
 	return lst, nil
 }
@@ -711,29 +726,21 @@ func GetFirmwareVersion(id string) string {
 
 // MacRuleBean ...
 type MacRuleBean struct {
-	Id string
-
-	Name string
-
-	MacAddresses string
-
-	MacListRef string
-
-	FirmwareConfig *FirmwareConfig
-
-	TargetedModelIds *[]string
-
-	MacList *[]string
+	Id               string          `json:"id,omitempty"`
+	Name             string          `json:"name,omitempty"`
+	MacAddresses     string          `json:"macAddresses,omitempty"`
+	MacListRef       string          `json:"macListRef,omitempty"`
+	FirmwareConfig   *FirmwareConfig `json:"firmwareConfig"`
+	TargetedModelIds *[]string       `json:"targetedModelIds,omitempty"`
+	//in JAva, MacList is in MacRuleBeanWrapper that extends MacRuleBean
+	MacList *[]string `json:"macList,omitempty"`
 }
 
 type EnvModelBean struct {
-	Id string
-
-	Name string
-
-	EnvironmentId string
-
-	ModelId string
-
-	FirmwareConfig *FirmwareConfig
+	Id             string          `json:"id,omitempty" xml:"id,omitempty"`
+	Name           string          `json:"name,omitempty" xml:"name,omitempty"`
+	EnvironmentId  string          `json:"environmentId,omitempty" xml:"environmentId,omitempty"`
+	ModelId        string          `json:"modelId,omitempty" xml:"modelId,omitempty"`
+	FirmwareConfig *FirmwareConfig `json:"firmwareConfig,omitempty" xml:"firmwareConfig,omitempty"`
+	Noop           bool            `json:"-"`
 }

@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	"xconfwebconfig/util"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -99,6 +100,7 @@ func GetLocalSatToken(fields log.Fields) (*SatToken, error) {
 	if stm.TestOnly() {
 		return stm.SatToken, nil
 	}
+	fields = common.FilterLogFields(fields)
 
 	// check for if we have token or not as well as token is expired or not
 	if stm.Token == "" || stm.IsTokenExpired(fields) {
@@ -121,7 +123,7 @@ func SetLocalSatToken(fields log.Fields) error {
 		// SatService had error
 		return err
 	}
-	name := Ws.SatServiceConnector.name
+	name := Ws.SatServiceConnector.SatServiceName()
 	keyname := fmt.Sprintf("sat_token_%s", name)
 	stm.SatToken = &SatToken{
 		Token:    cb2Token.AccessToken,
@@ -142,7 +144,7 @@ func GetSatTokenFromSatService(fields log.Fields) (*SatToken, error) {
 		return nil, err
 	}
 
-	name := Ws.SatServiceConnector.name
+	name := Ws.SatServiceConnector.SatServiceName()
 	keyname := fmt.Sprintf("sat_token_%s", name)
 
 	return &SatToken{

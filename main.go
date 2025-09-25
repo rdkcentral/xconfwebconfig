@@ -28,9 +28,9 @@ import (
 	"time"
 	_ "time/tzdata"
 
-	"xconfwebconfig/common"
-	"xconfwebconfig/dataapi"
-	xhttp "xconfwebconfig/http"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/dataapi"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -75,13 +75,20 @@ func main() {
 		log.SetOutput(os.Stdout)
 	}
 
-	log.SetFormatter(&log.JSONFormatter{
-		TimestampFormat: common.LOGGING_TIME_FORMAT,
-		FieldMap: log.FieldMap{
-			log.FieldKeyTime: "timestamp",
-		},
-	})
-
+	logFormat := server.GetString("xconfwebconfig.log.format")
+	if logFormat == "text" {
+		log.SetFormatter(&log.TextFormatter{
+			FullTimestamp:   true,
+			TimestampFormat: common.LOGGING_TIME_FORMAT,
+		})
+	} else {
+		log.SetFormatter(&log.JSONFormatter{
+			TimestampFormat: common.LOGGING_TIME_FORMAT,
+			FieldMap: log.FieldMap{
+				log.FieldKeyTime: "timestamp",
+			},
+		})
+	}
 	// Output to stderr instead of stdout, could also be a file.
 
 	// default log level info
@@ -113,8 +120,9 @@ func main() {
 
 	if server.MetricsEnabled() {
 		router.Handle("/metrics", promhttp.Handler())
-		metrics := xhttp.NewMetrics()
-		handler := server.WebMetrics(metrics, router)
+		appmetrics := xhttp.NewMetrics()
+		metrics := server.SetWebMetrics(appmetrics)
+		handler := metrics.MetricsHandler(router)
 		server.Handler = handler
 	} else {
 		server.Handler = router
