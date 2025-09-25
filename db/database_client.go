@@ -84,6 +84,13 @@ type DatabaseClient interface {
 	Sleep()
 
 	// Xconf
+	QueryXconfDataRows(query string, queryParams ...string) ([]map[string]interface{}, error)
+	ModifyXconfData(query string, queryParameters ...string) error
+
+	// Batch operations
+	NewBatch(batchType int) BatchOperation
+	ExecuteBatch(batch BatchOperation) error
+
 	SetXconfData(tableName string, rowKey string, value []byte, ttl int) error
 	GetXconfData(tableName string, rowKey string) ([]byte, error)
 	GetAllXconfDataByKeys(tableName string, rowKeys []string) [][]byte
@@ -133,3 +140,16 @@ type DatabaseClient interface {
 	SetPrecookDataInXPC(RfcPrecookHash string, RfcPrecookPayload []byte) error
 	GetPrecookDataFromXPC(RfcPrecookHash string) ([]byte, string, error)
 }
+
+// BatchOperation interface for database batch operations
+type BatchOperation interface {
+	Query(stmt string, args ...interface{})
+	Size() int
+}
+
+// Batch types constants
+const (
+	LoggedBatch = iota
+	UnloggedBatch
+	CounterBatch
+)

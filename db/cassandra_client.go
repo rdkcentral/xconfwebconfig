@@ -92,6 +92,19 @@ type PenetrationMetrics struct {
 	RfcTs                   time.Time
 }
 
+// BatchWrapper wraps gocql.Batch to implement BatchOperation interface
+type BatchWrapper struct {
+	*gocql.Batch
+}
+
+func (bw *BatchWrapper) Query(stmt string, args ...interface{}) {
+	bw.Batch.Query(stmt, args...)
+}
+
+func (bw *BatchWrapper) Size() int {
+	return bw.Batch.Size()
+}
+
 func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraClient, error) {
 
 	var xpcKeyspace string
@@ -315,6 +328,89 @@ func (c *CassandraClient) SetXconfData(tableName string, rowKey string, value []
 	}
 
 	return nil
+}
+
+func (c *CassandraClient) QueryXconfDataRows(query string, queryParameters ...string) ([]map[string]interface{}, error) {
+	start := time.Now()
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	// Convert string slice to interface slice
+	params := make([]interface{}, len(queryParameters))
+	for i, v := range queryParameters {
+		params[i] = v
+	}
+
+	var resultData []map[string]interface{}
+	iter := c.Query(query, params...).Iter()
+	for {
+		row := make(map[string]interface{})
+		if !iter.MapScan(row) {
+			break
+		}
+		resultData = append(resultData, row)
+	}
+	log.Debug(fmt.Sprintf("CassandraClient.QueryXconfDataRows executed query=%q parameters=%v duration=%s", query, queryParameters, time.Since(start)))
+	return resultData, nil
+}
+
+func (c *CassandraClient) ModifyXconfData(query string, queryParameters ...string) error {
+	start := time.Now()
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	// Convert string slice to interface slice
+	params := make([]interface{}, len(queryParameters))
+	for i, v := range queryParameters {
+		params[i] = v
+	}
+
+	if err := c.Query(query, params...).Exec(); err != nil {
+		return err
+	}
+	log.Debug(fmt.Sprintf("CassandraClient.ModifyXconfData executed query=%q parameters=%v duration=%s", query, queryParameters, time.Since(start)))
+	return nil
+}
+
+// NewBatch creates a new batch operation
+func (c *CassandraClient) NewBatch(batchType int) BatchOperation {
+	start := time.Now()
+
+	var gocqlBatchType gocql.BatchType
+	switch batchType {
+	case LoggedBatch:
+		gocqlBatchType = gocql.LoggedBatch
+	case UnloggedBatch:
+		gocqlBatchType = gocql.UnloggedBatch
+	case CounterBatch:
+		gocqlBatchType = gocql.CounterBatch
+	default:
+		gocqlBatchType = gocql.LoggedBatch
+	}
+
+	batch := &BatchWrapper{c.Session.NewBatch(gocqlBatchType)}
+	log.Debug(fmt.Sprintf("CassandraClient.NewBatch created batch_type=%d duration=%s",
+		batchType, time.Since(start)))
+
+	return batch
+}
+
+// ExecuteBatch executes a batch operation
+func (c *CassandraClient) ExecuteBatch(batch BatchOperation) error {
+	start := time.Now()
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	batchWrapper := batch.(*BatchWrapper)
+	err := c.Session.ExecuteBatch(batchWrapper.Batch)
+
+	log.Debug(fmt.Sprintf("CassandraClient.ExecuteBatch executed batch_size=%d duration=%s error=%v",
+		batch.Size(), time.Since(start), err))
+
+	return err
 }
 
 // GetXconfData Get one row where return value is JSON data
@@ -660,7 +756,7 @@ func (c *CassandraClient) SetXconfCompressedData(tableName string, rowKey string
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
-	batch := c.NewBatch(gocql.LoggedBatch)
+	batch := c.NewBatch(LoggedBatch)
 
 	// Add a record that specifies the number of compressed data chunks
 	var stmt string
