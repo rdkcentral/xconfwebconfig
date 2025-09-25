@@ -46,6 +46,8 @@ The following code illustrates how to retrieve a specific Model from the Model t
 
 // SimpleDao interface
 type SimpleDao interface {
+	Modify(query string, queryParams ...string) error
+	Query(query string, queryParams ...string) ([]map[string]interface{}, error)
 	GetOne(tableName string, rowKey string) (interface{}, error)
 	SetOne(tableName string, rowKey string, value []byte) error
 	DeleteOne(tableName string, rowKey string) error
@@ -54,6 +56,10 @@ type SimpleDao interface {
 	GetAllAsMap(tableName string, maxResults int) (map[string]interface{}, error)
 	GetKeys(tableName string) []string
 	GetAllAsMapRaw(tableName string, maxResults int) (map[string]json.RawMessage, error)
+
+	// Batch operations
+	NewBatch(batchType int) BatchOperation
+	ExecuteBatch(batch BatchOperation) error
 }
 
 // GetAllAsMap get a map of all Xconf records as JSON string
@@ -102,6 +108,26 @@ func (sd simpleDaoImpl) GetOne(tableName string, rowKey string) (interface{}, er
 	}
 
 	return obj, nil
+}
+
+func (sd simpleDaoImpl) Modify(query string, queryParams ...string) error {
+	return GetDatabaseClient().ModifyXconfData(query, queryParams...)
+}
+
+func (sd simpleDaoImpl) Query(query string, queryParams ...string) ([]map[string]interface{}, error) {
+	rows, err := GetDatabaseClient().QueryXconfDataRows(query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (sd simpleDaoImpl) NewBatch(batchType int) BatchOperation {
+	return GetDatabaseClient().NewBatch(batchType)
+}
+
+func (sd simpleDaoImpl) ExecuteBatch(batch BatchOperation) error {
+	return GetDatabaseClient().ExecuteBatch(batch)
 }
 
 // SetOne set Xconf record
