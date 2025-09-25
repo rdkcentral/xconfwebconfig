@@ -85,3 +85,19 @@ CREATE TABLE IF NOT EXISTS "PenetrationMetrics" (estb_mac text, ecm_mac text, se
 CREATE TABLE IF NOT EXISTS "Tag" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
 CREATE TABLE IF NOT EXISTS "Locks" (name text, locked_by text, locked_at timestamp, expires_at timestamp, PRIMARY KEY (name));
+
+CREATE TABLE IF NOT EXISTS "TagMembersBucketed" (
+    tag_id TEXT,
+    bucket_id INT,
+    member TEXT,
+    created BIGINT,
+    PRIMARY KEY ((tag_id, bucket_id), member)
+) WITH CLUSTERING ORDER BY (member ASC)
+    AND compaction = {'class': 'SizeTieredCompactionStrategy'}
+    AND compression = {'sstable_compression': 'LZ4Compressor'};
+
+CREATE TABLE IF NOT EXISTS "TagBucketMetadata" (
+    tag_id TEXT,
+    bucket_id INT,
+    PRIMARY KEY (tag_id, bucket_id)
+);
