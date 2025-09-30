@@ -131,14 +131,6 @@ func (obj *GenericNamespacedList) ValidateForAdminService() error {
 	return nil
 }
 
-func LockGenericNamespacedList() {
-	namespacedListUpdateMutex.Lock()
-}
-
-func UnlockGenericNamespacedList() {
-	namespacedListUpdateMutex.Unlock()
-}
-
 func ValidateListData(typeName string, listData []string) error {
 	if !IsValidType(typeName) {
 		return errors.New("Type is invalid")
