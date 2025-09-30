@@ -110,14 +110,12 @@ type DatabaseClient interface {
 	// Pod table lookup estbMac from pod serialNum
 	GetEcmMacFromPodTable(string) (string, error)
 
-	//Penetration Metrics
-	GetPenetrationMetrics(macAddress string) (map[string]interface{}, error)
-	SetPenetrationMetrics(penetrationmetrics *PenetrationMetrics) error
-
 	// not found
 	IsDbNotFound(error) bool
 
-	//Penetration Metrics
+	// Penetration Metrics
+	GetPenetrationMetrics(macAddress string) (map[string]interface{}, error)
+	SetPenetrationMetrics(penetrationmetrics *PenetrationMetrics) error
 	SetFwPenetrationMetrics(*FwPenetrationMetrics) error
 	GetFwPenetrationMetrics(string) (*FwPenetrationMetrics, error)
 	SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetrics, is304FromPrecook bool) error
@@ -129,7 +127,12 @@ type DatabaseClient interface {
 	GetRecookingStatus(module string, partitionId string) (int, time.Time, error)
 	CheckFinalRecookingStatus(module string) (bool, time.Time, error)
 
-	////XPC precook reference data
+	// XPC precook reference data
 	SetPrecookDataInXPC(RfcPrecookHash string, RfcPrecookPayload []byte) error
 	GetPrecookDataFromXPC(RfcPrecookHash string) ([]byte, string, error)
+
+	// Locks
+	AcquireLock(lockName string, lockedBy string, ttlSeconds int) error
+	ReleaseLock(lockName string, lockedBy string) error
+	GetLockInfo(lockName string) (map[string]interface{}, error)
 }
