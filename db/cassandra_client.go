@@ -51,7 +51,7 @@ const (
 	DefaultXpcTestKeyspace               = "xpc_test_keyspace"
 	DefaultXpcPrecookTableName           = "reference_document"
 	DefaultXconfRecookingStatusTableName = "RecookingStatus"
-	LockNameDelimiter                    = "::"
+	LockNameDelimiter                    = "|"
 )
 
 // Interface used for connecting to Cassandra in a cloud environment
