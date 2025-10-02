@@ -31,6 +31,7 @@ const (
 	SECURITY_TOKEN_MODEL           = "model"
 	SECURITY_TOKEN_PARTNER         = "partnerId"
 	SECURITY_TOKEN_FW_FILENAME     = "firmwareFilename"
+	SECURITY_TOKEN_FW_VERSION      = "fwVersion"
 	SECURITY_TOKEN_FW_DOWNLOAD_TS  = "fwDownloadTs"
 	SECURITY_TOKEN_LOG_UPLOAD_TS   = "logUploadTs"
 	URL_PROTOCOL_PREFIX            = "http://"
@@ -54,6 +55,7 @@ type SecurityTokenConfig struct {
 	SecurityTokenDevicePercentValue    float64
 	SecurityTokenHostKeyword           string
 	SecurityTokenKey                   string
+	SecurityTokenHashEnabled           bool
 	SecurityTokenGroupServiceEnabled   bool
 }
 
@@ -75,6 +77,7 @@ func NewSecurityTokenConfig(conf *configuration.Config) *SecurityTokenConfig {
 	devicePercentEnabled := conf.GetBoolean("xconfwebconfig.xconf.security_token_device_percent_enabled")
 	devicePercentValue := conf.GetFloat64("xconfwebconfig.xconf.security_token_device_percent_value")
 	hostKeyword := conf.GetString("xconfwebconfig.xconf.security_token_host_keyword")
+	securityTokenHashEnabled := conf.GetBoolean("xconfwebconfig.xconf.security_token_hash_enabled")
 	securityTokenGroupServiceEnabled := conf.GetBoolean("xconfwebconfig.xconf.security_token_group_service_enabled")
 
 	return &SecurityTokenConfig{
@@ -84,6 +87,7 @@ func NewSecurityTokenConfig(conf *configuration.Config) *SecurityTokenConfig {
 		SecurityTokenDevicePercentValue:    devicePercentValue,
 		SecurityTokenHostKeyword:           hostKeyword,
 		SecurityTokenKey:                   getSecurityTokenKey(conf),
+		SecurityTokenHashEnabled:           securityTokenHashEnabled,
 		SecurityTokenGroupServiceEnabled:   securityTokenGroupServiceEnabled,
 	}
 }
@@ -137,23 +141,13 @@ func (s *SecurityTokenPathConfig) getSecurityToken(deviceInfo map[string]string,
 		return ""
 	}
 	token := ""
-	if Ws.SecurityTokenConfig.SecurityTokenGroupServiceEnabled {
-		// token will be set to the mac address without colons if using GroupService to hold other device details
-		token = util.AlphaNumericMacAddress(deviceInfo[SECURITY_TOKEN_ESTB_MAC])
-		if util.IsBlank(token) {
-			log.WithFields(fields).Errorf("Mac address is missing, not generating security token")
-			return ""
-		}
-		deviceInfo[s.TimestampKey] = fmt.Sprintf("%d", time.Now().Unix())
-		log.WithFields(fields).Debugf("Adding security token to group service")
-		// removing macAddress from deviceInfo since it's already present as the key
-		delete(deviceInfo, SECURITY_TOKEN_ESTB_MAC)
-		err := Ws.GroupServiceSyncConnector.AddSecurityTokenInfo(token, deviceInfo, fields)
-		if err != nil {
-			log.WithFields(fields).Errorf("Error adding security token to group service, err=%+v", err)
-		}
-	} else {
-		// if not using GroupService, need to hash the estbIP (and optionally the filename) to create the token
+	// three scenario options for creating security token
+	// 1. if hash is enabled, need to hash the estbIP (and optionally the filename) to create the token
+	// this way we don't need to store the token anywhere because we can unhash it using the same algorithm later
+	// 2. if hash is not enabled, we will use mac address without colons as the token
+	// 2A if group service is enabled, we will store token info in group service to look up later
+	// 2B if group service is not enabled, we will get the token info from Cassandra (all fields needed are already in penetration table, so just return token)
+	if Ws.SecurityTokenConfig.SecurityTokenHashEnabled {
 		estbIp := deviceInfo[SECURITY_TOKEN_ESTB_IP]
 		if util.IsBlank(estbIp) {
 			log.WithFields(fields).Errorf("EstbIP is missing, not generating security token")
@@ -164,6 +158,24 @@ func (s *SecurityTokenPathConfig) getSecurityToken(deviceInfo map[string]string,
 			input = fmt.Sprintf("%s_%s", input, deviceInfo[SECURITY_TOKEN_FW_FILENAME])
 		}
 		token = generateSecurityToken(input, fields)
+		return token
+	}
+	// token will be set to the mac address without colons
+	token = util.AlphaNumericMacAddress(deviceInfo[SECURITY_TOKEN_ESTB_MAC])
+	if util.IsBlank(token) {
+		log.WithFields(fields).Errorf("Mac address is missing, not generating security token")
+		return ""
+	}
+	if Ws.SecurityTokenConfig.SecurityTokenGroupServiceEnabled {
+		// add token info to Group Service to look up later, if disabled, we will get the info from Cassandra Penetration Metrics table (will be written later in existing flow)
+		deviceInfo[s.TimestampKey] = fmt.Sprintf("%d", time.Now().Unix())
+		// removing macAddress from deviceInfo since it's already present as the key
+		delete(deviceInfo, SECURITY_TOKEN_ESTB_MAC)
+		log.WithFields(fields).Debugf("Adding security token to group service")
+		err := Ws.GroupServiceSyncConnector.AddSecurityTokenInfo(token, deviceInfo, fields)
+		if err != nil {
+			log.WithFields(fields).Errorf("Error adding security token to group service, err=%+v", err)
+		}
 	}
 	return token
 }

@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/util"
 )
@@ -306,7 +307,10 @@ func (c *CassandraClient) GetFwPenetrationMetrics(estbMac string) (*FwPenetratio
 				pMetrics.FwAppliedRule = itfvalue
 			}
 		case FwTsColumnValue:
-			if itfvalue, ok := v.(int64); ok {
+			if itfvalue, ok := v.(time.Time); ok {
+				pMetrics.FwTs = itfvalue.Unix()
+			} else if itfvalue, ok := v.(int64); ok {
+				// fallback for existing int64 values
 				pMetrics.FwTs = itfvalue
 			}
 		}
@@ -359,7 +363,10 @@ func (c *CassandraClient) GetRfcPenetrationMetrics(estbMac string) (*RfcPenetrat
 				pMetrics.RfcFeatures = itfvalue
 			}
 		case RfcTsColumnValue:
-			if itfvalue, ok := v.(int64); ok {
+			if itfvalue, ok := v.(time.Time); ok {
+				pMetrics.RfcTs = itfvalue.Unix()
+			} else if itfvalue, ok := v.(int64); ok {
+				// fallback for existing int64 values
 				pMetrics.RfcTs = itfvalue
 			}
 		}
