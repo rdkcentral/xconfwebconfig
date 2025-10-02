@@ -156,6 +156,7 @@ func GetFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResp
 			xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
 			xhttp.SECURITY_TOKEN_ESTB_IP:         contextMap[common.IP_ADDRESS],
 			xhttp.SECURITY_TOKEN_FW_FILENAME:     evaluationResult.FirmwareConfig.GetFirmwareFilename(),
+			xhttp.SECURITY_TOKEN_FW_VERSION:      evaluationResult.FirmwareConfig.GetFirmwareVersion(),
 		}
 		if !util.IsBlank(contextMap[common.PARTNER_ID]) {
 			deviceInfo[xhttp.SECURITY_TOKEN_PARTNER] = contextMap[common.PARTNER_ID]
