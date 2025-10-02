@@ -70,6 +70,7 @@ const (
 	TABLE_XCONF_CHANGED_KEYS = "XconfChangedKeys4"
 	TABLE_APP_SETTINGS       = "AppSettings"
 	TABLE_TAG                = "Tag"
+	TABLE_LOCKS              = "Locks"
 )
 
 var AllTables = []string{

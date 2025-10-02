@@ -116,7 +116,8 @@ func (f *FeatureControlRuleBase) CalculateHash(features []rfc.FeatureResponse) s
 	return util.CalculateHash(string(arrBytes))
 }
 
-func (f *FeatureControlRuleBase) LogFeatureInfo(context map[string]string, appliedRules []*rfc.FeatureRule, features []rfc.FeatureResponse, fields log.Fields) {
+func (f *FeatureControlRuleBase) LogFeatureInfo(context map[string]string, appliedRules []*rfc.FeatureRule, features []rfc.FeatureResponse, isLiveCalculated bool, fields log.Fields) {
+	fields["isLiveCalculated"] = isLiveCalculated
 	fields["context"] = context
 	var ruleNames []string
 	for _, rule := range appliedRules {
@@ -124,6 +125,8 @@ func (f *FeatureControlRuleBase) LogFeatureInfo(context map[string]string, appli
 	}
 	if len(ruleNames) > 0 {
 		fields["appliedRules"] = ruleNames
+	} else if !isLiveCalculated {
+		fields["appliedRules"] = ""
 	} else {
 		fields["appliedRules"] = "NO MATCH"
 	}

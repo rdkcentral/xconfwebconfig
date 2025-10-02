@@ -156,7 +156,7 @@ func (c *CassandraClient) SetFwPenetrationMetrics(pMetrics *FwPenetrationMetrics
 	return nil
 }
 
-func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetrics) error {
+func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetrics, isReturn304FromPrecook bool) error {
 	// always write rfc_* values so pre-cook data is as close to what we're using in rule evaluation
 	columns := []string{
 		EstbMacColumnValue,
@@ -170,8 +170,8 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		RfcAccountMgmtColumnValue,
 		TitanAccountIdColumnValue,
 		RfcFwReportedVersionColumnValue,
-		RfcFeaturesColumnValue,
-		RfcAppliedRulesColumnValue,
+		//RfcFeaturesColumnValue,
+		//RfcAppliedRulesColumnValue,
 		RfcEnvColumnValue,
 		RfcApplicationTypeColumnValue,
 		RfcExperienceColumnValue,
@@ -182,13 +182,6 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		RfcEstbIpColumnValue,
 		RfcTsColumnValue,
 		RfcPostProcColumnValue,
-	}
-
-	if isEmptyString(pMetrics.RfcAppliedRules) {
-		pMetrics.RfcAppliedRules = ""
-	}
-	if isEmptyString(pMetrics.RfcFeatures) {
-		pMetrics.RfcFeatures = ""
 	}
 
 	values := []interface{}{
@@ -203,8 +196,8 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		pMetrics.RfcAccountMgmt,
 		pMetrics.TitanAccountId,
 		pMetrics.RfcFwReportedVersion,
-		pMetrics.RfcFeatures,
-		pMetrics.RfcAppliedRules,
+		//pMetrics.RfcFeatures,
+		//pMetrics.RfcAppliedRules,
 		pMetrics.RfcEnv,
 		pMetrics.RfcApplicationType,
 		pMetrics.RfcExperience,
@@ -217,7 +210,7 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		pMetrics.RfcPostProc,
 	}
 
-	// only write following values when they're non-empty for metrics
+	// only write following values when they're non-empty for rfc penetratioin metrics
 	if !isEmptyString(pMetrics.Partner) {
 		columns = append(columns, PartnerColumnValue)
 		values = append(values, pMetrics.Partner)
@@ -236,6 +229,19 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		values = append(values, pMetrics.RecoveryCertExpiry)
 	}
 
+	if isEmptyString(pMetrics.RfcAppliedRules) {
+		pMetrics.RfcAppliedRules = ""
+	}
+
+	if isEmptyString(pMetrics.RfcFeatures) {
+		pMetrics.RfcFeatures = ""
+	}
+
+	//if we return 304 based on precook data, we do not update features and applied_rules with empty string
+	if !isReturn304FromPrecook {
+		columns = append(columns, RfcFeaturesColumnValue, RfcAppliedRulesColumnValue)
+		values = append(values, pMetrics.RfcFeatures, pMetrics.RfcAppliedRules)
+	}
 	stmt := fmt.Sprintf(`INSERT INTO "%s"(%v) VALUES(%v)`, PenetrationMetricsTable, GetColumnsStr(columns), GetValuesStr(len(columns)))
 
 	c.ConcurrentQueries <- true

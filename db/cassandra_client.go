@@ -51,6 +51,7 @@ const (
 	DefaultXpcTestKeyspace               = "xpc_test_keyspace"
 	DefaultXpcPrecookTableName           = "reference_document"
 	DefaultXconfRecookingStatusTableName = "RecookingStatus"
+	LockNameDelimiter                    = "|"
 )
 
 // Interface used for connecting to Cassandra in a cloud environment
@@ -93,8 +94,8 @@ type PenetrationMetrics struct {
 }
 
 func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraClient, error) {
-
 	var xpcKeyspace string
+
 	// init
 	log.Debug("Connecting to Cassandra with DefaultCassandraConnection")
 	hosts := conf.GetStringList("xconfwebconfig.database.hosts")
@@ -846,4 +847,162 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tableName string) map[string
 	log.Debug(fmt.Sprintf("CassandraClient.GetXconfCompressedDataRaw: table %v in %v", tableName, time.Since(start)))
 
 	return resultData
+}
+
+func (c *CassandraClient) AcquireLock(lockName string, lockedBy string, ttl int) error {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	lockedAt := time.Now()
+	expiresAt := lockedAt.Add(time.Duration(ttl) * time.Second)
+
+	// First, try to insert a new lock (if no lock exists)
+	existingLock := make(map[string]interface{})
+	stmt := fmt.Sprintf(`INSERT INTO "%s"(name, locked_by, locked_at, expires_at) VALUES(?,?,?,?) IF NOT EXISTS`, TABLE_LOCKS)
+	applied, err := c.Query(stmt, lockName, lockedBy, lockedAt, expiresAt).MapScanCAS(existingLock)
+	if err != nil {
+		return fmt.Errorf("failed to acquire lock '%s': %w", lockName, err)
+	}
+	if applied {
+		log.Debug(fmt.Sprintf("Lock '%s' acquired by '%s'", lockName, lockedBy))
+		return nil
+	}
+
+	// Lock exists, check if it's expired and try to update
+	if exExpiresAt, ok := existingLock["expires_at"].(time.Time); ok {
+		if time.Now().Before(exExpiresAt) {
+			return fmt.Errorf("unable to acquire lock '%s' held by '%s' until %s", lockName, existingLock["locked_by"], exExpiresAt)
+		}
+	}
+
+	stmt = fmt.Sprintf(`UPDATE "%s" SET locked_by = ?, locked_at = ?, expires_at = ? WHERE name = ? IF expires_at < ?`, TABLE_LOCKS)
+	applied, err = c.Query(stmt, lockedBy, lockedAt, expiresAt, lockName, lockedAt).MapScanCAS(existingLock)
+	if err != nil {
+		return fmt.Errorf("failed to acquire expired lock '%s': %w", lockName, err)
+	}
+	if !applied {
+		return fmt.Errorf("unable to acquire expired lock '%s' held by '%s'", lockName, existingLock["locked_by"])
+	}
+
+	log.Debug(fmt.Sprintf("Lock '%s' acquired by '%s'", lockName, lockedBy))
+	return nil
+}
+
+func (c *CassandraClient) ReleaseLock(lockName string, lockedBy string) error {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	// Try to release the lock by deleting the record only if it is held by the specified lockHolder
+	existingLock := make(map[string]interface{})
+	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE name = ? IF locked_by = ?`, TABLE_LOCKS)
+	applied, err := c.Query(stmt, lockName, lockedBy).MapScanCAS(existingLock)
+	if err != nil {
+		return fmt.Errorf("failed to release lock '%s': %w", lockName, err)
+	}
+	if !applied {
+		return fmt.Errorf("unable to release lock '%s' held by '%s'", lockName, existingLock["locked_by"])
+	}
+
+	log.Debug(fmt.Sprintf("Lock '%s' released by '%s'", lockName, lockedBy))
+	return nil
+}
+
+func (c *CassandraClient) GetLockInfo(lockName string) (map[string]interface{}, error) {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	dict := util.Dict{}
+	stmt := fmt.Sprintf(`SELECT * FROM "%s" WHERE name=?`, TABLE_LOCKS)
+	qry := c.Query(stmt, lockName)
+	err := qry.MapScan(dict)
+	if err != nil {
+		return dict, fmt.Errorf("failed to retrieve lock '%s': %w", lockName, err)
+	}
+
+	return dict, nil
+}
+
+type DistributedLock struct {
+	name string
+	ttl  int
+}
+
+func NewDistributedLock(name string, ttl int) *DistributedLock {
+	if name == "" || ttl <= 0 {
+		return nil
+	}
+	return &DistributedLock{
+		name: name,
+		ttl:  ttl,
+	}
+}
+
+func (dl DistributedLock) Lock(owner string) (e error) {
+	if util.IsBlank(owner) {
+		e = fmt.Errorf("owner is required to lock '%s' table", dl.name)
+		return
+	}
+
+	if err := GetDatabaseClient().AcquireLock(dl.name, owner, dl.ttl); err != nil {
+		e = fmt.Errorf("unable to lock '%s' table: %w", dl.name, err)
+		log.Error(e)
+	}
+
+	return
+}
+
+func (tl DistributedLock) Unlock(owner string) (e error) {
+	if util.IsBlank(owner) {
+		e = fmt.Errorf("owner is required to unlock '%s' table", tl.name)
+		return
+	}
+
+	if err := GetDatabaseClient().ReleaseLock(tl.name, owner); err != nil {
+		e = fmt.Errorf("unable to unlock '%s' table: %w", tl.name, err)
+		log.Error(e)
+	}
+
+	return
+}
+
+// LockRow locks a specific row in the table identified by rowKey.
+// The lock name is constructed as "<tableName>::<rowKey>".
+// This allows for row-level locking within the same table using the existing locking mechanism.
+// For a given resource either resource-level or sub-resource-level locks can be used, but not both.
+func (tl DistributedLock) LockRow(owner string, rowKey string) (e error) {
+	if util.IsBlank(owner) {
+		e = fmt.Errorf("owner is required to lock '%s' table", tl.name)
+		return
+	}
+	if util.IsBlank(rowKey) {
+		e = fmt.Errorf("rowKey is required to lock '%s' table", tl.name)
+		return
+	}
+
+	lockName := tl.name + LockNameDelimiter + rowKey
+	if err := GetDatabaseClient().AcquireLock(lockName, owner, tl.ttl); err != nil {
+		e = fmt.Errorf("unable to lock '%s' table row '%s': %w", tl.name, rowKey, err)
+		log.Error(e)
+	}
+
+	return
+}
+
+func (tl DistributedLock) UnlockRow(owner string, rowKey string) (e error) {
+	if util.IsBlank(owner) {
+		e = fmt.Errorf("owner is required to unlock '%s' table", tl.name)
+		return
+	}
+	if util.IsBlank(rowKey) {
+		e = fmt.Errorf("rowKey is required to unlock '%s' table", tl.name)
+		return
+	}
+
+	lockName := tl.name + LockNameDelimiter + rowKey
+	if err := GetDatabaseClient().ReleaseLock(lockName, owner); err != nil {
+		e = fmt.Errorf("unable to unlock '%s' table row '%s': %w", tl.name, rowKey, err)
+		log.Error(e)
+	}
+
+	return
 }

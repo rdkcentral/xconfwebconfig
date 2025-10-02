@@ -63,7 +63,7 @@ func TestMain(m *testing.M) {
 
 	securityTokenKey := os.Getenv("SECURITY_TOKEN_KEY")
 	if len(securityTokenKey) == 0 {
-		os.Setenv("SECURITY_TOKEN_KEY", "dGVzdC1jMDctZDBkMS00MTBiLTg5Y2EtNmM1NWY1ZTU=")
+		os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
 	}
 
 	awsS3SsecKey := os.Getenv("AWS_S3_SSEC_KEY")

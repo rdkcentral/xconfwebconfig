@@ -1,0 +1,941 @@
+openapi: 3.0.0
+info:
+  title: XConf Data Service API
+  version: 1.0.0
+  description: |
+    API documentation for the XConf Data Service. This service provides device-facing endpoints for feature control, firmware management, log upload, and telemetry settings.
+servers:
+  - url: http://localhost:9000/
+paths:
+  /featureControl/getSettings:
+    get:
+      summary: Get feature control settings
+      description: Retrieve feature control settings for a device. Query parameters are used for device identification and rule evaluation.
+      parameters:
+        - $ref: '#/components/parameters/estbMacAddress'
+        - $ref: '#/components/parameters/model'
+        - $ref: '#/components/parameters/firmwareVersion'
+        - $ref: '#/components/parameters/env'
+        - $ref: '#/components/parameters/partnerId'
+        - in: query
+          name: accountId
+          schema:
+            type: string
+          required: false
+          description: Account ID for the device (optional, used for some feature rules).
+        - in: query
+          name: experience
+          schema:
+            type: string
+          required: false
+          description: Experience identifier (optional, used for some feature rules).
+        - in: query
+          name: estbIp
+          schema:
+            type: string
+            format: ipv4
+          required: false
+          description: Device IP address (optional, used for some feature rules).
+      responses:
+        '200':
+          description: Feature control settings found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureControlSettingsResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    featureA: true
+                    featureB: false
+                    featureC: "beta"
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: No matching feature control settings found
+  /featureControl/getSettings/{applicationType}:
+    get:
+      summary: Get feature control settings by application type
+      description: Retrieve feature control settings for a device and application type.
+      parameters:
+        - $ref: '#/components/parameters/applicationType'
+        - $ref: '#/components/parameters/estbMacAddress'
+        - $ref: '#/components/parameters/model'
+        - $ref: '#/components/parameters/firmwareVersion'
+        - $ref: '#/components/parameters/env'
+        - $ref: '#/components/parameters/partnerId'
+        - in: query
+          name: accountId
+          schema:
+            type: string
+          required: false
+          description: Account ID for the device (optional, used for some feature rules).
+        - in: query
+          name: experience
+          schema:
+            type: string
+          required: false
+          description: Experience identifier (optional, used for some feature rules).
+        - in: query
+          name: estbIp
+          schema:
+            type: string
+            format: ipv4
+          required: false
+          description: Device IP address (optional, used for some feature rules).
+      responses:
+        '200':
+          description: Feature control settings found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureControlSettingsResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    featureA: true
+                    featureB: false
+                    featureC: "beta"
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: No matching feature control settings found
+  /xconf/swu/{applicationType}:
+    get:
+      summary: Get firmware SWU settings
+      description: Retrieve firmware software update (SWU) settings for a device and application type. All parameters except env and partnerId are required.
+      parameters:
+        - $ref: '#/components/parameters/applicationType'
+        - in: query
+          name: eStbMac
+          schema:
+            type: string
+            example: "A1B2C3D4E5F6"
+            pattern: "^[A-F0-9]{12}$"
+          required: true
+          description: MAC address of the device (12 uppercase hex digits, no separators). Parameter name must be 'eStbMac'.
+        - in: query
+          name: model
+          schema:
+            type: string
+            example: "XG1V4"
+          required: true
+          description: Device model identifier.
+        - in: query
+          name: firmwareVersion
+          schema:
+            type: string
+            example: "X1-5.2.1"
+            pattern: "^[A-Za-z0-9_.-]+$"
+          required: true
+          description: Current firmware version of the device.
+        - in: query
+          name: env
+          schema:
+            type: string
+            example: "prod"
+            enum: [prod, dev, test]
+          required: false
+          description: Environment (optional).
+        - in: query
+          name: partnerId
+          schema:
+            type: string
+            example: "comcast"
+            pattern: "^[A-Za-z0-9_.\-,:;]{3,32}$"
+          required: false
+          description: Partner identifier (optional).
+      responses:
+        '200':
+          description: Firmware SWU settings found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FirmwareSwuResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    firmwareVersion: "X1-5.2.1"
+                    downloadUrl: "https://firmware.example.com/X1-5.2.1.bin"
+                    rebootRequired: true
+        '400':
+          description: Invalid request parameters (e.g., missing estbMacAddress, model, or firmwareVersion)
+        '403':
+          description: Forbidden (request not allowed for this device)
+        '404':
+          description: No matching firmware SWU settings found
+    post:
+      summary: Get firmware SWU settings (POST)
+      description: Retrieve firmware SWU settings for a device and application type using form data (for clients that POST instead of GET).
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                eStbMac:
+                  type: string
+                  example: "A1B2C3D4E5F6"
+                  pattern: "^[A-F0-9]{12}$"
+                model:
+                  type: string
+                  example: "XG1V4"
+                firmwareVersion:
+                  type: string
+                  example: "X1-5.2.1"
+                  pattern: "^[A-Za-z0-9_.-]+$"
+                env:
+                  type: string
+                  example: "prod"
+                  enum: [prod, dev, test]
+                partnerId:
+                  type: string
+                  example: "comcast"
+                  pattern: "^[A-Za-z0-9_.\-,:;]{3,32}$"
+              required:
+                - estbMacAddress
+                - model
+                - firmwareVersion
+      responses:
+        '200':
+          description: Firmware SWU settings found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FirmwareSwuResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    firmwareVersion: "X1-5.2.1"
+                    downloadUrl: "https://firmware.example.com/X1-5.2.1.bin"
+                    rebootRequired: true
+        '400':
+          description: Invalid request parameters (e.g., missing estbMacAddress, model, or firmwareVersion)
+        '403':
+          description: Forbidden (request not allowed for this device)
+        '404':
+          description: No matching firmware SWU settings found
+  /xconf/swu/bse:
+    get:
+      summary: Get base firmware SWU settings
+      description: Retrieve base firmware software update (SWU) settings for a device.
+      parameters:
+        - in: query
+          name: ipAddress
+          schema:
+            type: string
+            format: ipv4
+          required: true
+          description: Device IP address (required for BSE firmware lookup).
+      responses:
+        '200':
+          description: Base firmware SWU settings found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FirmwareSwuResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    firmwareVersion: "X1-5.2.1"
+                    downloadUrl: "https://firmware.example.com/X1-5.2.1.bin"
+                    rebootRequired: true
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: No matching firmware SWU settings found
+  /loguploader/getSettings:
+    get:
+      summary: Get log uploader settings
+      description: Retrieve log uploader settings for a device.
+      parameters:
+        - $ref: '#/components/parameters/estbMacAddress'
+        - $ref: '#/components/parameters/model'
+        - $ref: '#/components/parameters/firmwareVersion'
+        - $ref: '#/components/parameters/env'
+        - $ref: '#/components/parameters/applicationTypeOpt'
+        - $ref: '#/components/parameters/partnerId'
+        - in: query
+          name: settingType
+          schema:
+            type: array
+            items:
+              type: string
+          required: false
+          description: List of setting types to retrieve (optional, repeatable).
+        - in: query
+          name: uploadImmediately
+          schema:
+            type: boolean
+          required: false
+          description: If true, triggers immediate upload (optional).
+      responses:
+        '200':
+          description: Log uploader settings found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogUploaderSettingsResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    uploadRepository: "https://logs.example.com/upload"
+                    logFiles:
+                      - name: "dmesg.log"
+                        maxSize: 1048576
+                        uploadFrequency: 3600
+                      - name: "messages.log"
+                        maxSize: 2097152
+                        uploadFrequency: 7200
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: No matching log uploader settings found
+  /loguploader/getSettings/{applicationType}:
+    get:
+      summary: Get log uploader settings by application type
+      description: Retrieve log uploader settings for a device and application type.
+      parameters:
+        - $ref: '#/components/parameters/applicationType'
+        - $ref: '#/components/parameters/estbMacAddress'
+        - $ref: '#/components/parameters/model'
+        - $ref: '#/components/parameters/firmwareVersion'
+        - $ref: '#/components/parameters/env'
+        - $ref: '#/components/parameters/partnerId'
+        - in: query
+          name: settingType
+          schema:
+            type: array
+            items:
+              type: string
+          required: false
+          description: List of setting types to retrieve (optional, repeatable).
+        - in: query
+          name: uploadImmediately
+          schema:
+            type: boolean
+          required: false
+          description: If true, triggers immediate upload (optional).
+      responses:
+        '200':
+          description: Log uploader settings found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogUploaderSettingsResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    uploadRepository: "https://logs.example.com/upload"
+                    logFiles:
+                      - name: "dmesg.log"
+                        maxSize: 1048576
+                        uploadFrequency: 3600
+                      - name: "messages.log"
+                        maxSize: 2097152
+                        uploadFrequency: 7200
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: No matching log uploader settings found
+  /loguploader/getT2Settings:
+    get:
+      summary: Get T2 log uploader settings
+      description: Retrieve T2 log uploader settings for a device.
+      parameters:
+        - $ref: '#/components/parameters/estbMacAddress'
+        - $ref: '#/components/parameters/env'
+        - $ref: '#/components/parameters/model'
+        - $ref: '#/components/parameters/firmwareVersion'
+        - $ref: '#/components/parameters/applicationTypeOpt'
+        - $ref: '#/components/parameters/partnerId'
+      responses:
+        '200':
+          description: T2 log uploader settings found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogUploaderT2SettingsResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    t2Settings:
+                      enabled: true
+                      uploadInterval: 1800
+                      endpoints:
+                        - "https://t2logs.example.com/endpoint1"
+                        - "https://t2logs.example.com/endpoint2"
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: No matching T2 log uploader settings found
+  /loguploader/getT2Settings/{applicationType}:
+    get:
+      summary: Get T2 log uploader settings by application type
+      description: Retrieve T2 log uploader settings for a device and application type.
+      parameters:
+        - $ref: '#/components/parameters/applicationType'
+        - $ref: '#/components/parameters/estbMacAddress'
+        - $ref: '#/components/parameters/env'
+        - $ref: '#/components/parameters/model'
+        - $ref: '#/components/parameters/firmwareVersion'
+        - $ref: '#/components/parameters/partnerId'
+      responses:
+        '200':
+          description: T2 log uploader settings found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogUploaderT2SettingsResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    t2Settings:
+                      enabled: true
+                      uploadInterval: 1800
+                      endpoints:
+                        - "https://t2logs.example.com/endpoint1"
+                        - "https://t2logs.example.com/endpoint2"
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: No matching T2 log uploader settings found
+  /loguploader/getTelemetryProfiles:
+    get:
+      summary: Get telemetry profiles
+      description: Retrieve telemetry profiles for a device.
+      parameters:
+        - $ref: '#/components/parameters/estbMacAddress'
+        - $ref: '#/components/parameters/env'
+        - $ref: '#/components/parameters/model'
+        - $ref: '#/components/parameters/firmwareVersion'
+        - $ref: '#/components/parameters/applicationTypeOpt'
+        - $ref: '#/components/parameters/partnerId'
+      responses:
+        '200':
+          description: Telemetry profiles found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryProfilesResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    profiles:
+                      - id: "telemetry1"
+                        name: "Default Telemetry"
+                        reportingInterval: 3600
+                        metrics:
+                          - "cpu_usage"
+                          - "memory_usage"
+                      - id: "telemetry2"
+                        name: "Advanced Telemetry"
+                        reportingInterval: 1800
+                        metrics:
+                          - "disk_io"
+                          - "network_latency"
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: No matching telemetry profiles found
+  /loguploader/getTelemetryProfiles/{applicationType}:
+    get:
+      summary: Get telemetry profiles by application type
+      description: Retrieve telemetry profiles for a device and application type.
+      parameters:
+        - $ref: '#/components/parameters/applicationType'
+        - $ref: '#/components/parameters/estbMacAddress'
+        - $ref: '#/components/parameters/env'
+        - $ref: '#/components/parameters/model'
+        - $ref: '#/components/parameters/firmwareVersion'
+        - $ref: '#/components/parameters/partnerId'
+      responses:
+        '200':
+          description: Telemetry profiles found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryProfilesResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    profiles:
+                      - id: "telemetry1"
+                        name: "Default Telemetry"
+                        reportingInterval: 3600
+                        metrics:
+                          - "cpu_usage"
+                          - "memory_usage"
+                      - id: "telemetry2"
+                        name: "Advanced Telemetry"
+                        reportingInterval: 1800
+                        metrics:
+                          - "disk_io"
+                          - "network_latency"
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: No matching telemetry profiles found
+  /estbfirmware/checkMinimumFirmware:
+    get:
+      summary: Check minimum firmware version
+      description: Check if the device firmware version meets the minimum required version.
+      parameters:
+        - in: query
+          name: eStbMac
+          schema:
+            type: string
+            example: "A1B2C3D4E5F6"
+            pattern: "^[A-F0-9]{12}$"
+          required: true
+          description: MAC address of the device (12 uppercase hex digits, no separators). Parameter name must be 'eStbMac'.
+        - in: query
+          name: model
+          schema:
+            type: string
+            example: "XG1V4"
+          required: true
+          description: Device model identifier.
+        - in: query
+          name: firmwareVersion
+          schema:
+            type: string
+            example: "X1-5.2.1"
+            pattern: "^[A-Za-z0-9_.-]+$"
+          required: true
+          description: Current firmware version of the device.
+        - in: query
+          name: ipAddress
+          schema:
+            type: string
+            format: ipv4
+          required: true
+          description: Device IP address (required).
+        - in: query
+          name: env
+          schema:
+            type: string
+            example: "prod"
+            enum: [prod, dev, test]
+          required: true
+          description: Environment (required).
+        - in: query
+          name: applicationType
+          schema:
+            type: string
+            example: "stb"
+            enum: [stb, xhome]
+          required: false
+          description: Application type (optional, but recommended for multi-app environments).
+        - in: query
+          name: partnerId
+          schema:
+            type: string
+            example: "comcast"
+            pattern: "^[A-Za-z0-9_.\-,:;]{3,32}$"
+          required: false
+          description: Partner identifier (optional).
+      responses:
+        '200':
+          description: Minimum firmware check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MinimumFirmwareCheckResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    meetsMinimum: true
+                    requiredVersion: "X1-5.2.0"
+                    currentVersion: "X1-5.2.1"
+        '400':
+          description: Invalid request parameters (e.g., missing eStbMac, model, or firmwareVersion)
+        '404':
+          description: No minimum firmware requirement found
+    post:
+      summary: Check minimum firmware version (POST)
+      description: Check if the device firmware version meets the minimum required version using form data.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                eStbMac:
+                  type: string
+                  example: "A1B2C3D4E5F6"
+                  pattern: "^[A-F0-9]{12}$"
+                model:
+                  type: string
+                  example: "XG1V4"
+                firmwareVersion:
+                  type: string
+                  example: "X1-5.2.1"
+                  pattern: "^[A-Za-z0-9_.-]+$"
+                ipAddress:
+                  type: string
+                  format: ipv4
+                env:
+                  type: string
+                  example: "prod"
+                  enum: [prod, dev, test]
+                applicationType:
+                  type: string
+                  example: "stb"
+                  enum: [stb, xhome]
+                partnerId:
+                  type: string
+                  example: "comcast"
+                  pattern: "^[A-Za-z0-9_.\-,:;]{3,32}$"
+              required:
+                - eStbMac
+                - model
+                - firmwareVersion
+                - ipAddress
+                - env
+      responses:
+        '200':
+          description: Minimum firmware check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MinimumFirmwareCheckResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    meetsMinimum: true
+                    requiredVersion: "X1-5.2.0"
+                    currentVersion: "X1-5.2.1"
+        '400':
+          description: Invalid request parameters (e.g., missing eStbMac, model, or firmwareVersion)
+        '404':
+          description: No minimum firmware requirement found
+      responses:
+        '200':
+          description: Minimum firmware check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MinimumFirmwareCheckResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    meetsMinimum: true
+                    requiredVersion: "X1-5.2.0"
+                    currentVersion: "X1-5.2.1"
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: No minimum firmware requirement found
+  /xconf/{applicationType}/runningFirmwareVersion/info:
+    get:
+      summary: Get running firmware version info
+      description: Retrieve information about the running firmware version for a device and application type.
+      parameters:
+        - $ref: '#/components/parameters/applicationType'
+        - in: query
+          name: eStbMac
+          schema:
+            type: string
+            example: "A1B2C3D4E5F6"
+            pattern: "^[A-F0-9]{12}$"
+          required: true
+          description: MAC address of the device (12 uppercase hex digits, no separators). Parameter name must be 'eStbMac'.
+        - in: query
+          name: model
+          schema:
+            type: string
+            example: "XG1V4"
+          required: true
+          description: Device model identifier.
+        - in: query
+          name: firmwareVersion
+          schema:
+            type: string
+            example: "X1-5.2.1"
+            pattern: "^[A-Za-z0-9_.-]+$"
+          required: true
+          description: Current firmware version of the device.
+        - in: query
+          name: ipAddress
+          schema:
+            type: string
+            format: ipv4
+          required: true
+          description: Device IP address (required).
+        - in: query
+          name: env
+          schema:
+            type: string
+            example: "prod"
+            enum: [prod, dev, test]
+          required: true
+          description: Environment (required).
+        - in: query
+          name: partnerId
+          schema:
+            type: string
+            example: "comcast"
+            pattern: "^[A-Za-z0-9_.\-,:;]{3,32}$"
+          required: false
+          description: Partner identifier (optional).
+      responses:
+        '200':
+          description: Running firmware version info found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FirmwareVersionInfoResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    firmwareVersion: "X1-5.2.1"
+                    buildDate: "2025-09-17T12:00:00Z"
+                    releaseNotes: "Bug fixes and performance improvements."
+        '400':
+          description: Invalid request parameters (e.g., missing eStbMac, model, or firmwareVersion)
+        '404':
+          description: No running firmware version info found
+    post:
+      summary: Get running firmware version info (POST)
+      description: Retrieve information about the running firmware version for a device and application type using form data.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                eStbMac:
+                  type: string
+                  example: "A1B2C3D4E5F6"
+                  pattern: "^[A-F0-9]{12}$"
+                model:
+                  type: string
+                  example: "XG1V4"
+                firmwareVersion:
+                  type: string
+                  example: "X1-5.2.1"
+                  pattern: "^[A-Za-z0-9_.-]+$"
+                ipAddress:
+                  type: string
+                  format: ipv4
+                env:
+                  type: string
+                  example: "prod"
+                  enum: [prod, dev, test]
+                partnerId:
+                  type: string
+                  example: "comcast"
+                  pattern: "^[A-Za-z0-9_.\-,:;]{3,32}$"
+              required:
+                - eStbMac
+                - model
+                - firmwareVersion
+                - ipAddress
+                - env
+      responses:
+        '200':
+          description: Running firmware version info found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FirmwareVersionInfoResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    firmwareVersion: "X1-5.2.1"
+                    buildDate: "2025-09-17T12:00:00Z"
+                    releaseNotes: "Bug fixes and performance improvements."
+        '400':
+          description: Invalid request parameters (e.g., missing eStbMac, model, or firmwareVersion)
+        '404':
+          description: No running firmware version info found
+      responses:
+        '200':
+          description: Running firmware version info found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FirmwareVersionInfoResponse'
+              examples:
+                success:
+                  summary: Example response
+                  value:
+                    firmwareVersion: "X1-5.2.1"
+                    buildDate: "2025-09-17T12:00:00Z"
+                    releaseNotes: "Bug fixes and performance improvements."
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: No running firmware version info found
+components:
+  schemas:
+    MinimumFirmwareCheckResponse:
+      type: object
+      properties:
+        meetsMinimum:
+          type: boolean
+          description: Whether the device meets the minimum firmware requirement.
+        requiredVersion:
+          type: string
+          description: The minimum required firmware version.
+        currentVersion:
+          type: string
+          description: The current firmware version of the device.
+    FirmwareVersionInfoResponse:
+      type: object
+      properties:
+        firmwareVersion:
+          type: string
+          description: The running firmware version.
+        buildDate:
+          type: string
+          format: date-time
+          description: The build date of the firmware.
+        releaseNotes:
+          type: string
+          description: Release notes for the firmware version.
+    FeatureControlSettingsResponse:
+      type: object
+      properties:
+        applicationType:
+          type: string
+          description: Application type identifier.
+        features:
+          type: array
+          description: List of feature control settings.
+          items:
+            $ref: '#/components/schemas/FeatureSetting'
+    FeatureSetting:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Feature name.
+        enabled:
+          type: boolean
+          description: Whether the feature is enabled.
+        description:
+          type: string
+          description: Description of the feature.
+    FirmwareSwuResponse:
+      type: object
+      properties:
+        applicationType:
+          type: string
+          description: Application type identifier.
+        swuVersion:
+          type: string
+          description: Software update version.
+        downloadUrl:
+          type: string
+          description: URL to download the firmware.
+        releaseNotes:
+          type: string
+          description: Release notes for the firmware.
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: HTTP status code.
+        message:
+          type: string
+          description: Error message.
+        details:
+          type: string
+          description: Additional error details, if any.
+  parameters:
+    estbMacAddress:
+      in: query
+      name: estbMacAddress
+      schema:
+        type: string
+        example: "A1B2C3D4E5F6"
+        pattern: "^[A-F0-9]{12}$"
+      required: true
+      description: |
+        MAC address of the device (12 uppercase hex digits, no separators).
+        Example: A1B2C3D4E5F6
+    env:
+      in: query
+      name: env
+      schema:
+        type: string
+        example: "prod"
+        enum: [prod, dev, test]
+      required: false
+      description: |
+        Environment (e.g., prod, dev, test). Optional.
+    model:
+      in: query
+      name: model
+      schema:
+        type: string
+        example: "XG1V4"
+      required: false
+      description: |
+        Device model identifier. Optional.
+        Example: XG1V4
+    firmwareVersion:
+      in: query
+      name: firmwareVersion
+      schema:
+        type: string
+        example: "X1-5.2.1"
+        pattern: "^[A-Za-z0-9_.-]+$"
+      required: false
+      description: |
+        Current firmware version of the device. Optional.
+        Example: X1-5.2.1
+    applicationType:
+      in: path
+      name: applicationType
+      schema:
+        type: string
+        example: "stb"
+        enum: [stb, xhome]
+      required: true
+      description: |
+        Application type (e.g., stb, xhome). Required in path.
+    applicationTypeOpt:
+      in: query
+      name: applicationType
+      schema:
+        type: string
+        example: "stb"
+        enum: [stb, xhome]
+      required: false
+      description: |
+        Application type (e.g., stb, xhome). Optional in query.
+    partnerId:
+      in: query
+      name: partnerId
+      schema:
+        type: string
+        example: "comcast"
+        pattern: "^[A-Za-z0-9_.\-,:;]{3,32}$"
+      required: false
+      description: |
+        Partner identifier. Optional.
+        Example: comcast
+
