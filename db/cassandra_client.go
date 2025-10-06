@@ -93,8 +93,19 @@ type PenetrationMetrics struct {
 	RfcTs                   time.Time
 }
 
+type DistributedLockSettings struct {
+	retries      int
+	retryInMsecs int
+}
+
+var distributedLockSettings = DistributedLockSettings{
+	retries:      3,
+	retryInMsecs: 500,
+}
+
 func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraClient, error) {
-	var xpcKeyspace string
+	distributedLockSettings.retries = int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_retries", 3))
+	distributedLockSettings.retryInMsecs = int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_retry_in_msecs", 500))
 
 	// init
 	log.Debug("Connecting to Cassandra with DefaultCassandraConnection")
@@ -200,7 +211,7 @@ func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Con
 	}
 	log.Debug(fmt.Sprintf("Init CassandraClient with keyspace: %v", cluster.Keyspace))
 
-	xpcKeyspace = conf.GetString("xconfwebconfig.database.xpc_keyspace", DefaultXpcKeyspace)
+	xpcKeyspace := conf.GetString("xconfwebconfig.database.xpc_keyspace", DefaultXpcKeyspace)
 	xpcPrecookTableName := conf.GetString("xconfwebconfig.database.xpc_precook_table_name", DefaultXpcPrecookTableName)
 	xconfRecookingStatusTableName := conf.GetString("xconfwebconfig.database.xconf_recooking_status_table_name", DefaultXconfRecookingStatusTableName)
 
@@ -923,6 +934,7 @@ func (c *CassandraClient) GetLockInfo(lockName string) (map[string]interface{}, 
 }
 
 type DistributedLock struct {
+	DistributedLockSettings
 	name string
 	ttl  int
 }
@@ -932,9 +944,38 @@ func NewDistributedLock(name string, ttl int) *DistributedLock {
 		return nil
 	}
 	return &DistributedLock{
-		name: name,
-		ttl:  ttl,
+		DistributedLockSettings: distributedLockSettings,
+		name:                    name,
+		ttl:                     ttl,
 	}
+}
+
+func (dl DistributedLock) Name() string {
+	return dl.name
+}
+
+func (dl DistributedLock) TTL() int {
+	return dl.ttl
+}
+
+func (dl DistributedLock) Retries() int {
+	return dl.retries
+}
+
+func (dl DistributedLock) RetryInMsecs() int {
+	return dl.retryInMsecs
+}
+
+func (dl *DistributedLock) SetTTL(secs int) {
+	dl.ttl = secs
+}
+
+func (dl *DistributedLock) SetRetries(retries int) {
+	dl.retries = retries
+}
+
+func (dl *DistributedLock) SetRetryInMsecs(retryInMsecs int) {
+	dl.retryInMsecs = retryInMsecs
 }
 
 func (dl DistributedLock) Lock(owner string) (e error) {
@@ -943,22 +984,38 @@ func (dl DistributedLock) Lock(owner string) (e error) {
 		return
 	}
 
-	if err := GetDatabaseClient().AcquireLock(dl.name, owner, dl.ttl); err != nil {
-		e = fmt.Errorf("unable to lock '%s' table: %w", dl.name, err)
-		log.Error(e)
+	retryWaitTime := time.Duration(dl.retryInMsecs) * time.Millisecond
+
+	var err error
+	for attempt := 1; attempt <= dl.retries; attempt++ {
+		err = GetDatabaseClient().AcquireLock(dl.name, owner, dl.ttl)
+		if err == nil {
+			return
+		}
+
+		log.Debug(fmt.Sprintf("Lock acquisition attempt %d/%d failed for '%s': %v", attempt, dl.retries, dl.name, err))
+
+		// Don't wait after the last attempt
+		if attempt < dl.retries {
+			log.Debug(fmt.Sprintf("Waiting %v before retry attempt %d for lock '%s'", retryWaitTime, attempt+1, dl.name))
+			time.Sleep(retryWaitTime)
+		}
 	}
+
+	e = fmt.Errorf("unable to lock '%s' table after %d attempts: %w", dl.name, dl.retries, err)
+	log.Error(e)
 
 	return
 }
 
-func (tl DistributedLock) Unlock(owner string) (e error) {
+func (dl DistributedLock) Unlock(owner string) (e error) {
 	if util.IsBlank(owner) {
-		e = fmt.Errorf("owner is required to unlock '%s' table", tl.name)
+		e = fmt.Errorf("owner is required to unlock '%s' table", dl.name)
 		return
 	}
 
-	if err := GetDatabaseClient().ReleaseLock(tl.name, owner); err != nil {
-		e = fmt.Errorf("unable to unlock '%s' table: %w", tl.name, err)
+	if err := GetDatabaseClient().ReleaseLock(dl.name, owner); err != nil {
+		e = fmt.Errorf("unable to unlock '%s' table: %w", dl.name, err)
 		log.Error(e)
 	}
 
@@ -966,41 +1023,57 @@ func (tl DistributedLock) Unlock(owner string) (e error) {
 }
 
 // LockRow locks a specific row in the table identified by rowKey.
-// The lock name is constructed as "<tableName>::<rowKey>".
+// The lock name is constructed as "<tableName>|<rowKey>".
 // This allows for row-level locking within the same table using the existing locking mechanism.
 // For a given resource either resource-level or sub-resource-level locks can be used, but not both.
-func (tl DistributedLock) LockRow(owner string, rowKey string) (e error) {
+func (dl DistributedLock) LockRow(owner string, rowKey string) (e error) {
 	if util.IsBlank(owner) {
-		e = fmt.Errorf("owner is required to lock '%s' table", tl.name)
+		e = fmt.Errorf("owner is required to lock '%s' table", dl.name)
 		return
 	}
 	if util.IsBlank(rowKey) {
-		e = fmt.Errorf("rowKey is required to lock '%s' table", tl.name)
+		e = fmt.Errorf("rowKey is required to lock '%s' table", dl.name)
 		return
 	}
 
-	lockName := tl.name + LockNameDelimiter + rowKey
-	if err := GetDatabaseClient().AcquireLock(lockName, owner, tl.ttl); err != nil {
-		e = fmt.Errorf("unable to lock '%s' table row '%s': %w", tl.name, rowKey, err)
-		log.Error(e)
+	lockName := dl.name + LockNameDelimiter + rowKey
+	retryWaitTime := time.Duration(dl.retryInMsecs) * time.Millisecond
+
+	var err error
+	for attempt := 1; attempt <= dl.retries; attempt++ {
+		err = GetDatabaseClient().AcquireLock(lockName, owner, dl.ttl)
+		if err == nil {
+			return
+		}
+
+		log.Debug(fmt.Sprintf("Lock acquisition attempt %d/%d failed for '%s': %v", attempt, dl.retries, lockName, err))
+
+		// Don't wait after the last attempt
+		if attempt < dl.retries {
+			log.Debug(fmt.Sprintf("Waiting %v before retry attempt %d for lock '%s'", retryWaitTime, attempt+1, lockName))
+			time.Sleep(retryWaitTime)
+		}
 	}
+
+	e = fmt.Errorf("unable to lock '%s' table row '%s' after %d attempts: %w", dl.name, rowKey, dl.retries, err)
+	log.Error(e)
 
 	return
 }
 
-func (tl DistributedLock) UnlockRow(owner string, rowKey string) (e error) {
+func (dl DistributedLock) UnlockRow(owner string, rowKey string) (e error) {
 	if util.IsBlank(owner) {
-		e = fmt.Errorf("owner is required to unlock '%s' table", tl.name)
+		e = fmt.Errorf("owner is required to unlock '%s' table", dl.name)
 		return
 	}
 	if util.IsBlank(rowKey) {
-		e = fmt.Errorf("rowKey is required to unlock '%s' table", tl.name)
+		e = fmt.Errorf("rowKey is required to unlock '%s' table", dl.name)
 		return
 	}
 
-	lockName := tl.name + LockNameDelimiter + rowKey
+	lockName := dl.name + LockNameDelimiter + rowKey
 	if err := GetDatabaseClient().ReleaseLock(lockName, owner); err != nil {
-		e = fmt.Errorf("unable to unlock '%s' table row '%s': %w", tl.name, rowKey, err)
+		e = fmt.Errorf("unable to unlock '%s' table row '%s': %w", dl.name, rowKey, err)
 		log.Error(e)
 	}
 
