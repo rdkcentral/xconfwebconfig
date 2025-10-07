@@ -97,11 +97,6 @@ type AppMetricsConfig struct {
 }
 
 func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
-	certValidationEnabled := conf.GetBoolean("xconfwebconfig.http_client.enable_cert_validation", true)
-	if !certValidationEnabled {
-		log.Warn("TLS certificate validation is disabled by config flag")
-		return nil, nil
-	}
 	certFile := conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file")
 	if len(certFile) == 0 {
 		return nil, errors.New("xconfwebconfig.http_client.ca_comodo_cert_file not specified")
