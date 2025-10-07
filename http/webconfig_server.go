@@ -22,11 +22,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -97,13 +96,15 @@ type AppMetricsConfig struct {
 }
 
 func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
-	certFile := conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file")
-	if len(certFile) == 0 {
-		return nil, errors.New("xconfwebconfig.http_client.ca_comodo_cert_file not specified")
+	certValidationEnabled := conf.GetBoolean("xconfwebconfig.http_client.enable_cert_validation", true)
+	if !certValidationEnabled {
+		log.Warn("TLS certificate validation is disabled by config flag")
+		return nil, nil
 	}
-	caCertPEM, err := os.ReadFile(certFile)
+	caCertPEM, err := ioutil.ReadFile(conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file"))
 	if err != nil {
-		return nil, fmt.Errorf("unable to read comodo cert file %s with error: %+v", certFile, err)
+		return nil, fmt.Errorf("unable to read comodo cert file %s with error: %+v",
+			conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file"), err)
 	}
 
 	roots := x509.NewCertPool()
@@ -112,13 +113,13 @@ func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
 		return nil, fmt.Errorf("unable to append cert from pem: %+v", err)
 	}
 
-	certFile = conf.GetString("xconfwebconfig.http_client.cert_file")
+	certFile := conf.GetString("xconfwebconfig.http_client.cert_file")
 	if len(certFile) == 0 {
-		return nil, errors.New("xconfwebconfig.http_client.cert_file not specified")
+		return nil, fmt.Errorf("missing file %v", certFile)
 	}
 	privateKeyFile := conf.GetString("xconfwebconfig.http_client.private_key_file")
 	if len(privateKeyFile) == 0 {
-		return nil, errors.New("xconfwebconfig.http_client.private_key_file not specified")
+		return nil, fmt.Errorf("missing file %v", privateKeyFile)
 	}
 	cert, err := tls.LoadX509KeyPair(certFile, privateKeyFile)
 	if err != nil {
