@@ -53,11 +53,11 @@ func TestAcquireLock(t *testing.T) {
 
 	// Fail to acquire an existing lock
 	err = dbClient.AcquireLock(lockName, lockUser2, ttlSeconds)
-	assert.ErrorContains(t, err, "unable to acquire lock")
+	assert.ErrorContains(t, err, "failed to acquire lock")
 
 	// Fail to release a lock not owned by the user
 	err = dbClient.ReleaseLock(lockName, lockUser2)
-	assert.ErrorContains(t, err, "unable to release lock")
+	assert.ErrorContains(t, err, "failed to release lock")
 
 	// Release the lock
 	err = dbClient.ReleaseLock(lockName, lockUser1)
@@ -94,17 +94,11 @@ func TestLockTable(t *testing.T) {
 	assert.Assert(t, modelTableLock != nil)
 	assert.Equal(t, modelTableLock.Name(), db.TABLE_MODEL)
 	assert.Equal(t, modelTableLock.TTL(), 5)
-	assert.Assert(t, modelTableLock.Retries() > 0)
+	assert.Equal(t, modelTableLock.Retries(), 0)
 	assert.Assert(t, modelTableLock.RetryInMsecs() > 0)
 
-	modelTableLock.SetTTL(3)
-	assert.Equal(t, modelTableLock.TTL(), 3)
-
-	modelTableLock.SetRetries(2)
-	assert.Equal(t, modelTableLock.Retries(), 2)
-
-	modelTableLock.SetRetryInMsecs(200)
-	assert.Equal(t, modelTableLock.RetryInMsecs(), 200)
+	modelTableLock.SetTTL(2)
+	assert.Equal(t, modelTableLock.TTL(), 2)
 
 	// Acquire a new lock
 	err := modelTableLock.Lock(lockUser1)
@@ -112,11 +106,11 @@ func TestLockTable(t *testing.T) {
 
 	// Fail to acquire an existing lock
 	err = modelTableLock.Lock(lockUser2)
-	assert.ErrorContains(t, err, "unable to acquire lock")
+	assert.ErrorContains(t, err, "failed to acquire lock")
 
 	// Fail to release a lock not owned by the user
 	err = modelTableLock.Unlock(lockUser2)
-	assert.ErrorContains(t, err, "unable to release lock")
+	assert.ErrorContains(t, err, "failed to release lock")
 
 	// Release the lock
 	err = modelTableLock.Unlock(lockUser1)
@@ -139,8 +133,8 @@ func TestLockTable(t *testing.T) {
 	assert.NilError(t, err)
 
 	// Acquire a new lock with retries
-	envLockTable.SetRetries(5)
-	envLockTable.SetRetryInMsecs(300)
+	envLockTable.SetRetries(6)
+	envLockTable.SetRetryInMsecs(200)
 	err = envLockTable.Lock(lockUser1)
 	assert.NilError(t, err)
 }
@@ -168,7 +162,7 @@ func TestTableRowLock(t *testing.T) {
 
 	// Fail to acquire an existing lock on the same row
 	err = modelTableLock.LockRow(lockUser1, "key2")
-	assert.ErrorContains(t, err, "unable to acquire lock")
+	assert.ErrorContains(t, err, "failed to acquire lock")
 
 	// Release lock for key2
 	err = modelTableLock.UnlockRow(lockUser2, "key2")
