@@ -186,7 +186,7 @@ func generateSecurityToken(input string, fields log.Fields) string {
 	signingKey.Write([]byte(input))
 	securityToken := signingKey.Sum(nil)
 	encodedToken := SecurityTokenCustomBase64Encoding.EncodeToString(securityToken)
-	fields[SECURITY_TOKEN_KEY] = encodedToken
+	fields[fmt.Sprintf("%s.token", SECURITY_TOKEN_KEY)] = encodedToken
 	log.WithFields(fields).Debug("Successfully generated security token")
 	return encodedToken
 }
