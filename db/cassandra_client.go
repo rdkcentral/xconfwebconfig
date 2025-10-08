@@ -98,14 +98,11 @@ type DistributedLockSettings struct {
 	retryInMsecs int
 }
 
-var distributedLockSettings = DistributedLockSettings{
-	retries:      3,
-	retryInMsecs: 500,
-}
+var distributedLockSettings = DistributedLockSettings{}
 
 func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraClient, error) {
-	distributedLockSettings.retries = int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_retries", 3))
-	distributedLockSettings.retryInMsecs = int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_retry_in_msecs", 500))
+	distributedLockSettings.retries = int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_retries", 0))
+	distributedLockSettings.retryInMsecs = int(conf.GetInt32("xconfwebconfig.xconf.distributed_lock_retry_in_msecs", 200))
 
 	// init
 	log.Debug("Connecting to Cassandra with DefaultCassandraConnection")
@@ -882,7 +879,7 @@ func (c *CassandraClient) AcquireLock(lockName string, lockedBy string, ttl int)
 	// Lock exists, check if it's expired and try to update
 	if exExpiresAt, ok := existingLock["expires_at"].(time.Time); ok {
 		if time.Now().Before(exExpiresAt) {
-			return fmt.Errorf("unable to acquire lock '%s' held by '%s' until %s", lockName, existingLock["locked_by"], exExpiresAt)
+			return fmt.Errorf("failed to acquire lock '%s' held by '%s' until %s", lockName, existingLock["locked_by"], exExpiresAt)
 		}
 	}
 
@@ -892,7 +889,7 @@ func (c *CassandraClient) AcquireLock(lockName string, lockedBy string, ttl int)
 		return fmt.Errorf("failed to acquire expired lock '%s': %w", lockName, err)
 	}
 	if !applied {
-		return fmt.Errorf("unable to acquire expired lock '%s' held by '%s'", lockName, existingLock["locked_by"])
+		return fmt.Errorf("failed to acquire expired lock '%s' held by '%s'", lockName, existingLock["locked_by"])
 	}
 
 	log.Debug(fmt.Sprintf("Lock '%s' acquired by '%s'", lockName, lockedBy))
@@ -911,7 +908,7 @@ func (c *CassandraClient) ReleaseLock(lockName string, lockedBy string) error {
 		return fmt.Errorf("failed to release lock '%s': %w", lockName, err)
 	}
 	if !applied {
-		return fmt.Errorf("unable to release lock '%s' held by '%s'", lockName, existingLock["locked_by"])
+		return fmt.Errorf("failed to release lock '%s' held by '%s'", lockName, existingLock["locked_by"])
 	}
 
 	log.Debug(fmt.Sprintf("Lock '%s' released by '%s'", lockName, lockedBy))
@@ -987,22 +984,22 @@ func (dl DistributedLock) Lock(owner string) (e error) {
 	retryWaitTime := time.Duration(dl.retryInMsecs) * time.Millisecond
 
 	var err error
-	for attempt := 1; attempt <= dl.retries; attempt++ {
+	var attempt int // attempt=0 is NOT considered a retry
+	for attempt = 0; attempt <= dl.retries; attempt++ {
+		if attempt > 0 {
+			time.Sleep(retryWaitTime)
+		}
 		err = GetDatabaseClient().AcquireLock(dl.name, owner, dl.ttl)
 		if err == nil {
 			return
 		}
-
-		log.Debug(fmt.Sprintf("Lock acquisition attempt %d/%d failed for '%s': %v", attempt, dl.retries, dl.name, err))
-
-		// Don't wait after the last attempt
-		if attempt < dl.retries {
-			log.Debug(fmt.Sprintf("Waiting %v before retry attempt %d for lock '%s'", retryWaitTime, attempt+1, dl.name))
-			time.Sleep(retryWaitTime)
-		}
 	}
 
-	e = fmt.Errorf("unable to lock '%s' table after %d attempts: %w", dl.name, dl.retries, err)
+	if dl.retries > 0 {
+		e = fmt.Errorf("unable to lock table '%s' after %d attempts: %w", dl.name, attempt+1, err)
+	} else {
+		e = fmt.Errorf("unable to lock table '%s': %w", dl.name, err)
+	}
 	log.Error(e)
 
 	return
@@ -1010,12 +1007,12 @@ func (dl DistributedLock) Lock(owner string) (e error) {
 
 func (dl DistributedLock) Unlock(owner string) (e error) {
 	if util.IsBlank(owner) {
-		e = fmt.Errorf("owner is required to unlock '%s' table", dl.name)
+		e = fmt.Errorf("owner is required to unlock table '%s'", dl.name)
 		return
 	}
 
 	if err := GetDatabaseClient().ReleaseLock(dl.name, owner); err != nil {
-		e = fmt.Errorf("unable to unlock '%s' table: %w", dl.name, err)
+		e = fmt.Errorf("unable to unlock table '%s': %w", dl.name, err)
 		log.Error(e)
 	}
 
@@ -1040,22 +1037,22 @@ func (dl DistributedLock) LockRow(owner string, rowKey string) (e error) {
 	retryWaitTime := time.Duration(dl.retryInMsecs) * time.Millisecond
 
 	var err error
-	for attempt := 1; attempt <= dl.retries; attempt++ {
+	var attempt int // attempt=0 is NOT considered a retry
+	for attempt = 0; attempt <= dl.retries; attempt++ {
+		if attempt > 0 {
+			time.Sleep(retryWaitTime)
+		}
 		err = GetDatabaseClient().AcquireLock(lockName, owner, dl.ttl)
 		if err == nil {
 			return
 		}
-
-		log.Debug(fmt.Sprintf("Lock acquisition attempt %d/%d failed for '%s': %v", attempt, dl.retries, lockName, err))
-
-		// Don't wait after the last attempt
-		if attempt < dl.retries {
-			log.Debug(fmt.Sprintf("Waiting %v before retry attempt %d for lock '%s'", retryWaitTime, attempt+1, lockName))
-			time.Sleep(retryWaitTime)
-		}
 	}
 
-	e = fmt.Errorf("unable to lock '%s' table row '%s' after %d attempts: %w", dl.name, rowKey, dl.retries, err)
+	if dl.retries > 0 {
+		e = fmt.Errorf("unable to lock table '%s' row '%s' after %d attempts: %w", dl.name, rowKey, attempt+1, err)
+	} else {
+		e = fmt.Errorf("unable to lock table '%s' row '%s': %w", dl.name, rowKey, err)
+	}
 	log.Error(e)
 
 	return
@@ -1063,17 +1060,17 @@ func (dl DistributedLock) LockRow(owner string, rowKey string) (e error) {
 
 func (dl DistributedLock) UnlockRow(owner string, rowKey string) (e error) {
 	if util.IsBlank(owner) {
-		e = fmt.Errorf("owner is required to unlock '%s' table", dl.name)
+		e = fmt.Errorf("owner is required to unlock table '%s'", dl.name)
 		return
 	}
 	if util.IsBlank(rowKey) {
-		e = fmt.Errorf("rowKey is required to unlock '%s' table", dl.name)
+		e = fmt.Errorf("rowKey is required to unlock table '%s'", dl.name)
 		return
 	}
 
 	lockName := dl.name + LockNameDelimiter + rowKey
 	if err := GetDatabaseClient().ReleaseLock(lockName, owner); err != nil {
-		e = fmt.Errorf("unable to unlock '%s' table row '%s': %w", dl.name, rowKey, err)
+		e = fmt.Errorf("unable to unlock table '%s' row '%s': %w", dl.name, rowKey, err)
 		log.Error(e)
 	}
 
