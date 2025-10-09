@@ -186,7 +186,6 @@ func generateSecurityToken(input string, fields log.Fields) string {
 	signingKey.Write([]byte(input))
 	securityToken := signingKey.Sum(nil)
 	encodedToken := SecurityTokenCustomBase64Encoding.EncodeToString(securityToken)
-	fields[fmt.Sprintf("%s.token", SECURITY_TOKEN_KEY)] = encodedToken
 	log.WithFields(fields).Debug("Successfully generated security token")
 	return encodedToken
 }
@@ -196,6 +195,7 @@ func (s *SecurityTokenPathConfig) addTokenToUrl(deviceInfo map[string]string, ur
 	if util.IsBlank(securityToken) {
 		return urlString
 	}
+	fields[fmt.Sprintf("%s.token", SECURITY_TOKEN_KEY)] = securityToken
 	urlStringWithProtocol := urlString
 	// add protocol so we an parse the url properly
 	if isFqdn {
