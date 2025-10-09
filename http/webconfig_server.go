@@ -95,6 +95,11 @@ type AppMetricsConfig struct {
 }
 
 func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
+	certValidationEnabled := conf.GetBoolean("xconfwebconfig.http_client.enable_cert_validation", true)
+	if !certValidationEnabled {
+		log.Warn("TLS certificate validation is disabled by config flag")
+		return nil, nil
+	}
 	caCertPEM, err := ioutil.ReadFile(conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file"))
 	if err != nil {
 		return nil, fmt.Errorf("unable to read comodo cert file %s with error: %+v",
