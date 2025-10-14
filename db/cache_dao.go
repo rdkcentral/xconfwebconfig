@@ -78,7 +78,7 @@ func (csd cachedSimpleDaoImpl) GetOne(tableName string, rowKey string) (interfac
 		return nil, err
 	}
 
-	if !GetCacheManager().Settings.cloneDataEnabled {
+	if !GetCacheManager().settings.cloneDataEnabled {
 		return obj, nil
 	}
 
@@ -134,7 +134,7 @@ func (csd cachedSimpleDaoImpl) GetOneFromCacheOnly(tableName string, rowKey stri
 		return nil, gocql.ErrNotFound
 	}
 
-	if !GetCacheManager().Settings.cloneDataEnabled {
+	if !GetCacheManager().settings.cloneDataEnabled {
 		return obj, nil
 	}
 
@@ -251,7 +251,7 @@ func (csd cachedSimpleDaoImpl) GetAllAsList(tableName string, maxResults int) ([
 		objs = values
 	}
 
-	if !GetCacheManager().Settings.cloneDataEnabled {
+	if !GetCacheManager().settings.cloneDataEnabled {
 		return objs, nil
 	}
 
@@ -278,7 +278,7 @@ func (csd cachedSimpleDaoImpl) GetAllAsMap(tableName string) (map[interface{}]in
 
 	objMap := cache.GetAll()
 
-	if !GetCacheManager().Settings.cloneDataEnabled {
+	if !GetCacheManager().settings.cloneDataEnabled {
 		return objMap, nil
 	}
 
