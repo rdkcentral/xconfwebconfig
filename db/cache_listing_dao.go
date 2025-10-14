@@ -79,7 +79,7 @@ func (cld cachedListingDaoImpl) GetOne(tableName string, rowKey string, key2 int
 		return nil, err
 	}
 
-	if !GetCacheManager().Settings.cloneDataEnabled {
+	if !GetCacheManager().settings.cloneDataEnabled {
 		return obj, nil
 	}
 
@@ -171,7 +171,7 @@ func (cld cachedListingDaoImpl) GetAll(tableName string, rowKey string) ([]inter
 		return nil, err
 	}
 
-	cloneData := GetCacheManager().Settings.cloneDataEnabled
+	cloneData := GetCacheManager().settings.cloneDataEnabled
 	result := make([]interface{}, len(rowKey))
 
 	// find all records in cache with key that has rowKey + delimiter as the prefix
@@ -202,7 +202,7 @@ func (cld cachedListingDaoImpl) GetAllAsMap(tableName string, rowKey string, key
 		return nil, err
 	}
 
-	cloneData := GetCacheManager().Settings.cloneDataEnabled
+	cloneData := GetCacheManager().settings.cloneDataEnabled
 	var result = make(map[interface{}]interface{})
 
 	for _, key2 := range key2List {
