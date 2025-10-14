@@ -23,26 +23,29 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/rdkcentral/xconfwebconfig/util"
-
+	cache "github.com/Comcast/goburrow-cache"
 	"github.com/go-akka/configuration"
 	"github.com/gocql/gocql"
+	"github.com/rdkcentral/xconfwebconfig/util"
 	log "github.com/sirupsen/logrus"
-
-	cache "github.com/Comcast/goburrow-cache"
 )
 
-var Conf *configuration.Config
-
 var (
+	Conf          *configuration.Config
 	syncCacheLock sync.Mutex
 )
 
 // ConfigInjection - dependency injection
 func ConfigInjection(conf *configuration.Config) {
 	Conf = conf
+}
+
+// CacheChangeNotifier is an interface for notifications on cache changed events
+type CacheChangeNotifier interface {
+	Notify(tableName string, changedKey string, operation OperationType)
 }
 
 // CacheRefreshTask background task to refresh cache
@@ -73,7 +76,7 @@ func (t *CacheRefreshTask) doSyncChanges() {
 		_, err := GetCacheManager().SyncChanges(t.lastRefreshedTimestamp, now, true)
 		if err == nil {
 			t.lastRefreshedTimestamp = now
-			t.refreshAttemptsLeft = cacheManager.Settings.retryCountUntilFullRefresh
+			t.refreshAttemptsLeft = cacheManager.settings.retryCountUntilFullRefresh
 			//	Ws.UpdateCacheSyncMetrics(true)
 		} else {
 			log.Errorf("failed to sync cache changes: %v", err)
@@ -108,7 +111,7 @@ func (t *CacheRefreshTask) Run() {
 					_, err := GetCacheManager().SyncChanges(t.lastRefreshedTimestamp, now, true)
 					if err == nil {
 						t.lastRefreshedTimestamp = now
-						t.refreshAttemptsLeft = cacheManager.Settings.retryCountUntilFullRefresh
+						t.refreshAttemptsLeft = cacheManager.settings.retryCountUntilFullRefresh
 					} else {
 						log.Errorf("failed to sync cache changes: %v", err)
 						t.refreshAttemptsLeft--
@@ -185,11 +188,12 @@ type CacheInfo struct {
 
 // CacheManager a cache manager
 type CacheManager struct {
-	Settings                 CacheSettings
+	settings                 CacheSettings
+	cacheChangeNotifier      atomic.Value
 	cacheMap                 map[string]CacheInfo
 	refreshCacheTask         CacheRefreshTask
-	applicationCache         cache.Cache
 	applicationCacheEnabled  bool
+	applicationCache         cache.Cache
 	groupServiceFeatureCache cache.Cache
 }
 
@@ -200,38 +204,38 @@ var refreshCacheMutex sync.Mutex
 var grpCacheLoadfunc func(k cache.Key) (cache.Value, error)
 
 // GetCacheManager Initializes a CacheManager
-func GetCacheManager() CacheManager {
+func GetCacheManager() *CacheManager {
 	initOnce.Do(func() {
 		cacheManager = CacheManager{}
 		cacheManager.cacheMap = make(map[string]CacheInfo)
 
 		if Conf == nil {
 			// Handle ServerConfig not initialized yet
-			cacheManager.Settings.tickDuration = 60000
-			cacheManager.Settings.retryCountUntilFullRefresh = 10
-			cacheManager.Settings.changedKeysTimeWindowSize = 900000
-			cacheManager.Settings.reloadCacheEntries = false
-			cacheManager.Settings.reloadCacheEntriesTimeout = 1
-			cacheManager.Settings.reloadCacheEntriesTimeUnit = "DAYS"
-			cacheManager.Settings.numberOfEntriesToProcessSequentially = 10000
-			cacheManager.Settings.keysetChunkSizeForMassCacheLoad = 500
-			cacheManager.Settings.cloneDataEnabled = false
-			cacheManager.Settings.applicationCacheEnabled = false
-			cacheManager.Settings.groupServiceExpireAfterAccess = 240
-			cacheManager.Settings.groupServiceRefreshAfterWrite = 240
+			cacheManager.settings.tickDuration = 60000
+			cacheManager.settings.retryCountUntilFullRefresh = 10
+			cacheManager.settings.changedKeysTimeWindowSize = 900000
+			cacheManager.settings.reloadCacheEntries = false
+			cacheManager.settings.reloadCacheEntriesTimeout = 1
+			cacheManager.settings.reloadCacheEntriesTimeUnit = "DAYS"
+			cacheManager.settings.numberOfEntriesToProcessSequentially = 10000
+			cacheManager.settings.keysetChunkSizeForMassCacheLoad = 500
+			cacheManager.settings.cloneDataEnabled = false
+			cacheManager.settings.applicationCacheEnabled = false
+			cacheManager.settings.groupServiceExpireAfterAccess = 240
+			cacheManager.settings.groupServiceRefreshAfterWrite = 240
 		} else {
-			cacheManager.Settings.tickDuration = Conf.GetInt32("xconfwebconfig.xconf.cache_tickDuration", 60000)
-			cacheManager.Settings.retryCountUntilFullRefresh = Conf.GetInt32("xconfwebconfig.xconf.cache_retryCountUntilFullRefresh", 10)
-			cacheManager.Settings.changedKeysTimeWindowSize = Conf.GetInt32("xconfwebconfig.xconf.cache_changedKeysTimeWindowSize", 900000)
-			cacheManager.Settings.reloadCacheEntries = Conf.GetBoolean("xconfwebconfig.xconf.cache_reloadCacheEntries", false)
-			cacheManager.Settings.reloadCacheEntriesTimeout = Conf.GetInt64("xconfwebconfig.xconf.cache_reloadCacheEntriesTimeout", 1)
-			cacheManager.Settings.reloadCacheEntriesTimeUnit = Conf.GetString("xconfwebconfig.xconf.cache_reloadCacheEntriesTimeUnit", "DAYS")
-			cacheManager.Settings.numberOfEntriesToProcessSequentially = Conf.GetInt32("xconfwebconfig.xconf.cache_numberOfEntriesToProcessSequentially", 10000)
-			cacheManager.Settings.keysetChunkSizeForMassCacheLoad = Conf.GetInt32("xconfwebconfig.xconf.cache_keysetChunkSizeForMassCacheLoad", 500)
-			cacheManager.Settings.cloneDataEnabled = Conf.GetBoolean("xconfwebconfig.xconf.cache_clone_data_enabled", false)
-			cacheManager.Settings.applicationCacheEnabled = Conf.GetBoolean("xconfwebconfig.xconf.application_cache_enabled", false)
-			cacheManager.Settings.groupServiceExpireAfterAccess = Conf.GetInt64(fmt.Sprintf("xconfwebconfig.%v.cache_expire_after_access_in_mins", Conf.GetString("xconfwebconfig.xconf.group_service_name")))
-			cacheManager.Settings.groupServiceRefreshAfterWrite = Conf.GetInt64(fmt.Sprintf("xconfwebconfig.%v.cache_refresh_after_write_in_mins", Conf.GetString("xconfwebconfig.xconf.group_service_name")))
+			cacheManager.settings.tickDuration = Conf.GetInt32("xconfwebconfig.xconf.cache_tickDuration", 60000)
+			cacheManager.settings.retryCountUntilFullRefresh = Conf.GetInt32("xconfwebconfig.xconf.cache_retryCountUntilFullRefresh", 10)
+			cacheManager.settings.changedKeysTimeWindowSize = Conf.GetInt32("xconfwebconfig.xconf.cache_changedKeysTimeWindowSize", 900000)
+			cacheManager.settings.reloadCacheEntries = Conf.GetBoolean("xconfwebconfig.xconf.cache_reloadCacheEntries", false)
+			cacheManager.settings.reloadCacheEntriesTimeout = Conf.GetInt64("xconfwebconfig.xconf.cache_reloadCacheEntriesTimeout", 1)
+			cacheManager.settings.reloadCacheEntriesTimeUnit = Conf.GetString("xconfwebconfig.xconf.cache_reloadCacheEntriesTimeUnit", "DAYS")
+			cacheManager.settings.numberOfEntriesToProcessSequentially = Conf.GetInt32("xconfwebconfig.xconf.cache_numberOfEntriesToProcessSequentially", 10000)
+			cacheManager.settings.keysetChunkSizeForMassCacheLoad = Conf.GetInt32("xconfwebconfig.xconf.cache_keysetChunkSizeForMassCacheLoad", 500)
+			cacheManager.settings.cloneDataEnabled = Conf.GetBoolean("xconfwebconfig.xconf.cache_clone_data_enabled", false)
+			cacheManager.settings.applicationCacheEnabled = Conf.GetBoolean("xconfwebconfig.xconf.application_cache_enabled", false)
+			cacheManager.settings.groupServiceExpireAfterAccess = Conf.GetInt64(fmt.Sprintf("xconfwebconfig.%v.cache_expire_after_access_in_mins", Conf.GetString("xconfwebconfig.xconf.group_service_name")))
+			cacheManager.settings.groupServiceRefreshAfterWrite = Conf.GetInt64(fmt.Sprintf("xconfwebconfig.%v.cache_refresh_after_write_in_mins", Conf.GetString("xconfwebconfig.xconf.group_service_name")))
 		}
 
 		// Initialize the cache
@@ -245,9 +249,9 @@ func GetCacheManager() CacheManager {
 
 			// Create a LoadingCache for each table
 			var loadingCache cache.LoadingCache
-			if cacheManager.Settings.reloadCacheEntries {
+			if cacheManager.settings.reloadCacheEntries {
 				freshAfterWrite := getDuration(
-					cacheManager.Settings.reloadCacheEntriesTimeout, cacheManager.Settings.reloadCacheEntriesTimeUnit)
+					cacheManager.settings.reloadCacheEntriesTimeout, cacheManager.settings.reloadCacheEntriesTimeUnit)
 				loadingCache = cache.NewLoadingCache(loadFn,
 					cache.WithMaximumSize(0),                     // Unlimited number of entries in the cache.
 					cache.WithRefreshAfterWrite(freshAfterWrite), // Expire entries after specified duration since last created.
@@ -264,8 +268,8 @@ func GetCacheManager() CacheManager {
 		cacheManager.groupServiceFeatureCache = cache.NewLoadingCache(
 			cache.LoaderFunc(GetGrpCacheLoadFunc()),
 			cache.WithMaximumSize(100),
-			cache.WithExpireAfterAccess(time.Duration(cacheManager.Settings.groupServiceExpireAfterAccess)*time.Minute),
-			cache.WithRefreshAfterWrite(time.Duration(cacheManager.Settings.groupServiceRefreshAfterWrite)*time.Minute),
+			cache.WithExpireAfterAccess(time.Duration(cacheManager.settings.groupServiceExpireAfterAccess)*time.Minute),
+			cache.WithRefreshAfterWrite(time.Duration(cacheManager.settings.groupServiceRefreshAfterWrite)*time.Minute),
 		)
 
 		cc, ok := GetDatabaseClient().(*CassandraClient)
@@ -276,19 +280,27 @@ func GetCacheManager() CacheManager {
 			// Start background task to refresh cache
 			cacheManager.refreshCacheTask = CacheRefreshTask{
 				lastRefreshedTimestamp: time.Now().UTC(),
-				refreshAttemptsLeft:    cacheManager.Settings.retryCountUntilFullRefresh,
+				refreshAttemptsLeft:    cacheManager.settings.retryCountUntilFullRefresh,
 				stopped:                make(chan bool),
-				ticker:                 time.NewTicker(time.Duration(cacheManager.Settings.tickDuration) * time.Millisecond),
+				ticker:                 time.NewTicker(time.Duration(cacheManager.settings.tickDuration) * time.Millisecond),
 			}
 			cacheManager.refreshCacheTask.Run()
 		}
 
 		// Initialize application cache
 		cacheManager.applicationCache = cache.New(cache.WithMaximumSize(0))
-		cacheManager.applicationCacheEnabled = cacheManager.Settings.applicationCacheEnabled
+		cacheManager.applicationCacheEnabled = cacheManager.settings.applicationCacheEnabled
 	})
 
-	return cacheManager
+	return &cacheManager
+}
+
+// SetCacheChangeNotifier sets a notifier to be called on cache changed events
+func (cm *CacheManager) SetCacheChangeNotifier(notifier CacheChangeNotifier) {
+	if notifier == nil {
+		panic("SetCacheChangeNotifier: notifier cannot be nil")
+	}
+	cm.cacheChangeNotifier.Store(notifier)
 }
 
 func (cm CacheManager) GetCacheStats(tableName string) (*CacheStats, error) {
@@ -435,7 +447,7 @@ func (cm CacheManager) initiatePrecaching() {
 }
 
 func (cm CacheManager) GetChangedKeysTimeWindowSize() int32 {
-	return cm.Settings.changedKeysTimeWindowSize
+	return cm.settings.changedKeysTimeWindowSize
 }
 
 // RefreshAll Refresh all caches and return list of table names which were not refreshed
@@ -497,10 +509,10 @@ func (cm CacheManager) Refresh(tableName string) error {
 // start (lower bound, inclusive) and end (upper bound, exclusive)
 func (cm CacheManager) SyncChanges(startTime time.Time, endTime time.Time, apply bool) (changedList []interface{}, err error) {
 	startTS := util.GetTimestamp(startTime)
-	currentRowKey := startTS - (startTS % int64(cm.Settings.changedKeysTimeWindowSize))
+	currentRowKey := startTS - (startTS % int64(cm.settings.changedKeysTimeWindowSize))
 
 	endTS := util.GetTimestamp(endTime)
-	endRowKey := endTS - (endTS % int64(cm.Settings.changedKeysTimeWindowSize))
+	endRowKey := endTS - (endTS % int64(cm.settings.changedKeysTimeWindowSize))
 
 	startUuid, err := util.UUIDFromTime(startTS, 0, 0)
 	if err != nil {
@@ -509,10 +521,10 @@ func (cm CacheManager) SyncChanges(startTime time.Time, endTime time.Time, apply
 
 	ranges := make(map[int64]*RangeInfo)
 	ranges[currentRowKey] = &RangeInfo{StartValue: startUuid}
-	currentRowKey += int64(cm.Settings.changedKeysTimeWindowSize)
+	currentRowKey += int64(cm.settings.changedKeysTimeWindowSize)
 	for currentRowKey <= endRowKey {
 		ranges[currentRowKey] = nil
-		currentRowKey += int64(cm.Settings.changedKeysTimeWindowSize)
+		currentRowKey += int64(cm.settings.changedKeysTimeWindowSize)
 	}
 
 	// Load all changes from DB
@@ -635,7 +647,7 @@ func (cm CacheManager) WriteCacheLog(tableName string, changedKey string, operat
 func (cm CacheManager) writeCacheLog(tableName string, changedKey string, operation OperationType, cacheSize int32) {
 	go func() {
 		currentTS := util.GetTimestamp(time.Now().UTC())
-		rowKey := currentTS - (currentTS % int64(cm.Settings.changedKeysTimeWindowSize))
+		rowKey := currentTS - (currentTS % int64(cm.settings.changedKeysTimeWindowSize))
 
 		tableInfo, err := GetTableInfo(tableName)
 		if err != nil {
@@ -665,6 +677,13 @@ func (cm CacheManager) writeCacheLog(tableName string, changedKey string, operat
 
 		if err != nil {
 			log.Errorf("failed to write cache changed log: %v", err)
+		}
+
+		// Send changed event to a registered observer, if one exists
+		if val := cm.cacheChangeNotifier.Load(); val != nil {
+			if notifier, ok := val.(CacheChangeNotifier); ok {
+				notifier.Notify(tableName, changedKey, operation)
+			}
 		}
 	}()
 }
