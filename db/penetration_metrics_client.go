@@ -15,6 +15,7 @@ const (
 	SerialNumberColumnValue            = "serial_number"
 	PartnerColumnValue                 = "partner"
 	ModelColumnValue                   = "model"
+	FwFilenameColumnValue              = "fw_filename"
 	FwVersionColumnValue               = "fw_version"
 	FwReportedVersionColumnValue       = "fw_reported_version"
 	FwAdditionalVersionInfoColumnValue = "fw_additional_version_info"
@@ -49,6 +50,7 @@ type FwPenetrationMetrics struct {
 	EstbMac                 string
 	Partner                 string
 	Model                   string
+	FwFilename              string
 	FwVersion               string
 	FwReportedVersion       string
 	FwAdditionalVersionInfo string
@@ -95,6 +97,7 @@ func (c *CassandraClient) SetFwPenetrationMetrics(pMetrics *FwPenetrationMetrics
 
 	columns := []string{
 		EstbMacColumnValue,
+		FwFilenameColumnValue,
 		FwVersionColumnValue,
 		FwReportedVersionColumnValue,
 		FwAdditionalVersionInfoColumnValue,
@@ -103,6 +106,9 @@ func (c *CassandraClient) SetFwPenetrationMetrics(pMetrics *FwPenetrationMetrics
 	}
 	if isEmptyString(pMetrics.FwAppliedRule) {
 		pMetrics.FwAppliedRule = ""
+	}
+	if isEmptyString(pMetrics.FwFilename) {
+		pMetrics.FwFilename = ""
 	}
 	if isEmptyString(pMetrics.FwVersion) {
 		pMetrics.FwVersion = ""
@@ -116,6 +122,7 @@ func (c *CassandraClient) SetFwPenetrationMetrics(pMetrics *FwPenetrationMetrics
 
 	values := []interface{}{
 		pMetrics.EstbMac,
+		pMetrics.FwFilename,
 		pMetrics.FwVersion,
 		pMetrics.FwReportedVersion,
 		pMetrics.FwAdditionalVersionInfo,
@@ -289,6 +296,10 @@ func (c *CassandraClient) GetFwPenetrationMetrics(estbMac string) (*FwPenetratio
 				if len(itfvalue) > 0 {
 					pMetrics.Model = itfvalue
 				}
+			}
+		case FwFilenameColumnValue:
+			if itfvalue, ok := v.(string); ok {
+				pMetrics.FwFilename = itfvalue
 			}
 		case FwVersionColumnValue:
 			if itfvalue, ok := v.(string); ok {
