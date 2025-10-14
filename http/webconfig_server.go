@@ -171,10 +171,7 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 	loguploadSecurityTokenConfig := NewLogUploaderNonMtlSsrTokenPathConfig(conf)
 	firmwareSecurityTokenConfig := NewFirmwareNonMtlSsrTokenPathConfig(conf)
 
-	tlsConfig, err := NewTlsConfig(conf)
-	if err != nil && !testOnly {
-		panic(err)
-	}
+	tlsConfig, _ := NewTlsConfig(conf)
 
 	var serviceHostname string
 	if conf.GetBoolean("xconfwebconfig.server.localhost_only") {
