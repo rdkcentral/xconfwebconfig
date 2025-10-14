@@ -59,10 +59,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	server := xhttp.NewXconfServer(sc, false, nil)
 
 	// setup logging
-	logFile := server.GetString("xconfwebconfig.log.file")
+	logFile := sc.GetString("xconfwebconfig.log.file")
 	if len(logFile) > 0 {
 		f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
@@ -75,7 +74,7 @@ func main() {
 		log.SetOutput(os.Stdout)
 	}
 
-	logFormat := server.GetString("xconfwebconfig.log.format")
+	logFormat := sc.GetString("xconfwebconfig.log.format")
 	if logFormat == "text" {
 		log.SetFormatter(&log.TextFormatter{
 			FullTimestamp:   true,
@@ -89,15 +88,15 @@ func main() {
 			},
 		})
 	}
-	// Output to stderr instead of stdout, could also be a file.
 
 	// default log level info
 	logLevel := log.InfoLevel
-	if parsed, err := log.ParseLevel(server.GetString("xconfwebconfig.log.level")); err == nil {
+	if parsed, err := log.ParseLevel(sc.GetString("xconfwebconfig.log.level")); err == nil {
 		logLevel = parsed
 	}
 	log.SetLevel(logLevel)
-	// log.SetReportCaller(true)
+
+	server := xhttp.NewXconfServer(sc, false, nil)
 
 	// SAT token INIT
 	xhttp.InitSatTokenManager(server)
