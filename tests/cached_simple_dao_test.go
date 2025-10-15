@@ -27,6 +27,7 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/google/uuid"
+	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -41,7 +42,7 @@ type cacheNotifierImpl struct {
 
 // Notify logs the cache change event to a channel
 func (n *cacheNotifierImpl) Notify(tableName string, changedKey string, operation db.OperationType) {
-	msg := fmt.Sprintf("notification received: tableName=%s, changedKey=%s, operation=%s\n", tableName, changedKey, operation)
+	msg := fmt.Sprintf("%s: tableName=%s, changedKey=%s, operation=%s\n", common.ServerOriginId(), tableName, changedKey, operation)
 	n.ch <- msg
 }
 
@@ -335,6 +336,7 @@ func TestCacheChangedKeys(t *testing.T) {
 	assert.Equal(t, data.Operation, db.CREATE_OPERATION)
 	assert.Equal(t, data.CfName, db.TABLE_MODEL)
 	assert.Equal(t, data.ChangedKey, model.ID)
+	assert.Equal(t, data.ServerOriginId, common.ServerOriginId())
 
 	tableInfo, err := db.GetTableInfo(db.TABLE_MODEL)
 	assert.NilError(t, err)
@@ -362,7 +364,7 @@ func TestCacheChangeNotifier(t *testing.T) {
 	// Wait for the notification on the channel, with a timeout
 	select {
 	case msg := <-testNotifier.ch:
-		assert.Assert(t, strings.HasPrefix(msg, "notification received: tableName=Model,"))
+		assert.Assert(t, strings.HasPrefix(msg, fmt.Sprintf("%s: tableName=Model,", common.ServerOriginId())))
 	case <-time.After(2 * time.Second):
 		t.Fatal("timed out waiting for cache notification")
 	}

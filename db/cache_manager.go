@@ -29,6 +29,7 @@ import (
 	cache "github.com/Comcast/goburrow-cache"
 	"github.com/go-akka/configuration"
 	"github.com/gocql/gocql"
+	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/util"
 	log "github.com/sirupsen/logrus"
 )
@@ -581,6 +582,12 @@ func (cm CacheManager) applyChanges(changedDataList []interface{}) error {
 			continue
 		}
 
+		// Skip entry if it was originated by the same server
+		if data.ServerOriginId != "" && data.ServerOriginId == common.ServerOriginId() {
+			log.Debugf("sync cache, skipping %v for table '%v': %v", data.Operation, data.CfName, data.ChangedKey)
+			continue
+		}
+
 		log.Debugf("sync cache, processing %v for table '%v': %v", data.Operation, data.CfName, data.ChangedKey)
 
 		tableInfo, err := GetTableInfo(data.CfName)
@@ -666,7 +673,8 @@ func (cm CacheManager) writeCacheLog(tableName string, changedKey string, operat
 			Operation:      operation,
 			DaoId:          daoId,
 			ValidCacheSize: cacheSize,
-			UserName:       "DataService",
+			UserName:       "XConf",
+			ServerOriginId: common.ServerOriginId(),
 		}
 
 		jsonData, err := json.Marshal(changedData)
