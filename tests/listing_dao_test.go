@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rdkcentral/xconfwebconfig/common"
 	ds "github.com/rdkcentral/xconfwebconfig/db"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -194,6 +195,7 @@ func TestListingGetRange(t *testing.T) {
 		DaoId:          daoId,
 		ValidCacheSize: 1000,
 		UserName:       "DataService",
+		ServerOriginId: common.ServerOriginId(),
 	}
 
 	// test create
@@ -222,4 +224,6 @@ func TestListingGetRange(t *testing.T) {
 	assert.Equal(t, inst.Operation, changedData.Operation)
 	assert.Equal(t, inst.DaoId, changedData.DaoId)
 	assert.Equal(t, inst.ValidCacheSize, changedData.ValidCacheSize)
+	assert.Equal(t, inst.UserName, changedData.UserName)
+	assert.Equal(t, inst.ServerOriginId, changedData.ServerOriginId)
 }

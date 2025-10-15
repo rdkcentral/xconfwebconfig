@@ -38,6 +38,7 @@ type ChangedData struct {
 	DaoId          int32         `json:"DAOid"`
 	ValidCacheSize int32         `json:"validCacheSize"`
 	UserName       string        `json:"userName"`
+	ServerOriginId string        `json:"serverOriginId"`
 }
 
 func NewChangedDataInf() interface{} {
