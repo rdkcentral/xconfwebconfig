@@ -673,7 +673,7 @@ func (cm CacheManager) writeCacheLog(tableName string, changedKey string, operat
 			Operation:      operation,
 			DaoId:          daoId,
 			ValidCacheSize: cacheSize,
-			UserName:       "XConfGO",
+			UserName:       "XConf",
 			ServerOriginId: common.ServerOriginId(),
 		}
 
