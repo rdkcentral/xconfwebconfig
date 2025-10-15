@@ -18,10 +18,28 @@
 package common
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/go-akka/configuration"
+	log "github.com/sirupsen/logrus"
 )
+
+var serverOriginId string
+
+func init() {
+	if hostname, err := os.Hostname(); err != nil {
+		log.Errorf("ERROR getting host name: %v", err)
+		serverOriginId = fmt.Sprintf("%d", os.Getpid())
+	} else {
+		serverOriginId = fmt.Sprintf("%s:%d", hostname, os.Getpid())
+	}
+}
+
+func ServerOriginId() string {
+	return serverOriginId
+}
 
 type ServerConfig struct {
 	*configuration.Config
