@@ -309,6 +309,49 @@ func TestCacheRefresh(t *testing.T) {
 	}
 }
 
+func TestCacheInvalidate(t *testing.T) {
+	if !db.IsCassandraClient() {
+		t.Skip("Not using Cassandra DB")
+	}
+
+	truncateTable(db.TABLE_MODEL)
+
+	// ensure no data in cache
+	db.GetCacheManager().Refresh(db.TABLE_MODEL)
+
+	keys, err := db.GetCachedSimpleDao().GetKeys(db.TABLE_MODEL)
+	assert.NilError(t, err)
+	assert.Assert(t, len(keys) == 0)
+
+	// generate some data
+	modelKeys, err := generateTestModels(3)
+	assert.NilError(t, err)
+	assert.Assert(t, len(modelKeys) == 3)
+	db.GetCacheManager().Refresh(db.TABLE_MODEL)
+
+	cacheModelKeys, err := db.GetCachedSimpleDao().GetKeys(db.TABLE_MODEL)
+	assert.NilError(t, err)
+	assert.Assert(t, len(cacheModelKeys) == 3)
+
+	// invalidate one key
+	keyToInvalidate := cacheModelKeys[0]
+	db.GetCacheManager().Invalidate(db.TABLE_MODEL, keyToInvalidate.(string))
+	time.Sleep(500 * time.Millisecond) // wait for async invalidation to complete
+
+	cacheModelKeys, err = db.GetCachedSimpleDao().GetKeys(db.TABLE_MODEL)
+	assert.NilError(t, err)
+	assert.Assert(t, len(cacheModelKeys) == 2)
+	assert.Assert(t, !util.Contains(cacheModelKeys, keyToInvalidate))
+
+	// invalidate all keys
+	db.GetCacheManager().InvalidateAll(db.TABLE_MODEL)
+	time.Sleep(500 * time.Millisecond) // wait for async invalidation to complete
+
+	cacheModelKeys, err = db.GetCachedSimpleDao().GetKeys(db.TABLE_MODEL)
+	assert.NilError(t, err)
+	assert.Assert(t, len(cacheModelKeys) == 0)
+}
+
 func TestCacheChangedKeys(t *testing.T) {
 	if !db.IsCassandraClient() {
 		t.Skip("Not using Cassandra DB")
