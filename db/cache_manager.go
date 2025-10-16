@@ -506,6 +506,34 @@ func (cm CacheManager) Refresh(tableName string) error {
 	return nil
 }
 
+// Invalidate Evict an entry from cache
+func (cm CacheManager) Invalidate(tableName string, key string) error {
+	cache, err := cm.getCache(tableName)
+	if err != nil {
+		return err
+	}
+	if util.IsBlank(key) {
+		return fmt.Errorf("failed to invalidate cache for table '%s': key is blank", tableName)
+	}
+
+	cache.Invalidate(key)
+	cm.ApplicationCacheDeleteAll(tableName) // Invalidate application cache entries for this table
+
+	return nil
+}
+
+// InvalidateAll Evict all entries from cache
+func (cm CacheManager) InvalidateAll(tableName string) error {
+	cache, err := cm.getCache(tableName)
+	if err != nil {
+		return err
+	}
+
+	cache.InvalidateAll()
+	cm.ApplicationCacheDeleteAll(tableName) // Invalidate application cache entries for this table
+	return nil
+}
+
 // SyncChanges Updates changes for given time-window defined by
 // start (lower bound, inclusive) and end (upper bound, exclusive)
 func (cm CacheManager) SyncChanges(startTime time.Time, endTime time.Time, apply bool) (changedList []interface{}, err error) {
