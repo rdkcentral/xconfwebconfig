@@ -287,9 +287,11 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 		if Ws.Config.GetBoolean("xconfwebconfig.xconf.enable_fw_penetration_metrics", false) {
 			fwTs := time.Now().UnixNano() / 1000000
 			partner := contextMap[common.PARTNER_ID]
+			var fwFilename string
 			var fwVersion string
 			var fwAdditionalVerInfo string
 			if evaluationResult.FirmwareConfig != nil {
+				fwFilename = evaluationResult.FirmwareConfig.GetFirmwareFilename()
 				fwVersion = evaluationResult.FirmwareConfig.GetFirmwareVersion()
 				if fw, ok := evaluationResult.FirmwareConfig.Properties[common.ADDITIONAL_FW_VER_INFO]; ok {
 					if fwVal, isString := fw.(string); isString {
@@ -306,6 +308,7 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 				EstbMac:                 mac,
 				Partner:                 partner,
 				Model:                   contextMap[common.MODEL],
+				FwFilename:              fwFilename,
 				FwVersion:               fwVersion,
 				FwReportedVersion:       contextMap[common.FIRMWARE_VERSION],
 				FwAdditionalVersionInfo: fwAdditionalVerInfo,
