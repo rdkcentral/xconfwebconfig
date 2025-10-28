@@ -281,7 +281,200 @@ func TestPostProcessFeatureControl_SecureConnectionWithPodData(t *testing.T) {
 
 	// With secure connection and account ID, should have at least one feature
 	assert.NotEmpty(t, result)
-} // Test canPrecookRfcResponses
+}
+
+func TestPostProcessFeatureControl_WithCountryCodeEnabled(t *testing.T) {
+	originalXc := Xc
+	defer func() { Xc = originalXc }()
+
+	modelsSet := util.NewSet()
+	modelsSet.Add("MODEL123")
+	partnersSet := util.NewSet()
+	partnersSet.Add("partner1")
+
+	Xc = &XconfConfigs{
+		ReturnAccountId:           true,
+		RfcReturnCountryCode:      true,
+		ReturnAccountHash:         false,
+		RfcCountryCodeModelsSet:   modelsSet,
+		RfcCountryCodePartnersSet: partnersSet,
+	}
+
+	contextMap := map[string]string{
+		common.ACCOUNT_ID:        "acc123",
+		common.MODEL:             "MODEL123",
+		common.PARTNER_ID:        "partner1",
+		common.COUNTRY_CODE:      "US",
+		common.PASSED_PARTNER_ID: "partner1",
+	}
+
+	result := PostProcessFeatureControl(nil, contextMap, true, nil)
+
+	// Should include country code feature
+	assert.NotEmpty(t, result)
+	// Verify country code is in one of the responses
+	foundCountryCode := false
+	for _, resp := range result {
+		if cc, exists := resp[common.COUNTRY_CODE]; exists && cc == "US" {
+			foundCountryCode = true
+			break
+		}
+	}
+	assert.True(t, foundCountryCode, "Country code should be included in response")
+}
+
+func TestPostProcessFeatureControl_PodDataWithInvalidTimezone(t *testing.T) {
+	originalXc := Xc
+	defer func() { Xc = originalXc }()
+	Xc = &XconfConfigs{
+		ReturnAccountId:           true,
+		RfcReturnCountryCode:      false,
+		ReturnAccountHash:         false,
+		RfcCountryCodeModelsSet:   util.NewSet(),
+		RfcCountryCodePartnersSet: util.NewSet(),
+	}
+
+	contextMap := map[string]string{
+		common.ACCOUNT_ID:        "acc123",
+		common.PASSED_PARTNER_ID: "partner1",
+	}
+
+	podData := &PodData{
+		AccountId: "acc123",
+		PartnerId: "partner1",
+		TimeZone:  "Invalid/Timezone",
+	}
+
+	result := PostProcessFeatureControl(nil, contextMap, true, podData)
+
+	assert.NotEmpty(t, result)
+	// With invalid timezone, tzUTCOffset should be "unknown"
+	for _, resp := range result {
+		if tzOffset, exists := resp["tzUTCOffset"]; exists {
+			assert.Equal(t, "unknown", tzOffset, "Invalid timezone should result in unknown offset")
+		}
+	}
+}
+
+func TestPostProcessFeatureControl_PodDataWithEmptyTimezone(t *testing.T) {
+	originalXc := Xc
+	defer func() { Xc = originalXc }()
+	Xc = &XconfConfigs{
+		ReturnAccountId:           true,
+		RfcReturnCountryCode:      false,
+		ReturnAccountHash:         false,
+		RfcCountryCodeModelsSet:   util.NewSet(),
+		RfcCountryCodePartnersSet: util.NewSet(),
+	}
+
+	contextMap := map[string]string{
+		common.ACCOUNT_ID:        "acc123",
+		common.PASSED_PARTNER_ID: "partner1",
+	}
+
+	podData := &PodData{
+		AccountId: "acc123",
+		PartnerId: "partner1",
+		TimeZone:  "",
+	}
+
+	result := PostProcessFeatureControl(nil, contextMap, true, podData)
+
+	assert.NotEmpty(t, result)
+	// With empty timezone, both timeZone and tzUTCOffset should be "unknown"
+	for _, resp := range result {
+		if tz, exists := resp["timeZone"]; exists {
+			assert.Equal(t, "unknown", tz, "Empty timezone should result in unknown")
+		}
+		if tzOffset, exists := resp["tzUTCOffset"]; exists {
+			assert.Equal(t, "unknown", tzOffset, "Empty timezone should result in unknown offset")
+		}
+	}
+}
+
+func TestPostProcessFeatureControl_PodDataWithEmptyPartnerId(t *testing.T) {
+	originalXc := Xc
+	defer func() { Xc = originalXc }()
+	Xc = &XconfConfigs{
+		ReturnAccountId:           true,
+		RfcReturnCountryCode:      false,
+		ReturnAccountHash:         false,
+		RfcCountryCodeModelsSet:   util.NewSet(),
+		RfcCountryCodePartnersSet: util.NewSet(),
+	}
+
+	contextMap := map[string]string{
+		common.ACCOUNT_ID:        "acc123",
+		common.PASSED_PARTNER_ID: "partner1",
+	}
+
+	podData := &PodData{
+		AccountId: "acc123",
+		PartnerId: "",
+		TimeZone:  "America/New_York",
+	}
+
+	result := PostProcessFeatureControl(nil, contextMap, true, podData)
+
+	assert.NotEmpty(t, result)
+	// With empty partnerId, should be set to "unknown"
+	for _, resp := range result {
+		if pid, exists := resp["partnerId"]; exists {
+			assert.Equal(t, "unknown", pid, "Empty partnerId should result in unknown")
+		}
+	}
+}
+
+func TestPostProcessFeatureControl_NonXPCWithUnknownPartner(t *testing.T) {
+	originalXc := Xc
+	defer func() { Xc = originalXc }()
+	Xc = &XconfConfigs{
+		ReturnAccountId:           false,
+		RfcReturnCountryCode:      false,
+		ReturnAccountHash:         false,
+		RfcCountryCodeModelsSet:   util.NewSet(),
+		RfcCountryCodePartnersSet: util.NewSet(),
+	}
+
+	contextMap := map[string]string{
+		common.ACCOUNT_MGMT:      "notxpc",
+		common.MODEL:             "MODEL123",
+		common.PASSED_PARTNER_ID: "unknown",
+		common.PARTNER_ID:        "realpartner",
+	}
+
+	result := PostProcessFeatureControl(nil, contextMap, false, nil)
+
+	// When passed_partner is unknown but partner_id exists, should create partner feature
+	assert.NotEmpty(t, result)
+}
+
+func TestPostProcessFeatureControl_XPCWithGRAndPassedPartner(t *testing.T) {
+	originalXc := Xc
+	defer func() { Xc = originalXc }()
+	Xc = &XconfConfigs{
+		ReturnAccountId:           false,
+		RfcReturnCountryCode:      false,
+		ReturnAccountHash:         false,
+		RfcCountryCodeModelsSet:   util.NewSet(),
+		RfcCountryCodePartnersSet: util.NewSet(),
+	}
+
+	contextMap := map[string]string{
+		common.ACCOUNT_MGMT:      "xpc",
+		common.MODEL:             "GRMODEL123",
+		common.PASSED_PARTNER_ID: "passedpartner",
+	}
+
+	result := PostProcessFeatureControl(nil, contextMap, false, nil)
+
+	// With xpc and GR prefix, should have partner features
+	assert.NotEmpty(t, result)
+	// Should have at least 2 features (partner and timezone)
+	assert.GreaterOrEqual(t, len(result), 2)
+}
+
+// Test canPrecookRfcResponses
 func TestCanPrecookRfcResponses_DisabledPrecook(t *testing.T) {
 	originalXc := Xc
 	defer func() { Xc = originalXc }()
@@ -307,6 +500,136 @@ func TestCanPrecookRfcResponses_EnabledWithNoTimeWindow(t *testing.T) {
 	result := canPrecookRfcResponses(nil)
 
 	assert.True(t, result)
+}
+
+func TestCanPrecookRfcResponses_EnabledWithTimeWindowInside(t *testing.T) {
+	originalXc := Xc
+	defer func() { Xc = originalXc }()
+
+	// Get current time and create a window around it
+	now := time.Now().In(time.UTC)
+	// Use HH:MM format (hours:minutes without seconds)
+	nowStr := now.Format("15:04")
+	// Add 1 hour to endTime
+	endTime := now.Add(1 * time.Hour).Format("15:04")
+	// Subtract 1 hour from startTime
+	startTime := now.Add(-1 * time.Hour).Format("15:04")
+
+	Xc = &XconfConfigs{
+		EnableRfcPrecook:     true,
+		RfcPrecookStartTime:  startTime,
+		RfcPrecookEndTime:    endTime,
+		RfcPrecookTimeZone:   time.UTC,
+		RfcPrecookTimeFormat: "15:04",
+	}
+
+	result := canPrecookRfcResponses(nil)
+
+	assert.True(t, result, "Current time %s should be within window %s to %s", nowStr, startTime, endTime)
+}
+
+func TestCanPrecookRfcResponses_EnabledWithTimeWindowOutside(t *testing.T) {
+	originalXc := Xc
+	defer func() { Xc = originalXc }()
+
+	// Create a time window in the future
+	now := time.Now().In(time.UTC)
+	// Start 2 hours in future, end 3 hours in future
+	startTime := now.Add(2 * time.Hour).Format("15:04")
+	endTime := now.Add(3 * time.Hour).Format("15:04")
+
+	Xc = &XconfConfigs{
+		EnableRfcPrecook:     true,
+		RfcPrecookStartTime:  startTime,
+		RfcPrecookEndTime:    endTime,
+		RfcPrecookTimeZone:   time.UTC,
+		RfcPrecookTimeFormat: "15:04",
+	}
+
+	result := canPrecookRfcResponses(nil)
+
+	assert.False(t, result, "Current time should be outside window %s to %s", startTime, endTime)
+}
+
+func TestCanPrecookRfcResponses_EnabledWithReverseTimeWindowInside(t *testing.T) {
+	originalXc := Xc
+	defer func() { Xc = originalXc }()
+
+	// Reverse window: startTime > endTime (e.g., 22:00 to 02:00 - overnight window)
+	// Test when current time is after startTime (e.g., 23:00)
+	now := time.Now().In(time.UTC)
+	// Set startTime 1 hour before current time
+	startTime := now.Add(-1 * time.Hour).Format("15:04")
+	// Set endTime far in future (this makes startTime < endTime, not reverse)
+	// For a TRUE reverse window, endTime must be LESS than startTime
+	// e.g., startTime="23:00", endTime="01:00"
+	endTime := now.Add(-2 * time.Hour).Format("15:04")
+
+	// This ensures startTime > endTime (reverse window)
+	// If endTime is before startTime, it's overnight: current > start OR current < end
+
+	Xc = &XconfConfigs{
+		EnableRfcPrecook:     true,
+		RfcPrecookStartTime:  startTime,
+		RfcPrecookEndTime:    endTime,
+		RfcPrecookTimeZone:   time.UTC,
+		RfcPrecookTimeFormat: "15:04",
+	}
+
+	result := canPrecookRfcResponses(nil)
+
+	// With reverse window where current > startTime, should be true
+	nowStr := now.Format("15:04")
+	// startTime > endTime is reverse window
+	// current > startTime means inside the window
+	assert.True(t, result, "With reverse window (start=%s > end=%s), current time %s should be inside", startTime, endTime, nowStr)
+}
+
+func TestCanPrecookRfcResponses_EnabledWithReverseTimeWindowOutside(t *testing.T) {
+	originalXc := Xc
+	defer func() { Xc = originalXc }()
+
+	// Create reverse window where current time is outside
+	// e.g., window is 01:00 to 03:00, but startTime=01:00 < endTime=03:00 actually
+	// Let's make: startTime=23:00, endTime=01:00, currentTime around 12:00 (outside)
+	now := time.Now().In(time.UTC)
+	currentHour := now.Hour()
+
+	// Create a window that doesn't include current hour
+	// If current hour is between 2 and 22, use window 23:00-01:00
+	if currentHour >= 2 && currentHour <= 22 {
+		startTime := "23:00"
+		endTime := "01:00"
+
+		Xc = &XconfConfigs{
+			EnableRfcPrecook:     true,
+			RfcPrecookStartTime:  startTime,
+			RfcPrecookEndTime:    endTime,
+			RfcPrecookTimeZone:   time.UTC,
+			RfcPrecookTimeFormat: "15:04",
+		}
+
+		result := canPrecookRfcResponses(nil)
+
+		assert.False(t, result, "Current time should be outside reverse window %s to %s", startTime, endTime)
+	} else {
+		// If current time is 23:xx, 00:xx, or 01:xx, use window 10:00-14:00
+		startTime := "10:00"
+		endTime := "14:00"
+
+		Xc = &XconfConfigs{
+			EnableRfcPrecook:     true,
+			RfcPrecookStartTime:  startTime,
+			RfcPrecookEndTime:    endTime,
+			RfcPrecookTimeZone:   time.UTC,
+			RfcPrecookTimeFormat: "15:04",
+		}
+
+		result := canPrecookRfcResponses(nil)
+
+		// In this case startTime < endTime (normal window), current time is outside
+		assert.False(t, result, "Current time should be outside window %s to %s", startTime, endTime)
+	}
 }
 
 // Test struct instantiation
