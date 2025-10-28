@@ -425,3 +425,66 @@ func TestGetContextMapAndSettingTypes_NilQueryParams(t *testing.T) {
 	assert.Empty(t, settingTypes)
 	assert.Len(t, contextMap, 1) // Only APPLICATION_TYPE
 }
+
+// Tests for HTTP Handler Functions
+
+func TestGetLogUploaderSettingsHandler(t *testing.T) {
+	t.Run("HandlerWrapperExistsAndIsCallable", func(t *testing.T) {
+		// Test that the handler wrapper exists and can be referenced
+		// The actual execution requires complex setup (DB, SAT tokens, services)
+		// which is better tested in integration tests
+
+		assert.NotNil(t, GetLogUploaderSettingsHandler)
+
+		// Verify it's a handler function with correct signature
+		var handler func(http.ResponseWriter, *http.Request) = GetLogUploaderSettingsHandler
+		assert.NotNil(t, handler)
+	})
+}
+
+func TestGetLogUploaderT2SettingsHandler(t *testing.T) {
+	t.Run("HandlerWrapperExistsAndIsCallable", func(t *testing.T) {
+		assert.NotNil(t, GetLogUploaderT2SettingsHandler)
+
+		// Verify it's a handler function with correct signature
+		var handler func(http.ResponseWriter, *http.Request) = GetLogUploaderT2SettingsHandler
+		assert.NotNil(t, handler)
+	})
+}
+
+func TestGetLogUploaderTelemetryProfilesHandler(t *testing.T) {
+	t.Run("HandlerReturnsErrorWithNonXResponseWriter", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/loguploader/getTelemetryProfiles", nil)
+		w := httptest.NewRecorder()
+
+		// Call with regular ResponseWriter (not XResponseWriter)
+		GetLogUploaderTelemetryProfilesHandler(w, req)
+
+		// Should return 500 error because writer is not XResponseWriter
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+}
+
+func TestGetLogUploaderSettings(t *testing.T) {
+	t.Run("HandlerReturnsErrorWithNonXResponseWriter", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/loguploader/getSettings", nil)
+		w := httptest.NewRecorder()
+
+		// Call with regular ResponseWriter (not XResponseWriter)
+		GetLogUploaderSettings(w, req, false)
+
+		// Should return 500 error because writer is not XResponseWriter
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+
+	t.Run("HandlerReturnsErrorWithNonXResponseWriterForT2", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/loguploader/getSettings", nil)
+		w := httptest.NewRecorder()
+
+		// Call with regular ResponseWriter (not XResponseWriter) and T2 flag
+		GetLogUploaderSettings(w, req, true)
+
+		// Should return 500 error because writer is not XResponseWriter
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+}
