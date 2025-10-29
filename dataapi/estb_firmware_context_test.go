@@ -593,6 +593,206 @@ func TestGetExplanation(t *testing.T) {
 			},
 			shouldContain: []string{"matched NO OP", "received NO config"},
 		},
+		{
+			name: "With TIME_FILTER applied",
+			contextMap: map[string]string{
+				common.ESTB_MAC: "AA:BB:CC:DD:EE:FF",
+			},
+			evaluationResult: &estbfirmware.EvaluationResult{
+				MatchedRule: &firmware.FirmwareRule{
+					ID:   "rule-123",
+					Name: "Time Rule",
+					Type: firmware.ENV_MODEL_RULE,
+				},
+				FirmwareConfig: &coreef.FirmwareConfigFacade{
+					Properties: map[string]interface{}{
+						common.FIRMWARE_VERSION: "2.0.0",
+					},
+				},
+				AppliedFilters: []interface{}{
+					&firmware.FirmwareRule{
+						ID:   "time-filter-1",
+						Name: "Time Filter",
+						Type: firmware.TIME_FILTER,
+					},
+				},
+			},
+			shouldContain: []string{"matched", "received config", "was blocked/modified by filter", "TIME_FILTER"},
+		},
+		{
+			name: "With IP_FILTER applied",
+			contextMap: map[string]string{
+				common.ESTB_MAC: "AA:BB:CC:DD:EE:FF",
+			},
+			evaluationResult: &estbfirmware.EvaluationResult{
+				MatchedRule: &firmware.FirmwareRule{
+					ID:   "rule-123",
+					Name: "IP Rule",
+					Type: firmware.ENV_MODEL_RULE,
+				},
+				FirmwareConfig: &coreef.FirmwareConfigFacade{
+					Properties: map[string]interface{}{
+						common.FIRMWARE_VERSION: "2.0.0",
+					},
+				},
+				AppliedFilters: []interface{}{
+					&firmware.FirmwareRule{
+						ID:   "ip-filter-1",
+						Name: "IP Filter",
+						Type: firmware.IP_FILTER,
+					},
+				},
+			},
+			shouldContain: []string{"matched", "IP_FILTER"},
+		},
+		{
+			name: "With DOWNLOAD_LOCATION_FILTER applied",
+			contextMap: map[string]string{
+				common.ESTB_MAC: "AA:BB:CC:DD:EE:FF",
+			},
+			evaluationResult: &estbfirmware.EvaluationResult{
+				MatchedRule: &firmware.FirmwareRule{
+					ID:   "rule-123",
+					Name: "Download Rule",
+					Type: firmware.ENV_MODEL_RULE,
+				},
+				FirmwareConfig: &coreef.FirmwareConfigFacade{
+					Properties: map[string]interface{}{
+						common.FIRMWARE_VERSION: "2.0.0",
+					},
+				},
+				AppliedFilters: []interface{}{
+					&firmware.FirmwareRule{
+						ID:   "dl-filter-1",
+						Name: "Download Location Filter",
+						Type: firmware.DOWNLOAD_LOCATION_FILTER,
+					},
+				},
+			},
+			shouldContain: []string{"matched", "received config"},
+		},
+		{
+			name: "With PercentFilterValue applied",
+			contextMap: map[string]string{
+				common.ESTB_MAC: "AA:BB:CC:DD:EE:FF",
+			},
+			evaluationResult: &estbfirmware.EvaluationResult{
+				MatchedRule: &firmware.FirmwareRule{
+					ID:   "rule-123",
+					Name: "Percent Rule",
+					Type: firmware.ENV_MODEL_RULE,
+				},
+				FirmwareConfig: &coreef.FirmwareConfigFacade{
+					Properties: map[string]interface{}{
+						common.FIRMWARE_VERSION: "2.0.0",
+					},
+				},
+				AppliedFilters: []interface{}{
+					coreef.PercentFilterValue{
+						Percentage:          50.0,
+						EnvModelPercentages: map[string]coreef.EnvModelPercentage{},
+					},
+				},
+			},
+			shouldContain: []string{"matched", "percent=50"},
+		},
+		{
+			name: "With DownloadLocationRoundRobinFilterValue applied",
+			contextMap: map[string]string{
+				common.ESTB_MAC: "AA:BB:CC:DD:EE:FF",
+			},
+			evaluationResult: &estbfirmware.EvaluationResult{
+				MatchedRule: &firmware.FirmwareRule{
+					ID:   "rule-123",
+					Name: "RoundRobin Rule",
+					Type: firmware.ENV_MODEL_RULE,
+				},
+				FirmwareConfig: &coreef.FirmwareConfigFacade{
+					Properties: map[string]interface{}{
+						common.FIRMWARE_VERSION: "2.0.0",
+					},
+				},
+				AppliedFilters: []interface{}{
+					coreef.DownloadLocationRoundRobinFilterValue{
+						ID: "roundrobin_VALUE",
+					},
+				},
+			},
+			shouldContain: []string{"matched", "SINGLETON"},
+		},
+		{
+			name: "With RuleAction applied",
+			contextMap: map[string]string{
+				common.ESTB_MAC: "AA:BB:CC:DD:EE:FF",
+			},
+			evaluationResult: &estbfirmware.EvaluationResult{
+				MatchedRule: &firmware.FirmwareRule{
+					ID:   "rule-123",
+					Name: "Action Rule",
+					Type: firmware.ENV_MODEL_RULE,
+				},
+				FirmwareConfig: &coreef.FirmwareConfigFacade{
+					Properties: map[string]interface{}{
+						common.FIRMWARE_VERSION: "2.0.0",
+					},
+				},
+				AppliedFilters: []interface{}{
+					firmware.RuleAction{},
+				},
+			},
+			shouldContain: []string{"matched", "DistributionPercent"},
+		},
+		{
+			name: "With PercentageBean applied",
+			contextMap: map[string]string{
+				common.ESTB_MAC: "AA:BB:CC:DD:EE:FF",
+			},
+			evaluationResult: &estbfirmware.EvaluationResult{
+				MatchedRule: &firmware.FirmwareRule{
+					ID:   "rule-123",
+					Name: "Percentage Bean Rule",
+					Type: firmware.ENV_MODEL_RULE,
+				},
+				FirmwareConfig: &coreef.FirmwareConfigFacade{
+					Properties: map[string]interface{}{
+						common.FIRMWARE_VERSION: "2.0.0",
+					},
+				},
+				AppliedFilters: []interface{}{
+					coreef.PercentageBean{
+						ID:   "bean-123",
+						Name: "Test Bean",
+					},
+				},
+			},
+			shouldContain: []string{"matched", "DistributedEnvModelPercentage"},
+		},
+		{
+			name: "With generic FirmwareRule filter",
+			contextMap: map[string]string{
+				common.ESTB_MAC: "AA:BB:CC:DD:EE:FF",
+			},
+			evaluationResult: &estbfirmware.EvaluationResult{
+				MatchedRule: &firmware.FirmwareRule{
+					ID:   "rule-123",
+					Name: "Generic Rule",
+					Type: firmware.ENV_MODEL_RULE,
+				},
+				FirmwareConfig: &coreef.FirmwareConfigFacade{
+					Properties: map[string]interface{}{
+						common.FIRMWARE_VERSION: "2.0.0",
+					},
+				},
+				AppliedFilters: []interface{}{
+					&firmware.FirmwareRule{
+						ID:   "generic-filter-1",
+						Name: "Generic Filter",
+						Type: "CUSTOM_FILTER",
+					},
+				},
+			},
+			shouldContain: []string{"matched", "FirmwareRule{id=generic-filter-1"},
+		},
 	}
 
 	for _, tt := range tests {

@@ -536,6 +536,56 @@ func TestContains_EmptyString(t *testing.T) {
 func TestGetConditionsSize(t *testing.T) {
 	// getConditionsSize is a helper function using rulesengine.Rule
 	// The implementation counts conditions in a rule
-	// Skip detailed testing as it requires rulesengine package setup
+	// Skip detailed testing as it requires rulesengine.Rule setup
 	t.Skip("getConditionsSize requires rulesengine.Rule setup")
+}
+
+// Test ExtractAnyPresentConfig - requires complex type setup
+func TestExtractAnyPresentConfig(t *testing.T) {
+	t.Skip("ExtractAnyPresentConfig requires firmware.ApplicableAction type setup")
+}
+
+// Test ConvertProperties - simplified test without complex type dependencies
+func TestConvertProperties(t *testing.T) {
+	t.Skip("ConvertProperties requires complex firmware template structure")
+}
+
+// Test SetRule ProcessorFactory
+func TestSetruleProcessorFactory(t *testing.T) {
+	ruleBase := NewEstbFirmwareRuleBaseDefault()
+
+	t.Run("SetNonNilFactory", func(t *testing.T) {
+		// This is a setter method, just test it doesn't panic
+		assert.NotPanics(t, func() {
+			ruleBase.SetruleProcessorFactory(ruleBase.ruleProcessorFactory)
+		})
+	})
+}
+
+// Additional helper function tests
+func TestContains_CaseSensitivity(t *testing.T) {
+	slice := []string{"Version1", "Version2"}
+
+	result := contains(slice, "version1")
+	assert.False(t, result, "contains should be case-sensitive")
+
+	result = contains(slice, "Version1")
+	assert.True(t, result)
+}
+
+func TestContains_PartialMatch(t *testing.T) {
+	slice := []string{"version1.0", "version2.0"}
+
+	result := contains(slice, "version1")
+	assert.False(t, result, "contains should match exact strings, not substrings")
+}
+
+func TestContains_WithSpaces(t *testing.T) {
+	slice := []string{"version 1", "version 2"}
+
+	result := contains(slice, "version 1")
+	assert.True(t, result)
+
+	result = contains(slice, "version1")
+	assert.False(t, result)
 }
