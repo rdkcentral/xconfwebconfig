@@ -91,3 +91,4 @@ func TestOffsetToTimeZone(t *testing.T) {
 	tmoffset := offsetToTimeZone("11:00")
 	assert.Assert(t, tmoffset != time.UTC)
 }
+
