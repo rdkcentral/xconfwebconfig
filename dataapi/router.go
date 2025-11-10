@@ -34,7 +34,7 @@ import (
 	fw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
-	"github.com/rdkcentral/xconfwebconfig/tagging"
+	"github.com/rdkcentral/xconfwebconfig/tag"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
 	cache "github.com/Comcast/goburrow-cache"
@@ -121,7 +121,7 @@ func RegisterTables() {
 		db.RegisterTableConfigSimple(db.TABLE_XCONF_FEATURE, rfc.NewFeatureInf)
 		db.RegisterTableConfigSimple(db.TABLE_FEATURE_CONTROL_RULE, rfc.NewFeatureRuleInf)
 		db.RegisterTableConfigSimple(db.TABLE_APP_SETTINGS, shared.NewAppSettingInf)
-		db.RegisterTableConfigSimple(db.TABLE_TAG, tagging.NewTagInf)
+		db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf)
 
 		db.RegisterTableConfig(&db.TableInfo{
 			TableName:       db.TABLE_XCONF_CHANGE,

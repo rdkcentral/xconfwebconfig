@@ -49,17 +49,19 @@ type SecurityTokenPathConfig struct {
 }
 
 type SecurityTokenConfig struct {
-	SkipSecurityTokenClientProtocolSet util.Set
-	SecurityTokenModelSet              util.Set
-	SecurityTokenDevicePercentEnabled  bool
-	SecurityTokenDevicePercentValue    float64
-	SecurityTokenHostKeyword           string
-	SecurityTokenKey                   string
-	SecurityTokenHashEnabled           bool
-	SecurityTokenGroupServiceEnabled   bool
+	SecurityTokenOnlyForNewOfferedFwEnabled bool
+	SkipSecurityTokenClientProtocolSet      util.Set
+	SecurityTokenModelSet                   util.Set
+	SecurityTokenDevicePercentEnabled       bool
+	SecurityTokenDevicePercentValue         float64
+	SecurityTokenHostKeyword                string
+	SecurityTokenKey                        string
+	SecurityTokenHashEnabled                bool
+	SecurityTokenGroupServiceEnabled        bool
 }
 
 func NewSecurityTokenConfig(conf *configuration.Config) *SecurityTokenConfig {
+	securityTokenOnlyForNewOfferedFwEnabled := conf.GetBoolean("xconfwebconfig.xconf.security_token_only_for_new_offered_fw_enabled")
 	clientProtocolString := conf.GetString("xconfwebconfig.xconf.skip_security_token_client_protocol_set")
 	clientProtocolSet := util.NewSet()
 	if !util.IsBlank(clientProtocolString) {
@@ -81,14 +83,15 @@ func NewSecurityTokenConfig(conf *configuration.Config) *SecurityTokenConfig {
 	securityTokenGroupServiceEnabled := conf.GetBoolean("xconfwebconfig.xconf.security_token_group_service_enabled")
 
 	return &SecurityTokenConfig{
-		SkipSecurityTokenClientProtocolSet: clientProtocolSet,
-		SecurityTokenModelSet:              modelSet,
-		SecurityTokenDevicePercentEnabled:  devicePercentEnabled,
-		SecurityTokenDevicePercentValue:    devicePercentValue,
-		SecurityTokenHostKeyword:           hostKeyword,
-		SecurityTokenKey:                   getSecurityTokenKey(conf),
-		SecurityTokenHashEnabled:           securityTokenHashEnabled,
-		SecurityTokenGroupServiceEnabled:   securityTokenGroupServiceEnabled,
+		SecurityTokenOnlyForNewOfferedFwEnabled: securityTokenOnlyForNewOfferedFwEnabled,
+		SkipSecurityTokenClientProtocolSet:      clientProtocolSet,
+		SecurityTokenModelSet:                   modelSet,
+		SecurityTokenDevicePercentEnabled:       devicePercentEnabled,
+		SecurityTokenDevicePercentValue:         devicePercentValue,
+		SecurityTokenHostKeyword:                hostKeyword,
+		SecurityTokenKey:                        getSecurityTokenKey(conf),
+		SecurityTokenHashEnabled:                securityTokenHashEnabled,
+		SecurityTokenGroupServiceEnabled:        securityTokenGroupServiceEnabled,
 	}
 }
 
@@ -197,7 +200,7 @@ func (s *SecurityTokenPathConfig) addTokenToUrl(deviceInfo map[string]string, ur
 	}
 	fields[fmt.Sprintf("%s.token", SECURITY_TOKEN_KEY)] = securityToken
 	urlStringWithProtocol := urlString
-	// add protocol so we an parse the url properly
+	// add protocol so we can parse the url properly
 	if isFqdn {
 		urlStringWithProtocol = fmt.Sprintf("%s%s", URL_PROTOCOL_PREFIX, urlString)
 	}
