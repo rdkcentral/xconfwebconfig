@@ -151,11 +151,17 @@ func GetFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResp
 	// only invoke security manager code if flag is enabled
 	// also check if SecurityTokenOnlyForNewOfferedFw is enabled, make sure a new fw is offered
 	if Xc.SecurityTokenManagerEnabled && (!Ws.SecurityTokenConfig.SecurityTokenOnlyForNewOfferedFwEnabled || evaluationResult.FirmwareConfig.GetFirmwareVersion() != contextMap[common.FIRMWARE_VERSION]) {
+
+		filename := evaluationResult.FirmwareConfig.GetFirmwareFilename()
+		if additionalFwVerInfo, ok := evaluationResult.FirmwareConfig.Properties[common.ADDITIONAL_FW_VER_INFO]; ok {
+			filename = fmt.Sprintf("%s,%s", filename, additionalFwVerInfo)
+		}
+
 		deviceInfo := map[string]string{
 			xhttp.SECURITY_TOKEN_ESTB_MAC:        contextMap[common.ESTB_MAC],
 			xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
 			xhttp.SECURITY_TOKEN_ESTB_IP:         contextMap[common.IP_ADDRESS],
-			xhttp.SECURITY_TOKEN_FW_FILENAME:     evaluationResult.FirmwareConfig.GetFirmwareFilename(),
+			xhttp.SECURITY_TOKEN_FW_FILENAME:     filename,
 			xhttp.SECURITY_TOKEN_FW_VERSION:      evaluationResult.FirmwareConfig.GetFirmwareVersion(),
 		}
 		if !util.IsBlank(contextMap[common.PARTNER_ID]) {
