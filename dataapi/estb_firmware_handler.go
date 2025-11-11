@@ -148,9 +148,9 @@ func GetFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResp
 		return http.StatusNotFound, []byte(fmt.Sprintf("\"<h2>404 NOT FOUND</h2><div>%s<div>\"", explanation)), nil, nil
 	}
 
-	// only invoke security manager code if flag is enabled and offered firmware version differs from reported firmware version
-	if Xc.SecurityTokenManagerEnabled && evaluationResult.FirmwareConfig.GetFirmwareVersion() != contextMap[common.FIRMWARE_VERSION] {
-
+	// only invoke security manager code if flag is enabled
+	// also check if SecurityTokenOnlyForNewOfferedFw is enabled, make sure a new fw is offered
+	if Xc.SecurityTokenManagerEnabled && (!Ws.SecurityTokenConfig.SecurityTokenOnlyForNewOfferedFwEnabled || evaluationResult.FirmwareConfig.GetFirmwareVersion() != contextMap[common.FIRMWARE_VERSION]) {
 		deviceInfo := map[string]string{
 			xhttp.SECURITY_TOKEN_ESTB_MAC:        contextMap[common.ESTB_MAC],
 			xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
