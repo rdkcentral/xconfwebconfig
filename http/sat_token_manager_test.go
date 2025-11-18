@@ -19,7 +19,10 @@ package http
 
 import (
 	"testing"
+	"time"
 
+	"github.com/rdkcentral/xconfwebconfig/common"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -169,4 +172,122 @@ func TestSatToken_ShortExpiry(t *testing.T) {
 
 	assert.Equal(t, "short-lived-token", token.Token)
 	assert.Equal(t, 60, token.TokenTTL)
+}
+
+// Test functions using existing mock infrastructure for 0% coverage functions
+
+func TestGetSatTokenManager_WithMockInfrastructure(t *testing.T) {
+	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
+	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks() // Use existing mock infrastructure
+
+	// Test GetSatTokenManager function
+	manager := GetSatTokenManager()
+	assert.NotNil(t, manager)
+}
+
+func TestGetSatToken_WithMockInfrastructure(t *testing.T) {
+	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
+	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks() // Use existing mock infrastructure
+	InitSatTokenManager(server)
+
+	manager := GetSatTokenManager()
+	fields := log.Fields{"test": "GetSatToken"}
+
+	// Test GetSatToken function with proper fields parameter
+	token, err := manager.GetSatToken(fields)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, token)
+}
+
+func TestGetLocalSatToken_WithMockInfrastructure(t *testing.T) {
+	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
+	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks() // Use existing mock infrastructure
+	InitSatTokenManager(server)
+
+	fields := log.Fields{"test": "GetLocalSatToken"}
+
+	// Test GetLocalSatToken function with proper fields parameter
+	token, err := GetLocalSatToken(fields)
+	assert.NoError(t, err)
+	assert.NotNil(t, token)
+}
+
+func TestSetLocalSatToken_WithMockInfrastructure(t *testing.T) {
+	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
+	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks() // Use existing mock infrastructure
+	InitSatTokenManager(server)
+
+	fields := log.Fields{"test": "SetLocalSatToken"}
+
+	// Test SetLocalSatToken function with proper fields parameter
+	err := SetLocalSatToken(fields)
+	assert.NoError(t, err)
+
+	// Verify the token was set by getting it back
+	retrievedToken, err := GetLocalSatToken(fields)
+	assert.NoError(t, err)
+	assert.NotNil(t, retrievedToken)
+}
+
+func TestGetSatTokenFromSatService_WithMockInfrastructure(t *testing.T) {
+	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
+	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks() // Use existing mock infrastructure
+	InitSatTokenManager(server)
+
+	fields := log.Fields{"test": "GetSatTokenFromSatService"}
+
+	// Test GetSatTokenFromSatService function using existing Ws mock
+	token, err := GetSatTokenFromSatService(fields)
+	// Since we're using mocks, we expect successful execution
+	assert.NoError(t, err)
+	assert.NotNil(t, token)
+}
+
+func TestIsTokenExpired_WithMockInfrastructure(t *testing.T) {
+	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
+	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks() // Use existing mock infrastructure
+	InitSatTokenManager(server)
+
+	fields := log.Fields{"test": "IsTokenExpired"}
+
+	// Test IsTokenExpired with an expired token
+	expiredToken := &SatToken{
+		Token:    "expired-token",
+		Expiry:   "2020-01-01 00:00:00", // Past date
+		TokenTTL: 3600,
+	}
+
+	isExpired := expiredToken.IsTokenExpired(fields)
+	assert.True(t, isExpired)
+
+	// Test IsTokenExpired with a valid token
+	futureToken := &SatToken{
+		Token:    "future-token",
+		Expiry:   "2030-12-31 23:59:59", // Future date
+		TokenTTL: 3600,
+	}
+
+	isExpired = futureToken.IsTokenExpired(fields)
+	assert.False(t, isExpired)
+}
+
+func TestGetTokenExpiryTime_WithMockInfrastructure(t *testing.T) {
+	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
+	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks() // Use existing mock infrastructure
+	InitSatTokenManager(server)
+
+	// Test GetTokenExpiryTime function
+	expiryTime := GetTokenExpiryTime()
+	assert.NotEmpty(t, expiryTime)
+
+	// Verify it's a valid timestamp format
+	_, err := time.Parse("2006-01-02 15:04:05", expiryTime)
+	assert.NoError(t, err)
 }

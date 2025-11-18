@@ -18,8 +18,13 @@
 package http
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/go-akka/configuration"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -115,4 +120,107 @@ func TestDefaultGroupServiceSync_MultipleUpdates(t *testing.T) {
 
 	service.SetGroupServiceSyncHost("https://host3.com")
 	assert.Equal(t, "https://host3.com", service.host)
+}
+
+// Test AddSecurityTokenInfo function with mocked HTTP responses
+func TestDefaultGroupServiceSync_AddSecurityTokenInfo_Success(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Contains(t, r.URL.Path, "security-123")
+		assert.Equal(t, "application/x-protobuf", r.Header.Get("Content-Type"))
+		assert.Equal(t, "application/x-protobuf", r.Header.Get("Accept"))
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Success"))
+	}))
+	defer mockServer.Close()
+
+	conf := configuration.ParseString(fmt.Sprintf(`
+		xconfwebconfig {
+			xconf {
+				group_sync_service_name = "groupsync-service"
+			}
+			groupsync-service {
+				host = "%s"
+				path = "/api/v1"
+				security_token_path = "/security"
+			}
+		}
+	`, mockServer.URL))
+
+	service := NewGroupServiceSyncConnector(conf, nil, nil).(*DefaultGroupServiceSync)
+	fields := log.Fields{"test": "security_token"}
+
+	// Create test security token info
+	tokenInfo := map[string]string{
+		"token":      "test-token-123",
+		"expires_at": "2025-12-31",
+		"scope":      "read write",
+	}
+
+	err := service.AddSecurityTokenInfo("security-123", tokenInfo, fields)
+
+	assert.NoError(t, err)
+}
+
+func TestDefaultGroupServiceSync_AddSecurityTokenInfo_ServerError(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
+	}))
+	defer mockServer.Close()
+
+	conf := configuration.ParseString(fmt.Sprintf(`
+		xconfwebconfig {
+			xconf {
+				group_sync_service_name = "groupsync-service"
+			}
+			groupsync-service {
+				host = "%s"
+				path = "/api/v1"
+				security_token_path = "/security"
+			}
+		}
+	`, mockServer.URL))
+
+	service := NewGroupServiceSyncConnector(conf, nil, nil).(*DefaultGroupServiceSync)
+	fields := log.Fields{"test": "error"}
+
+	tokenInfo := map[string]string{
+		"token": "test-token",
+	}
+
+	err := service.AddSecurityTokenInfo("error-id", tokenInfo, fields)
+
+	assert.Error(t, err)
+}
+
+func TestDefaultGroupServiceSync_AddSecurityTokenInfo_EmptyTokenInfo(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Success"))
+	}))
+	defer mockServer.Close()
+
+	conf := configuration.ParseString(fmt.Sprintf(`
+		xconfwebconfig {
+			xconf {
+				group_sync_service_name = "groupsync-service"
+			}
+			groupsync-service {
+				host = "%s"
+				path = "/api/v1"
+				security_token_path = "/security"
+			}
+		}
+	`, mockServer.URL))
+
+	service := NewGroupServiceSyncConnector(conf, nil, nil).(*DefaultGroupServiceSync)
+	fields := log.Fields{"test": "empty"}
+
+	tokenInfo := map[string]string{}
+
+	err := service.AddSecurityTokenInfo("empty-id", tokenInfo, fields)
+
+	assert.NoError(t, err)
 }

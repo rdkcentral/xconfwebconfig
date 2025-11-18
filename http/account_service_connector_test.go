@@ -18,8 +18,14 @@
 package http
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/go-akka/configuration"
+	"github.com/rdkcentral/xconfwebconfig/common"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -188,4 +194,164 @@ func TestDefaultAccountService_SetAccountServiceHost_EmptyString(t *testing.T) {
 	service.SetAccountServiceHost("")
 
 	assert.Equal(t, "", service.host)
+}
+
+// Test GetAccountData with mocked HTTP server (0% coverage function)
+func TestDefaultAccountService_GetAccountData_Success(t *testing.T) {
+	// Create a FAKE/MOCK HTTP server (not real!)
+	mockAccountServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify request headers
+		assert.Contains(t, r.Header.Get("Authorization"), "Bearer test-token")
+		assert.Equal(t, common.HeaderXconfDataService, r.Header.Get("User-Agent"))
+
+		// Return FAKE account data (no database involved!)
+		mockAccount := Account{
+			Id: "test-account-id",
+			AccountData: AccountData{
+				AccountAttributes: AccountAttributes{
+					TimeZone:    "America/New_York",
+					CountryCode: "US",
+				},
+			},
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(mockAccount)
+	}))
+	defer mockAccountServer.Close()
+
+	// Create service pointing to MOCK server (not real service!)
+	config := configuration.ParseString("") // Empty config for testing
+	service := &DefaultAccountService{
+		HttpClient: NewHttpClient(config, "test-service", nil),
+		host:       mockAccountServer.URL, // Points to our FAKE server
+	}
+
+	// Test GetAccountData with our MOCK server
+	fields := log.Fields{"test": "field"}
+	account, err := service.GetAccountData("test-service-account", "test-token", fields)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "test-account-id", account.Id)
+	assert.Equal(t, "America/New_York", account.AccountData.AccountAttributes.TimeZone)
+}
+
+func TestDefaultAccountService_GetAccountData_HTTPError(t *testing.T) {
+	// Create MOCK server that simulates HTTP error (not real service!)
+	mockErrorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Server Error"))
+	}))
+	defer mockErrorServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultAccountService{
+		HttpClient: NewHttpClient(config, "test-service", nil),
+		host:       mockErrorServer.URL, // Points to our FAKE error server
+	}
+
+	fields := log.Fields{"test": "field"}
+	account, err := service.GetAccountData("test-service-account", "test-token", fields)
+
+	assert.Error(t, err)
+	assert.Equal(t, "", account.Id)
+}
+
+func TestDefaultAccountService_GetAccountData_InvalidJSON(t *testing.T) {
+	// Create MOCK server that returns invalid JSON (simulates bad response)
+	mockInvalidJSONServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("invalid json"))
+	}))
+	defer mockInvalidJSONServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultAccountService{
+		HttpClient: NewHttpClient(config, "test-service", nil),
+		host:       mockInvalidJSONServer.URL, // Points to our FAKE server with bad JSON
+	}
+
+	fields := log.Fields{"test": "field"}
+	account, err := service.GetAccountData("test-service-account", "test-token", fields)
+
+	assert.Error(t, err)
+	assert.Equal(t, "", account.Id)
+}
+
+// Test GetDevices with mocked HTTP server (0% coverage function)
+func TestDefaultAccountService_GetDevices_Success(t *testing.T) {
+	// Create FAKE/MOCK server that returns device data (no real database!)
+	mockDevicesServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify request headers
+		assert.Contains(t, r.Header.Get("Authorization"), "Bearer test-token")
+		assert.Equal(t, common.HeaderXconfDataService, r.Header.Get("User-Agent"))
+
+		// Return FAKE devices data (hardcoded, no database query!)
+		mockDevices := []AccountServiceDevices{
+			{
+				Id: "device-123",
+				DeviceData: DeviceData{
+					Partner:           "Comcast",
+					ServiceAccountUri: "/accounts/12345",
+				},
+			},
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(mockDevices)
+	}))
+	defer mockDevicesServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultAccountService{
+		HttpClient: NewHttpClient(config, "test-service", nil),
+		host:       mockDevicesServer.URL, // Points to our FAKE devices server
+	}
+
+	fields := log.Fields{"test": "field"}
+	devices, err := service.GetDevices("macKey", "macValue", "test-token", fields)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "device-123", devices.Id)
+	assert.Equal(t, "Comcast", devices.DeviceData.Partner)
+}
+
+func TestDefaultAccountService_GetDevices_EmptyArray(t *testing.T) {
+	// Create MOCK server that returns empty devices array (simulates no devices found)
+	mockEmptyDevicesServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode([]AccountServiceDevices{})
+	}))
+	defer mockEmptyDevicesServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultAccountService{
+		HttpClient: NewHttpClient(config, "test-service", nil),
+		host:       mockEmptyDevicesServer.URL, // Points to our FAKE empty devices server
+	}
+
+	fields := log.Fields{"test": "field"}
+	devices, err := service.GetDevices("macKey", "macValue", "test-token", fields)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "", devices.Id) // Should be empty when array is empty
+}
+
+func TestDefaultAccountService_GetDevices_HTTPError(t *testing.T) {
+	// Create MOCK server that simulates HTTP 404 error (device not found scenario)
+	mockNotFoundServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Not Found"))
+	}))
+	defer mockNotFoundServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultAccountService{
+		HttpClient: NewHttpClient(config, "test-service", nil),
+		host:       mockNotFoundServer.URL, // Points to our FAKE 404 server
+	}
+
+	fields := log.Fields{"test": "field"}
+	devices, err := service.GetDevices("macKey", "macValue", "test-token", fields)
+
+	assert.Error(t, err)
+	assert.Equal(t, "", devices.Id)
 }

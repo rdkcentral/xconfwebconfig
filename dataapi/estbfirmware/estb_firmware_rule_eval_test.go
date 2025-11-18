@@ -743,3 +743,40 @@ func TestRunningVersionInfo_Struct(t *testing.T) {
 	assert.True(t, info.HasActivationMinFW)
 	assert.False(t, info.HasMinimumFW)
 }
+
+// Test contains package-level function (0% coverage)
+func TestContainsPackageLevel(t *testing.T) {
+	slice := []string{"apple", "banana", "cherry"}
+
+	// Test existing element
+	assert.True(t, contains(slice, "banana"))
+
+	// Test non-existing element
+	assert.False(t, contains(slice, "orange"))
+
+	// Test empty slice
+	assert.False(t, contains([]string{}, "apple"))
+
+	// Test nil slice
+	assert.False(t, contains(nil, "apple"))
+
+	// Test empty string
+	assert.False(t, contains(slice, ""))
+}
+
+// Test SortByConditionsSize package-level function (0% coverage)
+func TestSortByConditionsSizePackageLevel(t *testing.T) {
+	rules := []*corefw.FirmwareRule{
+		{Name: "rule1", ID: "id1"},
+		{Name: "rule2", ID: "id2"},
+		{Name: "rule3", ID: "id3"},
+	}
+
+	SortByConditionsSize(rules)
+
+	// Verify it doesn't panic and rules are still there
+	assert.Len(t, rules, 3)
+	assert.Equal(t, "rule1", rules[0].Name)
+	assert.Equal(t, "rule2", rules[1].Name)
+	assert.Equal(t, "rule3", rules[2].Name)
+}
