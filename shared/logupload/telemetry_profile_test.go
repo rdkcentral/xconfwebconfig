@@ -565,3 +565,112 @@ func TestNewTelemetryTwoProfileInf(t *testing.T) {
 	assert.Assert(t, ok, "Should return *TelemetryTwoProfile")
 	assert.Equal(t, profile.ApplicationType, shared.STB)
 }
+
+// Test TelemetryRule getter methods
+func TestTelemetryRuleGetters(t *testing.T) {
+	rule := &TelemetryRule{
+		ID:              "rule123",
+		Name:            "TestRule",
+		ApplicationType: "xhome",
+		Rule: re.Rule{
+			Condition: &re.Condition{},
+		},
+		BoundTelemetryID: "telemetry456",
+	}
+
+	t.Run("GetApplicationType", func(t *testing.T) {
+		assert.Equal(t, rule.GetApplicationType(), "xhome")
+	})
+
+	t.Run("GetApplicationTypeDefault", func(t *testing.T) {
+		ruleNoAppType := &TelemetryRule{}
+		assert.Equal(t, ruleNoAppType.GetApplicationType(), "stb")
+	})
+
+	t.Run("GetId", func(t *testing.T) {
+		assert.Equal(t, rule.GetId(), "rule123")
+	})
+
+	t.Run("GetName", func(t *testing.T) {
+		assert.Equal(t, rule.GetName(), "TestRule")
+	})
+
+	t.Run("GetRule", func(t *testing.T) {
+		r := rule.GetRule()
+		assert.Assert(t, r != nil)
+		assert.Equal(t, r, &rule.Rule)
+	})
+
+	t.Run("GetTemplateId", func(t *testing.T) {
+		assert.Equal(t, rule.GetTemplateId(), "")
+	})
+
+	t.Run("GetRuleType", func(t *testing.T) {
+		assert.Equal(t, rule.GetRuleType(), "TelemetryRule")
+	})
+}
+
+// Test TelemetryTwoRule getter methods
+func TestTelemetryTwoRuleGetters(t *testing.T) {
+	rule := &TelemetryTwoRule{
+		ID:              "rule789",
+		Name:            "TestTwoRule",
+		ApplicationType: "rdkcloud",
+		Rule: re.Rule{
+			Condition: &re.Condition{},
+		},
+		BoundTelemetryIDs: []string{"telemetry999", "telemetry888"},
+	}
+
+	t.Run("GetId", func(t *testing.T) {
+		assert.Equal(t, rule.GetId(), "rule789")
+	})
+
+	t.Run("GetName", func(t *testing.T) {
+		assert.Equal(t, rule.GetName(), "TestTwoRule")
+	})
+
+	t.Run("GetRule", func(t *testing.T) {
+		r := rule.GetRule()
+		assert.Assert(t, r != nil)
+		assert.Equal(t, r, &rule.Rule)
+	})
+
+	t.Run("GetTemplateId", func(t *testing.T) {
+		assert.Equal(t, rule.GetTemplateId(), "")
+	})
+
+	t.Run("GetRuleType", func(t *testing.T) {
+		assert.Equal(t, rule.GetRuleType(), "TelemetryTwoRule")
+	})
+}
+
+// Test PermanentTelemetryProfile GetApplicationType
+func TestPermanentTelemetryProfileGetApplicationType(t *testing.T) {
+	t.Run("WithApplicationType", func(t *testing.T) {
+		profile := &PermanentTelemetryProfile{
+			ApplicationType: "xhome",
+		}
+		assert.Equal(t, profile.GetApplicationType(), "xhome")
+	})
+
+	t.Run("EmptyApplicationType", func(t *testing.T) {
+		profile := &PermanentTelemetryProfile{}
+		assert.Equal(t, profile.GetApplicationType(), "")
+	})
+}
+
+// Test TelemetryTwoProfile GetApplicationType
+func TestTelemetryTwoProfileGetApplicationType(t *testing.T) {
+	t.Run("WithApplicationType", func(t *testing.T) {
+		profile := &TelemetryTwoProfile{
+			ApplicationType: "rdkcloud",
+		}
+		assert.Equal(t, profile.GetApplicationType(), "rdkcloud")
+	})
+
+	t.Run("EmptyApplicationType", func(t *testing.T) {
+		profile := &TelemetryTwoProfile{}
+		assert.Equal(t, profile.GetApplicationType(), "")
+	})
+}

@@ -20,6 +20,10 @@ package estbfirmware
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/common"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
+	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"github.com/stretchr/testify/assert"
 )
@@ -532,14 +536,6 @@ func TestContains_EmptyString(t *testing.T) {
 	assert.True(t, result)
 }
 
-// Test getConditionsSize
-func TestGetConditionsSize(t *testing.T) {
-	// getConditionsSize is a helper function using rulesengine.Rule
-	// The implementation counts conditions in a rule
-	// Skip detailed testing as it requires rulesengine.Rule setup
-	t.Skip("getConditionsSize requires rulesengine.Rule setup")
-}
-
 // Test ExtractAnyPresentConfig - requires complex type setup
 func TestExtractAnyPresentConfig(t *testing.T) {
 	t.Skip("ExtractAnyPresentConfig requires firmware.ApplicableAction type setup")
@@ -779,4 +775,255 @@ func TestSortByConditionsSizePackageLevel(t *testing.T) {
 	assert.Equal(t, "rule1", rules[0].Name)
 	assert.Equal(t, "rule2", rules[1].Name)
 	assert.Equal(t, "rule3", rules[2].Name)
+}
+
+// Test IsIpInRange utility function
+func TestIsIpInRange_ValidIP(t *testing.T) {
+	// This tests the helper function that wraps shared.IpAddress
+	// We're using simplified test cases as actual IP range checking is done in shared package
+	t.Run("EmptyIPString", func(t *testing.T) {
+		addressToCheck := shared.IpAddress{}
+		result := IsIpInRange("", addressToCheck)
+		assert.False(t, result, "Empty IP string should return false")
+	})
+
+	t.Run("InvalidIPString", func(t *testing.T) {
+		addressToCheck := shared.IpAddress{}
+		result := IsIpInRange("invalid-ip", addressToCheck)
+		assert.False(t, result, "Invalid IP string should return false")
+	})
+}
+
+// Test applyMandatoryUpdateFlag function
+func TestApplyMandatoryUpdateFlag(t *testing.T) {
+	t.Run("NoCurrentFirmwareVersionAndRuleAction", func(t *testing.T) {
+		evaluationResult := &EvaluationResult{
+			MatchedRule: &corefw.FirmwareRule{
+				ApplicableAction: &corefw.ApplicableAction{
+					ActionType: corefw.RULE,
+				},
+			},
+		}
+		context := &coreef.ConvertedContext{
+			FirmwareVersion: "",
+		}
+		properties := make(map[string]interface{})
+
+		applyMandatoryUpdateFlag(evaluationResult, context, properties)
+
+		// Should return early without setting mandatory update
+		_, exists := properties[common.MANDATORY_UPDATE]
+		assert.False(t, exists, "Should not set MANDATORY_UPDATE when firmware version is empty")
+	})
+
+	t.Run("FirmwareCheckRequiredAndVersionNotInList", func(t *testing.T) {
+		evaluationResult := &EvaluationResult{
+			MatchedRule: &corefw.FirmwareRule{
+				ApplicableAction: &corefw.ApplicableAction{
+					ActionType:            corefw.DEFINE_PROPERTIES,
+					FirmwareCheckRequired: true,
+					FirmwareVersions:      []string{"1.0.0", "2.0.0"},
+				},
+			},
+		}
+		context := &coreef.ConvertedContext{
+			FirmwareVersion: "3.0.0",
+		}
+		properties := make(map[string]interface{})
+
+		applyMandatoryUpdateFlag(evaluationResult, context, properties)
+
+		mandatoryUpdate, exists := properties[common.MANDATORY_UPDATE]
+		assert.True(t, exists)
+		assert.True(t, mandatoryUpdate.(bool), "Should set MANDATORY_UPDATE to true when version not in list")
+	})
+
+	t.Run("FirmwareCheckRequiredAndVersionInList", func(t *testing.T) {
+		evaluationResult := &EvaluationResult{
+			MatchedRule: &corefw.FirmwareRule{
+				ApplicableAction: &corefw.ApplicableAction{
+					ActionType:            corefw.DEFINE_PROPERTIES,
+					FirmwareCheckRequired: true,
+					FirmwareVersions:      []string{"1.0.0", "2.0.0", "3.0.0"},
+				},
+			},
+		}
+		context := &coreef.ConvertedContext{
+			FirmwareVersion: "2.0.0",
+		}
+		properties := make(map[string]interface{})
+
+		applyMandatoryUpdateFlag(evaluationResult, context, properties)
+
+		mandatoryUpdate, exists := properties[common.MANDATORY_UPDATE]
+		assert.True(t, exists)
+		assert.False(t, mandatoryUpdate.(bool), "Should set MANDATORY_UPDATE to false when version in list")
+	})
+
+	t.Run("FirmwareCheckNotRequired", func(t *testing.T) {
+		evaluationResult := &EvaluationResult{
+			MatchedRule: &corefw.FirmwareRule{
+				ApplicableAction: &corefw.ApplicableAction{
+					ActionType:            corefw.DEFINE_PROPERTIES,
+					FirmwareCheckRequired: false,
+					FirmwareVersions:      []string{"1.0.0"},
+				},
+			},
+		}
+		context := &coreef.ConvertedContext{
+			FirmwareVersion: "2.0.0",
+		}
+		properties := make(map[string]interface{})
+
+		applyMandatoryUpdateFlag(evaluationResult, context, properties)
+
+		mandatoryUpdate, exists := properties[common.MANDATORY_UPDATE]
+		assert.True(t, exists)
+		assert.False(t, mandatoryUpdate.(bool), "Should set MANDATORY_UPDATE to false when check not required")
+	})
+
+	t.Run("EmptyFirmwareVersionsList", func(t *testing.T) {
+		evaluationResult := &EvaluationResult{
+			MatchedRule: &corefw.FirmwareRule{
+				ApplicableAction: &corefw.ApplicableAction{
+					ActionType:            corefw.DEFINE_PROPERTIES,
+					FirmwareCheckRequired: true,
+					FirmwareVersions:      []string{},
+				},
+			},
+		}
+		context := &coreef.ConvertedContext{
+			FirmwareVersion: "1.0.0",
+		}
+		properties := make(map[string]interface{})
+
+		applyMandatoryUpdateFlag(evaluationResult, context, properties)
+
+		mandatoryUpdate, exists := properties[common.MANDATORY_UPDATE]
+		assert.True(t, exists)
+		assert.False(t, mandatoryUpdate.(bool), "Should set MANDATORY_UPDATE to false when versions list is empty")
+	})
+}
+
+// Test getConditionsSize helper
+func TestGetConditionsSizeHelper(t *testing.T) {
+	t.Run("EmptyRule", func(t *testing.T) {
+		rule := re.Rule{}
+		size := getConditionsSize(rule)
+		assert.Equal(t, 0, size, "Empty rule should have 0 conditions")
+	})
+
+	t.Run("RuleWithCondition", func(t *testing.T) {
+		rule := re.Rule{
+			Condition: &re.Condition{
+				FreeArg: re.NewFreeArg("STRING", "model"),
+				FixedArg: &re.FixedArg{
+					Bean: &re.Bean{},
+				},
+				Operation: "IS",
+			},
+		}
+		size := getConditionsSize(rule)
+		assert.Greater(t, size, 0, "Rule with condition should have at least 1 condition")
+	})
+}
+
+// Test FilterByAppType method
+func TestFilterByAppType_MultipleApplicationTypes(t *testing.T) {
+	ruleBase := NewEstbFirmwareRuleBaseDefault()
+
+	rules := []*corefw.FirmwareRule{
+		{
+			ID:              "rule1",
+			Name:            "STB Rule 1",
+			Type:            corefw.ENV_MODEL_RULE,
+			ApplicationType: "stb",
+		},
+		{
+			ID:              "rule2",
+			Name:            "XHOME Rule 1",
+			Type:            corefw.IP_RULE,
+			ApplicationType: "xhome",
+		},
+		{
+			ID:              "rule3",
+			Name:            "STB Rule 2",
+			Type:            corefw.ENV_MODEL_RULE,
+			ApplicationType: "stb",
+		},
+	}
+
+	t.Run("FilterSTBRules", func(t *testing.T) {
+		result := ruleBase.FilterByAppType(rules, "stb")
+		assert.NotNil(t, result)
+		assert.Contains(t, result, corefw.ENV_MODEL_RULE)
+		assert.Len(t, result[corefw.ENV_MODEL_RULE], 2)
+	})
+
+	t.Run("FilterXHOMERules", func(t *testing.T) {
+		result := ruleBase.FilterByAppType(rules, "xhome")
+		assert.NotNil(t, result)
+		assert.Contains(t, result, corefw.IP_RULE)
+		assert.Len(t, result[corefw.IP_RULE], 1)
+	})
+
+	t.Run("FilterNonExistentAppType", func(t *testing.T) {
+		result := ruleBase.FilterByAppType(rules, "nonexistent")
+		assert.NotNil(t, result)
+		assert.Empty(t, result)
+	})
+}
+
+// Test EvaluationResult struct fields
+func TestEvaluationResult_StructFields(t *testing.T) {
+	t.Run("AllFieldsInitialized", func(t *testing.T) {
+		result := NewEvaluationResult()
+		assert.Nil(t, result.MatchedRule)
+		assert.NotNil(t, result.AppliedFilters)
+		assert.Nil(t, result.FirmwareConfig)
+		assert.Equal(t, "", result.Description)
+		assert.False(t, result.Blocked)
+		assert.NotNil(t, result.AppliedVersionInfo)
+	})
+
+	t.Run("SetFields", func(t *testing.T) {
+		result := NewEvaluationResult()
+		result.Description = "Test description"
+		result.Blocked = true
+		result.AppliedVersionInfo["test"] = "value"
+
+		assert.Equal(t, "Test description", result.Description)
+		assert.True(t, result.Blocked)
+		assert.Equal(t, "value", result.AppliedVersionInfo["test"])
+	})
+}
+
+// Test RunningVersionInfo struct
+func TestRunningVersionInfo_AllFields(t *testing.T) {
+	t.Run("BothFlagsTrue", func(t *testing.T) {
+		info := &RunningVersionInfo{
+			HasActivationMinFW: true,
+			HasMinimumFW:       true,
+		}
+		assert.True(t, info.HasActivationMinFW)
+		assert.True(t, info.HasMinimumFW)
+	})
+
+	t.Run("BothFlagsFalse", func(t *testing.T) {
+		info := &RunningVersionInfo{
+			HasActivationMinFW: false,
+			HasMinimumFW:       false,
+		}
+		assert.False(t, info.HasActivationMinFW)
+		assert.False(t, info.HasMinimumFW)
+	})
+
+	t.Run("MixedFlags", func(t *testing.T) {
+		info := &RunningVersionInfo{
+			HasActivationMinFW: true,
+			HasMinimumFW:       false,
+		}
+		assert.True(t, info.HasActivationMinFW)
+		assert.False(t, info.HasMinimumFW)
+	})
 }
