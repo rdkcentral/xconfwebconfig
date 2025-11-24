@@ -314,3 +314,77 @@ func TestGetTelemetryTwoProfileByTelemetryRules(t *testing.T) {
 		assert.Equal(t, "profile1", profiles[0].ID)
 	})
 }
+
+// TestCreateTelemetryProfile tests CreateTelemetryProfile function
+func TestCreateTelemetryProfile(t *testing.T) {
+	service := NewTelemetryProfileService()
+
+	// Save original function
+	originalSetFunc := SetTelemetryProfileFunc
+	defer func() { SetTelemetryProfileFunc = originalSetFunc }()
+
+	// Mock the SetTelemetryProfile function
+	var capturedKey string
+	var capturedProfile logupload.TelemetryProfile
+	SetTelemetryProfileFunc = func(key string, profile logupload.TelemetryProfile) {
+		capturedKey = key
+		capturedProfile = profile
+	}
+
+	profile := logupload.TelemetryProfile{
+		ID:   "test-profile",
+		Name: "Test Profile",
+	}
+
+	rule := service.CreateTelemetryProfile("estbMac", "AA:BB:CC:DD:EE:FF", profile)
+
+	assert.NotNil(t, rule)
+	assert.NotNil(t, rule.Rule.Condition)
+	assert.Equal(t, "estbMac", rule.Rule.Condition.FreeArg.Name)
+	assert.NotEmpty(t, capturedKey)
+	assert.Equal(t, "test-profile", capturedProfile.ID)
+}
+
+// TestDropTelemetryFor tests DropTelemetryFor function
+func TestDropTelemetryFor(t *testing.T) {
+	service := NewTelemetryProfileService()
+
+	t.Run("DropWithNilMap", func(t *testing.T) {
+		// Save original function
+		originalGetFunc := GetTelemetryProfileMapFunc
+		defer func() { GetTelemetryProfileMapFunc = originalGetFunc }()
+
+		// Mock to return nil
+		GetTelemetryProfileMapFunc = func() *map[string]logupload.TelemetryProfile {
+			return nil
+		}
+
+		result := service.DropTelemetryFor("estbMac", "AA:BB:CC:DD:EE:FF")
+		assert.Nil(t, result)
+	})
+
+	t.Run("DropWithEmptyMap", func(t *testing.T) {
+		// Save original function
+		originalGetFunc := GetTelemetryProfileMapFunc
+		originalDeleteFunc := DeleteTelemetryProfileFunc
+		defer func() {
+			GetTelemetryProfileMapFunc = originalGetFunc
+			DeleteTelemetryProfileFunc = originalDeleteFunc
+		}()
+
+		// Mock to return empty map
+		emptyMap := make(map[string]logupload.TelemetryProfile)
+		GetTelemetryProfileMapFunc = func() *map[string]logupload.TelemetryProfile {
+			return &emptyMap
+		}
+
+		var deletedKeys []string
+		DeleteTelemetryProfileFunc = func(key string) {
+			deletedKeys = append(deletedKeys, key)
+		}
+
+		result := service.DropTelemetryFor("estbMac", "AA:BB:CC:DD:EE:FF")
+		assert.NotNil(t, result)
+		assert.Len(t, *result, 0)
+	})
+}
