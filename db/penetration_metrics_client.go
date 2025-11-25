@@ -175,7 +175,7 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		RfcAccountHashColumnValue,
 		RfcAccountIdColumnValue,
 		RfcAccountMgmtColumnValue,
-		TitanAccountIdColumnValue,
+		// TitanAccountIdColumnValue,
 		RfcFwReportedVersionColumnValue,
 		//RfcFeaturesColumnValue,
 		//RfcAppliedRulesColumnValue,
@@ -201,7 +201,7 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		pMetrics.RfcAccountHash,
 		pMetrics.RfcAccountId,
 		pMetrics.RfcAccountMgmt,
-		pMetrics.TitanAccountId,
+		// pMetrics.TitanAccountId,
 		pMetrics.RfcFwReportedVersion,
 		//pMetrics.RfcFeatures,
 		//pMetrics.RfcAppliedRules,
@@ -242,6 +242,11 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 
 	if isEmptyString(pMetrics.RfcFeatures) {
 		pMetrics.RfcFeatures = ""
+	}
+
+	if !isEmptyString(pMetrics.TitanAccountId) {
+		columns = append(columns, TitanAccountIdColumnValue)
+		values = append(values, pMetrics.TitanAccountId)
 	}
 
 	//if we return 304 based on precook data, we do not update features and applied_rules with empty string
