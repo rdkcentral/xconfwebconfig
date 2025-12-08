@@ -246,3 +246,125 @@ func TestConfigEntry_CompareTo_ZeroRange(t *testing.T) {
 
 	assert.Equal(t, 0, entry1.CompareTo(entry2))
 }
+
+// Test ApplicableAction GetFirmwareVersions function
+func TestApplicableAction_GetFirmwareVersions(t *testing.T) {
+	action := &ApplicableAction{
+		ActivationFirmwareVersions: map[string][]string{
+			"firmwareVersions": {"1.2.3", "2.0.1"},
+		},
+	}
+
+	versions := action.GetFirmwareVersions()
+	assert.Equal(t, 2, len(versions))
+	assert.Equal(t, "1.2.3", versions[0])
+	assert.Equal(t, "2.0.1", versions[1])
+
+	// Test with empty versions
+	emptyAction := &ApplicableAction{
+		ActivationFirmwareVersions: map[string][]string{},
+	}
+
+	emptyVersions := emptyAction.GetFirmwareVersions()
+	assert.Equal(t, 0, len(emptyVersions))
+}
+
+// Test ApplicableAction GetFirmwareVersionRegExs function
+func TestApplicableAction_GetFirmwareVersionRegExs(t *testing.T) {
+	action := &ApplicableAction{
+		ActivationFirmwareVersions: map[string][]string{
+			"regularExpressions": {"^1\\.2\\..*", "^2\\.0\\..*"},
+		},
+	}
+
+	regexes := action.GetFirmwareVersionRegExs()
+	assert.Equal(t, 2, len(regexes))
+	assert.Equal(t, "^1\\.2\\..*", regexes[0])
+	assert.Equal(t, "^2\\.0\\..*", regexes[1])
+
+	// Test with empty regexes
+	emptyAction := &ApplicableAction{
+		ActivationFirmwareVersions: map[string][]string{},
+	}
+
+	emptyRegexes := emptyAction.GetFirmwareVersionRegExs()
+	assert.Equal(t, 0, len(emptyRegexes))
+}
+
+// Test NewBlockingFilterAction function
+func TestNewBlockingFilterAction(t *testing.T) {
+	actionInterface := NewBlockingFilterAction()
+
+	action, ok := actionInterface.(*BlockingFilterAction)
+	assert.Assert(t, ok)
+	assert.Assert(t, action != nil)
+	assert.Equal(t, ".BlockingFilterAction", action.Type)
+}
+
+// Test NewDefinePropertiesTemplateAction function
+func TestNewDefinePropertiesTemplateAction(t *testing.T) {
+	actionInterface := NewDefinePropertiesTemplateAction()
+
+	action, ok := actionInterface.(*DefinePropertiesTemplateAction)
+	assert.Assert(t, ok)
+	assert.Assert(t, action != nil)
+	assert.Equal(t, ".DefinePropertiesTemplateAction", action.Type)
+}
+
+// Test NewDefinePropertiesAction function
+func TestNewDefinePropertiesAction(t *testing.T) {
+	actionInterface := NewDefinePropertiesAction()
+
+	action, ok := actionInterface.(*DefinePropertiesAction)
+	assert.Assert(t, ok)
+	assert.Assert(t, action != nil)
+	assert.Equal(t, ".DefinePropertiesAction", action.Type)
+}
+
+// Test NewPropertyValue function
+func TestNewPropertyValue(t *testing.T) {
+	value := "test-value"
+	optional := true
+	validationType := ValidationType("IPV4")
+
+	propertyValue := NewPropertyValue(value, optional, validationType)
+
+	assert.Assert(t, propertyValue != nil)
+	assert.Equal(t, value, propertyValue.Value)
+	assert.Equal(t, optional, propertyValue.Optional)
+	assert.Equal(t, 1, len(propertyValue.ValidationTypes))
+	assert.Equal(t, ValidationType("IPV4"), propertyValue.ValidationTypes[0])
+}
+
+// Test HasFirmwareVersion function
+func TestHasFirmwareVersion(t *testing.T) {
+	versions := []string{"1.2.3", "2.0.1", "3.1.0"}
+
+	// Test existing version
+	assert.Assert(t, HasFirmwareVersion(versions, "2.0.1"))
+
+	// Test non-existing version
+	assert.Assert(t, !HasFirmwareVersion(versions, "4.0.0"))
+
+	// Test empty slice
+	assert.Assert(t, !HasFirmwareVersion([]string{}, "1.2.3"))
+
+	// Test nil slice
+	assert.Assert(t, !HasFirmwareVersion(nil, "1.2.3"))
+}
+
+// Test SortConfigEntry function
+func TestSortConfigEntry(t *testing.T) {
+	entries := []*ConfigEntry{
+		{ConfigId: "config-3", StartPercentRange: 75.0},
+		{ConfigId: "config-1", StartPercentRange: 25.0},
+		{ConfigId: "config-2", StartPercentRange: 50.0},
+	}
+
+	SortConfigEntry(entries)
+
+	// Should be sorted by StartPercentRange
+	assert.Equal(t, "config-1", entries[0].ConfigId)
+	assert.Equal(t, "config-2", entries[1].ConfigId)
+	assert.Equal(t, "config-3", entries[2].ConfigId)
+}
