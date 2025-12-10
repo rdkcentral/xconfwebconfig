@@ -121,6 +121,7 @@ func RegisterTables() {
 		db.RegisterTableConfigSimple(db.TABLE_XCONF_FEATURE, rfc.NewFeatureInf)
 		db.RegisterTableConfigSimple(db.TABLE_FEATURE_CONTROL_RULE, rfc.NewFeatureRuleInf)
 		db.RegisterTableConfigSimple(db.TABLE_APP_SETTINGS, shared.NewAppSettingInf)
+		db.RegisterTableConfigSimple(db.TABLE_APPLICATION_TYPES, shared.NewApplicationTypeInf)
 		db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf)
 
 		db.RegisterTableConfig(&db.TableInfo{

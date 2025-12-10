@@ -47,11 +47,22 @@ type AppSetting struct {
 	Value   interface{} `json:"value"`
 }
 
+// ApplicationType table object
+type ApplicationType struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	CreatedBy   string `json:"createdBy"`
+	CreatedAt   int64  `json:"createdAt"`
+	UpdatedAt   int64  `json:"updatedAt,omitempty"`
+}
+
 func isValid(at string) bool {
-	if at == STB || at == XHOME || at == RDKCLOUD || at == SKY {
-		return true
-	}
-	return false
+	//Hiden for now, assume all created application types are valid
+	// if at == STB || at == XHOME || at == RDKCLOUD || at == SKY {
+	// 	return true
+	// }
+	return true
 }
 
 func ValidateApplicationType(applicationType string) error {
@@ -116,6 +127,9 @@ func (obj *Environment) Validate() error {
 	}
 
 	return errors.New("Id is invalid")
+}
+func NewApplicationTypeInf() interface{} {
+	return &ApplicationType{}
 }
 
 // NewEnvironmentInf constructor

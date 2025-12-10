@@ -86,6 +86,8 @@ CREATE TABLE IF NOT EXISTS "Tag" (key text, column1 text, value blob, PRIMARY KE
 
 CREATE TABLE IF NOT EXISTS "Locks" (name text, locked_by text, locked_at timestamp, expires_at timestamp, PRIMARY KEY (name));
 
+CREATE TABLE IF NOT EXISTS "ApplicationTypes" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
+
 CREATE TABLE IF NOT EXISTS "TagMembersBucketed" (
     tag_id TEXT,
     bucket_id INT,
