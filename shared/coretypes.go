@@ -58,11 +58,10 @@ type ApplicationType struct {
 }
 
 func isValid(at string) bool {
-	//Hiden for now, assume all created application types are valid
-	// if at == STB || at == XHOME || at == RDKCLOUD || at == SKY {
-	// 	return true
-	// }
-	return true
+	if at == STB || at == XHOME || at == RDKCLOUD || at == SKY {
+		return true
+	}
+	return false
 }
 
 func ValidateApplicationType(applicationType string) error {
