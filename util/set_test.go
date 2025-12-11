@@ -64,3 +64,19 @@ func TestSet(t *testing.T) {
 	slice = s4.ToSlice()
 	assert.Equal(t, len(slice), 0)
 }
+
+func TestSetIsEmpty(t *testing.T) {
+	// Test empty set
+	emptySet := Set{}
+	assert.Assert(t, emptySet.IsEmpty())
+
+	// Test non-empty set
+	nonEmptySet := NewSet("item1", "item2")
+	assert.Assert(t, !nonEmptySet.IsEmpty())
+
+	// Test set that becomes empty after removing items
+	set := NewSet("item1")
+	assert.Assert(t, !set.IsEmpty())
+	set.Remove("item1")
+	assert.Assert(t, set.IsEmpty())
+}

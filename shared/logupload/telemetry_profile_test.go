@@ -23,6 +23,7 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	"gotest.tools/assert"
 )
@@ -202,4 +203,474 @@ func TestGetTelemetryProfileMap(t *testing.T) {
 			assert.Equal(t, v.ApplicationType, "ApplicationType1")
 		}
 	}
+}
+
+// Test Clone and New constructor functions for better coverage
+func TestUploadRepositoryClone(t *testing.T) {
+	original := &UploadRepository{
+		ID:              "test-id",
+		Name:            "test-name",
+		Description:     "test description",
+		URL:             "http://test.com",
+		ApplicationType: "STB",
+		Protocol:        "HTTP",
+	}
+
+	cloned, err := original.Clone()
+	assert.NilError(t, err)
+	assert.Equal(t, original.ID, cloned.ID)
+	assert.Equal(t, original.Name, cloned.Name)
+	assert.Equal(t, original.Description, cloned.Description)
+	assert.Equal(t, original.URL, cloned.URL)
+	assert.Equal(t, original.ApplicationType, cloned.ApplicationType)
+	assert.Equal(t, original.Protocol, cloned.Protocol)
+
+	// Verify it's a deep copy
+	cloned.ID = "modified-id"
+	assert.Assert(t, original.ID != cloned.ID)
+}
+
+func TestNewUploadRepositoryInf(t *testing.T) {
+	result := NewUploadRepositoryInf()
+	repo, ok := result.(*UploadRepository)
+	assert.Assert(t, ok, "Should return *UploadRepository")
+	assert.Equal(t, repo.ApplicationType, shared.STB)
+}
+
+func TestLogFileClone(t *testing.T) {
+	original := &LogFile{
+		ID:             "log-file-id",
+		Updated:        1234567890,
+		Name:           "test.log",
+		DeleteOnUpload: true,
+	}
+
+	cloned, err := original.Clone()
+	assert.NilError(t, err)
+	assert.Equal(t, original.ID, cloned.ID)
+	assert.Equal(t, original.Updated, cloned.Updated)
+	assert.Equal(t, original.Name, cloned.Name)
+	assert.Equal(t, original.DeleteOnUpload, cloned.DeleteOnUpload)
+
+	// Verify it's a deep copy
+	cloned.Name = "modified.log"
+	assert.Assert(t, original.Name != cloned.Name)
+}
+
+func TestNewLogFileInf(t *testing.T) {
+	result := NewLogFileInf()
+	logFile, ok := result.(*LogFile)
+	assert.Assert(t, ok, "Should return *LogFile")
+	assert.Equal(t, logFile.ID, "")
+	assert.Equal(t, logFile.Updated, int64(0))
+}
+
+func TestLogFilesGroupsClone(t *testing.T) {
+	original := &LogFilesGroups{
+		ID:         "group-id",
+		Updated:    1234567890,
+		GroupName:  "group-name",
+		LogFileIDs: []string{"file1", "file2"},
+	}
+
+	cloned, err := original.Clone()
+	assert.NilError(t, err)
+	assert.Equal(t, original.ID, cloned.ID)
+	assert.Equal(t, original.Updated, cloned.Updated)
+	assert.Equal(t, original.GroupName, cloned.GroupName)
+	assert.Equal(t, len(original.LogFileIDs), len(cloned.LogFileIDs))
+}
+
+func TestNewLogFilesGroupsInf(t *testing.T) {
+	result := NewLogFilesGroupsInf()
+	group, ok := result.(*LogFilesGroups)
+	assert.Assert(t, ok, "Should return *LogFilesGroups")
+	assert.Equal(t, group.ID, "")
+}
+
+func TestLogFileListClone(t *testing.T) {
+	logFile1 := &LogFile{ID: "file1", Name: "test1.log"}
+	logFile2 := &LogFile{ID: "file2", Name: "test2.log"}
+	original := &LogFileList{
+		Updated: 1234567890,
+		Data:    []*LogFile{logFile1, logFile2},
+	}
+
+	cloned, err := original.Clone()
+	assert.NilError(t, err)
+	assert.Equal(t, original.Updated, cloned.Updated)
+	assert.Equal(t, len(original.Data), len(cloned.Data))
+	assert.Equal(t, original.Data[0].ID, cloned.Data[0].ID)
+}
+
+func TestNewLogFileListInf(t *testing.T) {
+	result := NewLogFileListInf()
+	list, ok := result.(*LogFileList)
+	assert.Assert(t, ok, "Should return *LogFileList")
+	assert.Equal(t, list.Updated, int64(0))
+}
+
+// Test DCMGenericRule methods
+func TestDCMGenericRule_GetPriority(t *testing.T) {
+	rule := &DCMGenericRule{Priority: 5}
+	assert.Equal(t, rule.GetPriority(), 5)
+}
+
+func TestDCMGenericRule_SetPriority(t *testing.T) {
+	rule := &DCMGenericRule{}
+	rule.SetPriority(10)
+	assert.Equal(t, rule.Priority, 10)
+}
+
+func TestDCMGenericRule_GetID(t *testing.T) {
+	rule := &DCMGenericRule{ID: "test-rule-id"}
+	assert.Equal(t, rule.GetID(), "test-rule-id")
+}
+
+func TestDCMGenericRule_Clone(t *testing.T) {
+	original := &DCMGenericRule{
+		ID:          "rule-id",
+		Name:        "test-rule",
+		Description: "test description",
+		Priority:    5,
+		Percentage:  80,
+	}
+
+	cloned, err := original.Clone()
+	assert.NilError(t, err)
+	assert.Equal(t, original.ID, cloned.ID)
+	assert.Equal(t, original.Name, cloned.Name)
+	assert.Equal(t, original.Priority, cloned.Priority)
+	assert.Equal(t, original.Percentage, cloned.Percentage)
+
+	// Verify it's a deep copy
+	cloned.ID = "modified-id"
+	assert.Assert(t, original.ID != cloned.ID)
+}
+
+func TestNewDCMGenericRuleInf(t *testing.T) {
+	result := NewDCMGenericRuleInf()
+	rule, ok := result.(*DCMGenericRule)
+	assert.Assert(t, ok, "Should return *DCMGenericRule")
+	assert.Equal(t, rule.Percentage, 100)
+	assert.Equal(t, rule.ApplicationType, shared.STB)
+}
+
+// Test Settings functions
+func TestIsValidSettingType(t *testing.T) {
+	// Test valid setting types
+	assert.Assert(t, IsValidSettingType("PARTNER_SETTINGS"))
+	assert.Assert(t, IsValidSettingType("EPON"))
+	assert.Assert(t, IsValidSettingType("partnersettings"))
+	assert.Assert(t, IsValidSettingType("epon"))
+
+	// Test invalid setting types
+	assert.Assert(t, !IsValidSettingType("INVALID"))
+	assert.Assert(t, !IsValidSettingType(""))
+	assert.Assert(t, !IsValidSettingType("random"))
+}
+
+func TestSettingTypeEnum(t *testing.T) {
+	// Test valid enums
+	assert.Equal(t, SettingTypeEnum("epon"), EPON)
+	assert.Equal(t, SettingTypeEnum("EPON"), EPON)
+	assert.Equal(t, SettingTypeEnum("partner_settings"), PARTNER_SETTINGS)
+	assert.Equal(t, SettingTypeEnum("partnersettings"), PARTNER_SETTINGS)
+	assert.Equal(t, SettingTypeEnum("PARTNERSETTINGS"), PARTNER_SETTINGS)
+
+	// Test invalid enum
+	assert.Equal(t, SettingTypeEnum("invalid"), 0)
+	assert.Equal(t, SettingTypeEnum(""), 0)
+}
+
+func TestSettingProfiles_Clone(t *testing.T) {
+	original := &SettingProfiles{
+		ID:               "settings-id",
+		Updated:          1234567890,
+		SettingProfileID: "profile-id",
+		SettingType:      "EPON",
+		Properties:       map[string]string{"key1": "value1", "key2": "value2"},
+		ApplicationType:  "STB",
+	}
+
+	cloned, err := original.Clone()
+	assert.NilError(t, err)
+	assert.Equal(t, original.ID, cloned.ID)
+	assert.Equal(t, original.SettingProfileID, cloned.SettingProfileID)
+	assert.Equal(t, original.SettingType, cloned.SettingType)
+	assert.Equal(t, len(original.Properties), len(cloned.Properties))
+	assert.Equal(t, original.Properties["key1"], cloned.Properties["key1"])
+}
+
+func TestNewSettingProfilesInf(t *testing.T) {
+	result := NewSettingProfilesInf()
+	profiles, ok := result.(*SettingProfiles)
+	assert.Assert(t, ok, "Should return *SettingProfiles")
+	assert.Equal(t, profiles.ApplicationType, shared.STB)
+}
+
+func TestVodSettings_Clone(t *testing.T) {
+	original := &VodSettings{
+		ID:           "vod-id",
+		Updated:      1234567890,
+		Name:         "vod-settings",
+		LocationsURL: "http://locations.com",
+		IPNames:      []string{"ip1", "ip2"},
+		IPList:       []string{"192.168.1.1", "192.168.1.2"},
+		SrmIPList:    map[string]string{"srm1": "10.0.0.1"},
+	}
+
+	cloned, err := original.Clone()
+	assert.NilError(t, err)
+	assert.Equal(t, original.ID, cloned.ID)
+	assert.Equal(t, original.Name, cloned.Name)
+	assert.Equal(t, len(original.IPNames), len(cloned.IPNames))
+	assert.Equal(t, original.IPNames[0], cloned.IPNames[0])
+}
+
+func TestNewVodSettingsInf(t *testing.T) {
+	result := NewVodSettingsInf()
+	vod, ok := result.(*VodSettings)
+	assert.Assert(t, ok, "Should return *VodSettings")
+	assert.Equal(t, vod.ApplicationType, shared.STB)
+}
+
+func TestDeviceSettings_Clone(t *testing.T) {
+	original := &DeviceSettings{
+		ID:                      "device-id",
+		Updated:                 1234567890,
+		Name:                    "device-settings",
+		CheckOnReboot:           true,
+		SettingsAreActive:       true,
+		Schedule:                Schedule{Type: "cron", Expression: "0 0 * * *"},
+		ConfigurationServiceURL: ConfigurationServiceURL{URL: "http://config.com"},
+	}
+
+	cloned, err := original.Clone()
+	assert.NilError(t, err)
+	assert.Equal(t, original.ID, cloned.ID)
+	assert.Equal(t, original.Name, cloned.Name)
+	assert.Equal(t, original.CheckOnReboot, cloned.CheckOnReboot)
+	assert.Equal(t, original.Schedule.Type, cloned.Schedule.Type)
+}
+
+func TestNewDeviceSettingsInf(t *testing.T) {
+	result := NewDeviceSettingsInf()
+	device, ok := result.(*DeviceSettings)
+	assert.Assert(t, ok, "Should return *DeviceSettings")
+	assert.Equal(t, device.ApplicationType, shared.STB)
+}
+
+func TestLogUploadSettings_Clone(t *testing.T) {
+	original := &LogUploadSettings{
+		ID:                "upload-id",
+		Updated:           1234567890,
+		Name:              "upload-settings",
+		UploadOnReboot:    true,
+		NumberOfDays:      7,
+		AreSettingsActive: true,
+	}
+
+	cloned, err := original.Clone()
+	assert.NilError(t, err)
+	assert.Equal(t, original.ID, cloned.ID)
+	assert.Equal(t, original.Name, cloned.Name)
+	assert.Equal(t, original.UploadOnReboot, cloned.UploadOnReboot)
+	assert.Equal(t, original.NumberOfDays, cloned.NumberOfDays)
+}
+
+func TestNewLogUploadSettingsInf(t *testing.T) {
+	result := NewLogUploadSettingsInf()
+	upload, ok := result.(*LogUploadSettings)
+	assert.Assert(t, ok, "Should return *LogUploadSettings")
+	assert.Equal(t, upload.ApplicationType, shared.STB)
+}
+
+// Test TelemetryProfile functions
+func TestTelemetryProfile_Clone(t *testing.T) {
+	original := &TelemetryProfile{
+		ID:               "telemetry-id",
+		Name:             "telemetry-profile",
+		Schedule:         "0 0 * * *",
+		UploadRepository: "http://upload.com",
+		ApplicationType:  "STB",
+	}
+
+	cloned, err := original.Clone()
+	assert.NilError(t, err)
+	assert.Equal(t, original.ID, cloned.ID)
+	assert.Equal(t, original.Name, cloned.Name)
+	assert.Equal(t, original.Schedule, cloned.Schedule)
+	assert.Equal(t, original.UploadRepository, cloned.UploadRepository)
+}
+
+func TestNewTelemetryProfileInf(t *testing.T) {
+	result := NewTelemetryProfileInf()
+	profile, ok := result.(*TelemetryProfile)
+	assert.Assert(t, ok, "Should return *TelemetryProfile")
+	assert.Equal(t, profile.ApplicationType, shared.STB)
+}
+
+func TestNewTelemetryProfileDescriptor(t *testing.T) {
+	descriptor := NewTelemetryProfileDescriptor()
+	assert.Assert(t, descriptor != nil, "Should return non-nil descriptor")
+}
+
+func TestIsValidUploadProtocol(t *testing.T) {
+	assert.Assert(t, IsValidUploadProtocol("HTTP"))
+	assert.Assert(t, IsValidUploadProtocol("HTTPS"))
+	assert.Assert(t, IsValidUploadProtocol("SFTP"))
+	assert.Assert(t, IsValidUploadProtocol("SCP"))
+	assert.Assert(t, IsValidUploadProtocol("S3"))
+
+	assert.Assert(t, !IsValidUploadProtocol("FTP"))
+	assert.Assert(t, !IsValidUploadProtocol("INVALID"))
+	assert.Assert(t, !IsValidUploadProtocol(""))
+}
+
+func TestIsValidUrl(t *testing.T) {
+	assert.Assert(t, IsValidUrl("http://example.com"))
+	assert.Assert(t, IsValidUrl("https://example.com"))
+	assert.Assert(t, IsValidUrl("sftp://example.com"))
+
+	assert.Assert(t, !IsValidUrl(""))
+	assert.Assert(t, !IsValidUrl("invalid-url"))
+	assert.Assert(t, !IsValidUrl("ftp://example.com"))
+}
+
+func TestNewPermanentTelemetryProfileInf(t *testing.T) {
+	result := NewPermanentTelemetryProfileInf()
+	profile, ok := result.(*PermanentTelemetryProfile)
+	assert.Assert(t, ok, "Should return *PermanentTelemetryProfile")
+	assert.Equal(t, profile.ApplicationType, shared.STB)
+}
+
+func TestNewTelemetryRuleInf(t *testing.T) {
+	result := NewTelemetryRuleInf()
+	rule, ok := result.(*TelemetryRule)
+	assert.Assert(t, ok, "Should return *TelemetryRule")
+	assert.Equal(t, rule.ApplicationType, shared.STB)
+}
+
+func TestNewTelemetryTwoRuleInf(t *testing.T) {
+	result := NewTelemetryTwoRuleInf()
+	rule, ok := result.(*TelemetryTwoRule)
+	assert.Assert(t, ok, "Should return *TelemetryTwoRule")
+	assert.Equal(t, rule.ApplicationType, shared.STB)
+}
+
+func TestNewTelemetryTwoProfileInf(t *testing.T) {
+	result := NewTelemetryTwoProfileInf()
+	profile, ok := result.(*TelemetryTwoProfile)
+	assert.Assert(t, ok, "Should return *TelemetryTwoProfile")
+	assert.Equal(t, profile.ApplicationType, shared.STB)
+}
+
+// Test TelemetryRule getter methods
+func TestTelemetryRuleGetters(t *testing.T) {
+	rule := &TelemetryRule{
+		ID:              "rule123",
+		Name:            "TestRule",
+		ApplicationType: "xhome",
+		Rule: re.Rule{
+			Condition: &re.Condition{},
+		},
+		BoundTelemetryID: "telemetry456",
+	}
+
+	t.Run("GetApplicationType", func(t *testing.T) {
+		assert.Equal(t, rule.GetApplicationType(), "xhome")
+	})
+
+	t.Run("GetApplicationTypeDefault", func(t *testing.T) {
+		ruleNoAppType := &TelemetryRule{}
+		assert.Equal(t, ruleNoAppType.GetApplicationType(), "stb")
+	})
+
+	t.Run("GetId", func(t *testing.T) {
+		assert.Equal(t, rule.GetId(), "rule123")
+	})
+
+	t.Run("GetName", func(t *testing.T) {
+		assert.Equal(t, rule.GetName(), "TestRule")
+	})
+
+	t.Run("GetRule", func(t *testing.T) {
+		r := rule.GetRule()
+		assert.Assert(t, r != nil)
+		assert.Equal(t, r, &rule.Rule)
+	})
+
+	t.Run("GetTemplateId", func(t *testing.T) {
+		assert.Equal(t, rule.GetTemplateId(), "")
+	})
+
+	t.Run("GetRuleType", func(t *testing.T) {
+		assert.Equal(t, rule.GetRuleType(), "TelemetryRule")
+	})
+}
+
+// Test TelemetryTwoRule getter methods
+func TestTelemetryTwoRuleGetters(t *testing.T) {
+	rule := &TelemetryTwoRule{
+		ID:              "rule789",
+		Name:            "TestTwoRule",
+		ApplicationType: "rdkcloud",
+		Rule: re.Rule{
+			Condition: &re.Condition{},
+		},
+		BoundTelemetryIDs: []string{"telemetry999", "telemetry888"},
+	}
+
+	t.Run("GetId", func(t *testing.T) {
+		assert.Equal(t, rule.GetId(), "rule789")
+	})
+
+	t.Run("GetName", func(t *testing.T) {
+		assert.Equal(t, rule.GetName(), "TestTwoRule")
+	})
+
+	t.Run("GetRule", func(t *testing.T) {
+		r := rule.GetRule()
+		assert.Assert(t, r != nil)
+		assert.Equal(t, r, &rule.Rule)
+	})
+
+	t.Run("GetTemplateId", func(t *testing.T) {
+		assert.Equal(t, rule.GetTemplateId(), "")
+	})
+
+	t.Run("GetRuleType", func(t *testing.T) {
+		assert.Equal(t, rule.GetRuleType(), "TelemetryTwoRule")
+	})
+}
+
+// Test PermanentTelemetryProfile GetApplicationType
+func TestPermanentTelemetryProfileGetApplicationType(t *testing.T) {
+	t.Run("WithApplicationType", func(t *testing.T) {
+		profile := &PermanentTelemetryProfile{
+			ApplicationType: "xhome",
+		}
+		assert.Equal(t, profile.GetApplicationType(), "xhome")
+	})
+
+	t.Run("EmptyApplicationType", func(t *testing.T) {
+		profile := &PermanentTelemetryProfile{}
+		assert.Equal(t, profile.GetApplicationType(), "")
+	})
+}
+
+// Test TelemetryTwoProfile GetApplicationType
+func TestTelemetryTwoProfileGetApplicationType(t *testing.T) {
+	t.Run("WithApplicationType", func(t *testing.T) {
+		profile := &TelemetryTwoProfile{
+			ApplicationType: "rdkcloud",
+		}
+		assert.Equal(t, profile.GetApplicationType(), "rdkcloud")
+	})
+
+	t.Run("EmptyApplicationType", func(t *testing.T) {
+		profile := &TelemetryTwoProfile{}
+		assert.Equal(t, profile.GetApplicationType(), "")
+	})
 }
