@@ -246,7 +246,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			if xAccountId != nil && xAccountId.GetAccountId() != "" {
 				accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(xAccountId.GetAccountId(), fields)
 				if err != nil {
-					log.WithFields(log.Fields{"error": err, "accountId": xAccountId.GetAccountId()}).Error("Error getting AccountService information")
+					log.WithFields(log.Fields{"error": err}).Error("Error getting AccountService information")
 				} else if len(accountProducts) > 0 {
 					if partner, ok := accountProducts["Partner"]; ok && partner != "" {
 						contextMap[common.PARTNER_ID] = partner
