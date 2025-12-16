@@ -238,50 +238,25 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			}
 		}
 	} else if Xc.EnableAccountDataService {
-		log.WithFields(fields).Debug(fmt.Sprintf("ADA_DEBUG: EnableAccountDataService=true, starting ADA keyspace retrieval flow"))
-		log.WithFields(fields).Debug(fmt.Sprintf("ADA_DEBUG: ContextMap keys available: ESTB_MAC='%s', ECM_MAC='%s', ECM_MAC_PARAM='%s'", contextMap[common.ESTB_MAC], contextMap[common.ECM_MAC], contextMap[common.ECM_MAC_PARAM]))
-		// Use ECM_MAC (normalized key after NormalizeCommonContext), fallback to ECM_MAC_PARAM (URL parameter)
 		ecmMacValue := contextMap[common.ECM_MAC]
 		if ecmMacValue == "" {
 			ecmMacValue = contextMap[common.ECM_MAC_PARAM]
-			log.WithFields(fields).Debug(fmt.Sprintf("ADA_DEBUG: ECM_MAC empty, using fallback ECM_MAC_PARAM='%s'", ecmMacValue))
 		}
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) || util.IsValidMacAddress(ecmMacValue) {
-			log.WithFields(fields).Debug(fmt.Sprintf("ADA_DEBUG: Valid MAC address found, calling XAC endpoint with ecmMacValue='%s'", ecmMacValue))
 			xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(ecmMacValue, fields)
 			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("ADA_DEBUG: XAC call failed - Error getting AccountIdData from XAC keyspace")
-			} else {
-				log.WithFields(fields).Debug(fmt.Sprintf("ADA_DEBUG: XAC call successful, received xAccountId object"))
+				log.WithFields(log.Fields{"error": err}).Error("Error getting AccountService information")
 			}
 			if xAccountId != nil && xAccountId.GetAccountId() != "" {
-				log.WithFields(fields).Debug(fmt.Sprintf("ADA_DEBUG: AccountId retrieved from XAC='%s', calling ADA endpoint", xAccountId.GetAccountId()))
 				accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(xAccountId.GetAccountId(), fields)
 				if err != nil {
-					log.WithFields(log.Fields{"error": err, "accountId": xAccountId.GetAccountId()}).Error("ADA_DEBUG: ADA call failed - Error getting AccountProducts from ADA keyspace")
-				} else {
-					log.WithFields(fields).Debug(fmt.Sprintf("ADA_DEBUG: ADA call successful, received accountProducts map with %d entries", len(accountProducts)))
-				}
-				if len(accountProducts) > 0 {
-					log.WithFields(fields).Debug(fmt.Sprintf("ADA_DEBUG: AccountProducts map contents: %v", accountProducts))
+					log.WithFields(log.Fields{"error": err}).Error("Error getting AccountService information")
+				} else if len(accountProducts) > 0 {
 					if partner, ok := accountProducts["Partner"]; ok && partner != "" {
 						contextMap[common.PARTNER_ID] = partner
-						log.WithFields(fields).Info(fmt.Sprintf("ADA_DEBUG: Partner successfully extracted from ADA keyspace and set in contextMap: '%s'", partner))
-					} else {
-						log.WithFields(fields).Warn("ADA_DEBUG: Partner field missing or empty in accountProducts map from ADA keyspace")
 					}
-				} else {
-					log.WithFields(fields).Warn("ADA_DEBUG: Empty accountProducts map received from ADA keyspace (len=0)")
-				}
-			} else {
-				if xAccountId == nil {
-					log.WithFields(fields).Warn("ADA_DEBUG: XAC returned nil xAccountId object")
-				} else {
-					log.WithFields(fields).Warn("ADA_DEBUG: XAC returned empty AccountId string")
 				}
 			}
-		} else {
-			log.WithFields(fields).Warn(fmt.Sprintf("ADA_DEBUG: No valid MAC address found in contextMap - ESTB_MAC='%s', ECM_MAC='%s', ecmMacValue='%s'", contextMap[common.ESTB_MAC], contextMap[common.ECM_MAC], ecmMacValue))
 		}
 	} else {
 		//err both the service
