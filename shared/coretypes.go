@@ -57,6 +57,14 @@ type ApplicationType struct {
 	UpdatedAt   int64  `json:"updatedAt,omitempty"`
 }
 
+func (obj *ApplicationType) Clone() (*ApplicationType, error) {
+	cloneObj, err := util.Copy(obj)
+	if err != nil {
+		return nil, err
+	}
+	return cloneObj.(*ApplicationType), nil
+}
+
 func isValid(at string) bool {
 	if at == STB || at == XHOME || at == RDKCLOUD || at == SKY {
 		return true
