@@ -238,8 +238,12 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			}
 		}
 	} else if Xc.EnableAccountDataService {
-		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-			xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(contextMap[common.ECM_MAC_ADDRESS], fields)
+		ecmMacValue := contextMap[common.ECM_MAC]
+		if ecmMacValue == "" {
+			ecmMacValue = contextMap[common.ECM_MAC_PARAM]
+		}
+		if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) || util.IsValidMacAddress(ecmMacValue) {
+			xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(ecmMacValue, fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Error getting AccountService information")
 			}
@@ -248,15 +252,20 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 				if err != nil {
 					log.WithFields(log.Fields{"error": err}).Error("Error getting AccountService information")
 				} else {
-					if partner, ok := accountProducts["Partner"]; ok && partner != "" {
-						contextMap[common.PARTNER_ID] = partner
+					if len(accountProducts) == 0 {
+						log.WithFields(fields).Warn("Empty or nil response from ADA keyspace")
+					} else {
+						// Successfully retrieved, update context
+						if partner, ok := accountProducts["Partner"]; ok && partner != "" {
+							contextMap[common.PARTNER_ID] = partner
+						}
 					}
 				}
 			}
 		}
 	} else {
 		//err both the service
-		log.WithFields(log.Fields{"error": err}).Error("Both the Account Service calls have been disabled")
+		log.Error("Both the Account Service calls have been disabled")
 	}
 	AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
 	AddGroupServiceFTContext(Ws, common.ESTB_MAC, contextMap, true, fields)
