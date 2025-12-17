@@ -234,16 +234,16 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 
 func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMap map[string]string, satToken string, vargs ...log.Fields) *AccountServiceData {
 	var td *AccountServiceData
-
+	var accountId string
 	var fields log.Fields
 	if len(vargs) > 0 {
 		fields = vargs[0]
 	} else {
 		fields = log.Fields{}
 	}
+	var err error
 	if Xc.EnableAccountService {
 		var accountServiceObject xhttp.AccountServiceDevices
-		var err error
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
 			accountServiceObject, err = ws.AccountServiceConnector.GetDevices(common.HOST_MAC_PARAM, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
 			if err == nil {
@@ -297,6 +297,48 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				}
 			}
 		}
+	} else if Xc.EnableAccountDataService {
+		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+			xboAccount, err := ws.GroupServiceConnector.GetAccountIdData(contextMap[common.ECM_MAC_ADDRESS], fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("Error getting accountId information")
+				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
+				return td
+			}
+			if xboAccount != nil && xboAccount.GetAccountId() != "" {
+				accountId = xboAccount.GetAccountId()
+				contextMap[common.ACCOUNT_ID] = accountId
+			} else {
+				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
+				return td
+			}
+
+			td = &AccountServiceData{
+				AccountId: accountId,
+			}
+			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("Error getting accountProducts information")
+			} else {
+				if partner, ok := accountProducts["Partner"]; ok && partner != "" {
+					contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
+				}
+
+				contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
+
+				if accountProductsVal, ok := accountProducts["AccountProducts"]; ok {
+					contextMap[common.ACCOUNT_PRODUCTS] = accountProductsVal
+				}
+
+				if countryCode, ok := accountProducts["CountryCode"]; ok {
+					contextMap[common.COUNTRY_CODE] = countryCode
+				}
+
+			}
+		}
+	} else {
+		//error both service not enabled
+		log.WithFields(log.Fields{"error": err}).Error("Both the Account Service calls have been disabled")
 	}
 	return td
 }

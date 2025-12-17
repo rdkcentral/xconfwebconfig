@@ -230,12 +230,33 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 		return err
 	}
 	satToken := localToken.Token
-
-	if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
-		partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
-		if partnerId != "" {
-			contextMap[common.PARTNER_ID] = partnerId
+	if Xc.EnableAccountService {
+		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
+			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
+			if partnerId != "" {
+				contextMap[common.PARTNER_ID] = partnerId
+			}
 		}
+	} else if Xc.EnableAccountDataService {
+		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+			xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(contextMap[common.ECM_MAC_ADDRESS], fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("Error getting AccountService information")
+			}
+			if xAccountId != nil && xAccountId.GetAccountId() != "" {
+				accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(xAccountId.GetAccountId(), fields)
+				if err != nil {
+					log.WithFields(log.Fields{"error": err}).Error("Error getting AccountService information")
+				} else {
+					if partner, ok := accountProducts["Partner"]; ok && partner != "" {
+						contextMap[common.PARTNER_ID] = partner
+					}
+				}
+			}
+		}
+	} else {
+		//err both the service
+		log.WithFields(log.Fields{"error": err}).Error("Both the Account Service calls have been disabled")
 	}
 	AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
 	AddGroupServiceFTContext(Ws, common.ESTB_MAC, contextMap, true, fields)
