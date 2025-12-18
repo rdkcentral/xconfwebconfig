@@ -238,25 +238,53 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			}
 		}
 	} else if Xc.EnableAccountDataService {
-		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-			xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(contextMap[common.ECM_MAC_ADDRESS], fields)
+		// Try ECM MAC first, then fall back to ESTB MAC
+		var macValue string
+		if util.IsValidMacAddress(contextMap[common.ECM_MAC]) {
+			macValue = contextMap[common.ECM_MAC]
+		} else if util.IsValidMacAddress(contextMap[common.ECM_MAC_PARAM]) {
+			macValue = contextMap[common.ECM_MAC_PARAM]
+		} else if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
+			macValue = contextMap[common.ESTB_MAC]
+		}
+
+		partnerFound := false
+		if macValue != "" {
+			// Remove colons from MAC for XAC call
+			macValueWithoutColons := strings.ReplaceAll(macValue, ":", "")
+
+			xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macValueWithoutColons, fields)
 			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("Error getting AccountService information")
+				log.WithFields(fields).Warn(fmt.Sprintf("XAC call failed for MAC='%s': %v", macValueWithoutColons, err))
 			}
+
 			if xAccountId != nil && xAccountId.GetAccountId() != "" {
-				accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(xAccountId.GetAccountId(), fields)
+				accountId := xAccountId.GetAccountId()
+				accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 				if err != nil {
-					log.WithFields(log.Fields{"error": err}).Error("Error getting AccountService information")
+					log.WithFields(fields).Warn(fmt.Sprintf("ADA call failed for AccountId='%s': %v", accountId, err))
 				} else {
 					if partner, ok := accountProducts["Partner"]; ok && partner != "" {
 						contextMap[common.PARTNER_ID] = partner
+						partnerFound = true
+						log.WithFields(fields).Info(fmt.Sprintf("Partner='%s' retrieved from ADA", partner))
 					}
 				}
 			}
 		}
+
+		// Fallback to old Account Service logic if XAC/ADA didn't return partner
+		if !partnerFound && (util.IsUnknownValue(contextMap[common.PARTNER_ID]) || contextMap[common.PARTNER_ID] == "") {
+			log.WithFields(fields).Info("Trying fallback Account Service for partner retrieval")
+			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
+			if partnerId != "" {
+				contextMap[common.PARTNER_ID] = partnerId
+				log.WithFields(fields).Info(fmt.Sprintf("Partner='%s' retrieved from fallback Account Service", partnerId))
+			}
+		}
 	} else {
 		//err both the service
-		log.WithFields(log.Fields{"error": err}).Error("Both the Account Service calls have been disabled")
+		log.Error("Both the Account Service calls have been disabled")
 	}
 	AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
 	AddGroupServiceFTContext(Ws, common.ESTB_MAC, contextMap, true, fields)
