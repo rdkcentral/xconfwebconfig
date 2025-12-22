@@ -117,6 +117,68 @@ func CompareHashWithXDAS(contextMap map[string]string, xdasHash string, tags []s
 	return calculatedHash == xdasHash, nil
 }
 
+// tryXacAdaFlowForPods attempts to retrieve account data using XAC → ADA flow
+func tryXacAdaFlowForPods(ws *xhttp.XconfServer, contextMap map[string]string, fields log.Fields) (*PodData, *AccountServiceData) {
+	var podData *PodData
+	var td *AccountServiceData
+
+	// Try ECM MAC first, then fall back to ESTB MAC
+	var macValue string
+	if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+		macValue = contextMap[common.ECM_MAC_ADDRESS]
+	} else if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
+		macValue = contextMap[common.ESTB_MAC_ADDRESS]
+	}
+
+	if macValue == "" {
+		return nil, nil
+	}
+
+	// Remove colons from MAC for XAC call
+	macValueWithoutColons := strings.ReplaceAll(macValue, ":", "")
+
+	// Call XAC to get AccountId
+	xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macValueWithoutColons, fields)
+	if err != nil {
+		log.WithFields(fields).Warn(fmt.Sprintf("XAC call failed for MAC='%s': %v", macValueWithoutColons, err))
+		return nil, nil
+	}
+
+	if xAccountId == nil || xAccountId.GetAccountId() == "" {
+		return nil, nil
+	}
+
+	accountId := xAccountId.GetAccountId()
+
+	// Call ADA to get account products
+	accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
+	if err != nil {
+		log.WithFields(fields).Warn(fmt.Sprintf("ADA call failed for AccountId='%s': %v", accountId, err))
+		return nil, nil
+	}
+
+	// Extract Partner from ADA response
+	var partnerId string
+	if partner, ok := accountProducts["Partner"]; ok && partner != "" {
+		partnerId = strings.ToUpper(partner)
+		log.WithFields(fields).Info(fmt.Sprintf("Partner='%s' retrieved from ADA for pods", partnerId))
+	}
+
+	// Create PodData and AccountServiceData with retrieved information
+	podData = &PodData{
+		AccountId: accountId,
+		PartnerId: partnerId,
+		// Note: TimeZone is not available from ADA, would need additional call if required
+	}
+
+	td = &AccountServiceData{
+		AccountId: accountId,
+		PartnerId: partnerId,
+	}
+
+	return podData, td
+}
+
 func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satToken string, vargs ...log.Fields) (*PodData, *AccountServiceData) {
 	var fields log.Fields
 	var podData *PodData
@@ -130,6 +192,18 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 	tfields := common.FilterLogFields(fields)
 
 	if Xc.EnableMacAccountServiceCall && strings.HasPrefix(strings.ToUpper(contextMap[common.SERIAL_NUM]), Xc.AccountServiceMacPrefix) {
+		// Try XAC → ADA flow first if enabled
+		if Xc.EnableAccountDataService {
+			podData, td = tryXacAdaFlowForPods(ws, contextMap, fields)
+			if podData != nil && podData.AccountId != "" {
+				if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
+					contextMap[common.ACCOUNT_ID] = podData.AccountId
+				}
+				return podData, td
+			}
+		}
+
+		// Fallback: Old AccountService logic
 		AccountServiceDeviceObject, err := ws.AccountServiceConnector.GetDevices(common.SERIAL_NUMBER_PARAM, contextMap[common.SERIAL_NUM], satToken, fields)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService device information: serialNum=%s", contextMap[common.SERIAL_NUM])
@@ -167,6 +241,18 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 		podData.TimeZone = AccountServiceAccountObject.AccountData.AccountAttributes.TimeZone
 		log.WithFields(tfields).Infof("Successfully got AccountService information  for XLE device: accountId=%s, serialNum=%s", AccountServiceDeviceObject.DeviceData.ServiceAccountUri, contextMap[common.SERIAL_NUM])
 	} else if Xc.EnableDeviceDBLookup && contextMap[common.SERIAL_NUM] != "" && !strings.HasPrefix(contextMap[common.MODEL], GR_PREFIX) {
+		// Try XAC → ADA flow first if enabled
+		if Xc.EnableAccountDataService {
+			podData, td = tryXacAdaFlowForPods(ws, contextMap, fields)
+			if podData != nil && podData.AccountId != "" {
+				if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
+					contextMap[common.ACCOUNT_ID] = podData.AccountId
+				}
+				return podData, td
+			}
+		}
+
+		// Fallback: Old AccountService logic
 		ecmMacAddress, err := ws.GetEcmMacFromPodTable(contextMap[common.SERIAL_NUM])
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Errorf("Error looking up pod information from odp db: serialNum=%s", contextMap[common.SERIAL_NUM])
@@ -213,6 +299,18 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 		}
 		podData.TimeZone = accountServiceAccountObject.AccountData.AccountAttributes.TimeZone
 	} else if Xc.EnableDeviceService && contextMap[common.SERIAL_NUM] != "" && !strings.HasPrefix(contextMap[common.MODEL], GR_PREFIX) {
+		// Try XAC → ADA flow first if enabled
+		if Xc.EnableAccountDataService {
+			podData, td = tryXacAdaFlowForPods(ws, contextMap, fields)
+			if podData != nil && podData.AccountId != "" {
+				if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
+					contextMap[common.ACCOUNT_ID] = podData.AccountId
+				}
+				return podData, td
+			}
+		}
+
+		// Fallback: Old Device Service (Titan) logic
 		deviceServiceObject, err := ws.DeviceServiceConnector.GetMeshPodAccountBySerialNum(contextMap[common.SERIAL_NUM], fields)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Errorf("Error getting Device Service information: serialNum=%s", contextMap[common.SERIAL_NUM])
