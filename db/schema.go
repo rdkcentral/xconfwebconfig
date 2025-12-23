@@ -69,6 +69,7 @@ const (
 	TABLE_LOGS               = "Logs2"
 	TABLE_XCONF_CHANGED_KEYS = "XconfChangedKeys4"
 	TABLE_APP_SETTINGS       = "AppSettings"
+	TABLE_APPLICATION_TYPES  = "ApplicationTypes"
 	TABLE_TAG                = "Tag"
 	TABLE_LOCKS              = "Locks"
 )
@@ -108,6 +109,7 @@ var AllTables = []string{
 	TABLE_LOGS,
 	TABLE_XCONF_CHANGED_KEYS,
 	TABLE_TAG,
+	TABLE_APPLICATION_TYPES,
 }
 
 // Two possible values for Key2FieldName

@@ -47,6 +47,24 @@ type AppSetting struct {
 	Value   interface{} `json:"value"`
 }
 
+// ApplicationType table object
+type ApplicationType struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	CreatedBy   string `json:"createdBy"`
+	CreatedAt   int64  `json:"createdAt"`
+	UpdatedAt   int64  `json:"updatedAt,omitempty"`
+}
+
+func (obj *ApplicationType) Clone() (*ApplicationType, error) {
+	cloneObj, err := util.Copy(obj)
+	if err != nil {
+		return nil, err
+	}
+	return cloneObj.(*ApplicationType), nil
+}
+
 func isValid(at string) bool {
 	if at == STB || at == XHOME || at == RDKCLOUD || at == SKY {
 		return true
@@ -116,6 +134,9 @@ func (obj *Environment) Validate() error {
 	}
 
 	return errors.New("Id is invalid")
+}
+func NewApplicationTypeInf() interface{} {
+	return &ApplicationType{}
 }
 
 // NewEnvironmentInf constructor
