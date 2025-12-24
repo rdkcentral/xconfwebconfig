@@ -238,48 +238,49 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			}
 		}
 	} else if Xc.EnableAccountDataService {
-		// Try ECM MAC first, then fall back to ESTB MAC
-		var macValue string
-		if util.IsValidMacAddress(contextMap[common.ECM_MAC]) {
-			macValue = contextMap[common.ECM_MAC]
-		} else if util.IsValidMacAddress(contextMap[common.ECM_MAC_PARAM]) {
-			macValue = contextMap[common.ECM_MAC_PARAM]
-		} else if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
-			macValue = contextMap[common.ESTB_MAC]
-		}
-
-		partnerFound := false
-		if macValue != "" {
-			// Remove colons from MAC for XAC call
-			macValueWithoutColons := strings.ReplaceAll(macValue, ":", "")
-
-			xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macValueWithoutColons, fields)
-			if err != nil {
-				log.WithFields(fields).Warn(fmt.Sprintf("XAC call failed for MAC='%s': %v", macValueWithoutColons, err))
+		// Only call XAC/ADA if partner is unknown or empty
+		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) || contextMap[common.PARTNER_ID] == "" {
+			// Try ECM MAC first, then fall back to ESTB MAC
+			var macValue string
+			if util.IsValidMacAddress(contextMap[common.ECM_MAC]) {
+				macValue = contextMap[common.ECM_MAC]
+			} else if util.IsValidMacAddress(contextMap[common.ECM_MAC_PARAM]) {
+				macValue = contextMap[common.ECM_MAC_PARAM]
+			} else if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
+				macValue = contextMap[common.ESTB_MAC]
 			}
 
-			if xAccountId != nil && xAccountId.GetAccountId() != "" {
-				accountId := xAccountId.GetAccountId()
-				accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
+			if macValue != "" {
+				// Remove colons from MAC for XAC call
+				macValueWithoutColons := strings.ReplaceAll(macValue, ":", "")
+
+				xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macValueWithoutColons, fields)
 				if err != nil {
-					log.WithFields(fields).Warn(fmt.Sprintf("ADA call failed for AccountId='%s': %v", accountId, err))
-				} else {
-					if partner, ok := accountProducts["Partner"]; ok && partner != "" {
-						contextMap[common.PARTNER_ID] = partner
-						partnerFound = true
-						log.WithFields(fields).Info(fmt.Sprintf("Partner='%s' retrieved from ADA", partner))
+					log.WithFields(fields).Warn(fmt.Sprintf("XAC call failed for MAC='%s': %v", macValueWithoutColons, err))
+				}
+
+				if xAccountId != nil && xAccountId.GetAccountId() != "" {
+					accountId := xAccountId.GetAccountId()
+					accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
+					if err != nil {
+						log.WithFields(fields).Warn(fmt.Sprintf("ADA call failed for AccountId='%s': %v", accountId, err))
+					} else {
+						if partner, ok := accountProducts["Partner"]; ok && partner != "" {
+							contextMap[common.PARTNER_ID] = partner
+							log.WithFields(fields).Info(fmt.Sprintf("Partner='%s' retrieved from ADA", partner))
+						}
 					}
 				}
 			}
-		}
 
-		// Fallback to old Account Service logic if XAC/ADA didn't return partner
-		if !partnerFound && (util.IsUnknownValue(contextMap[common.PARTNER_ID]) || contextMap[common.PARTNER_ID] == "") {
-			log.WithFields(fields).Info("Trying fallback Account Service for partner retrieval")
-			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
-			if partnerId != "" {
-				contextMap[common.PARTNER_ID] = partnerId
-				log.WithFields(fields).Info(fmt.Sprintf("Partner='%s' retrieved from fallback Account Service", partnerId))
+			// Fallback to old Account Service logic if XAC/ADA didn't return partner
+			if util.IsUnknownValue(contextMap[common.PARTNER_ID]) || contextMap[common.PARTNER_ID] == "" {
+				log.WithFields(fields).Info("Trying fallback Account Service for partner retrieval")
+				partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
+				if partnerId != "" {
+					contextMap[common.PARTNER_ID] = partnerId
+					log.WithFields(fields).Info(fmt.Sprintf("Partner='%s' retrieved from fallback Account Service", partnerId))
+				}
 			}
 		}
 	} else {
