@@ -117,10 +117,15 @@ func CompareHashWithXDAS(contextMap map[string]string, xdasHash string, tags []s
 	return calculatedHash == xdasHash, nil
 }
 
-// tryXacAdaFlowForPods attempts to retrieve account data using XAC → ADA flow
-func tryXacAdaFlowForPods(ws *xhttp.XconfServer, contextMap map[string]string, fields log.Fields) (*PodData, *AccountServiceData) {
+// getPartnerFromAccountDataService attempts to retrieve account data using XAC → ADA flow
+func getPartnerFromAccountDataService(ws *xhttp.XconfServer, contextMap map[string]string, fields log.Fields) (*PodData, *AccountServiceData) {
 	var podData *PodData
 	var td *AccountServiceData
+
+	// Skip XAC/ADA if partner already known
+	if !util.IsUnknownValue(contextMap[common.PARTNER_ID]) && contextMap[common.PARTNER_ID] != "" {
+		return nil, nil
+	}
 
 	// Try ECM MAC first, then fall back to ESTB MAC
 	var macValue string
@@ -194,7 +199,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 	if Xc.EnableMacAccountServiceCall && strings.HasPrefix(strings.ToUpper(contextMap[common.SERIAL_NUM]), Xc.AccountServiceMacPrefix) {
 		// Try XAC → ADA flow first if enabled
 		if Xc.EnableAccountDataService {
-			podData, td = tryXacAdaFlowForPods(ws, contextMap, fields)
+			podData, td = getPartnerFromAccountDataService(ws, contextMap, fields)
 			if podData != nil && podData.AccountId != "" {
 				if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
 					contextMap[common.ACCOUNT_ID] = podData.AccountId
@@ -243,7 +248,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 	} else if Xc.EnableDeviceDBLookup && contextMap[common.SERIAL_NUM] != "" && !strings.HasPrefix(contextMap[common.MODEL], GR_PREFIX) {
 		// Try XAC → ADA flow first if enabled
 		if Xc.EnableAccountDataService {
-			podData, td = tryXacAdaFlowForPods(ws, contextMap, fields)
+			podData, td = getPartnerFromAccountDataService(ws, contextMap, fields)
 			if podData != nil && podData.AccountId != "" {
 				if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
 					contextMap[common.ACCOUNT_ID] = podData.AccountId
@@ -301,7 +306,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 	} else if Xc.EnableDeviceService && contextMap[common.SERIAL_NUM] != "" && !strings.HasPrefix(contextMap[common.MODEL], GR_PREFIX) {
 		// Try XAC → ADA flow first if enabled
 		if Xc.EnableAccountDataService {
-			podData, td = tryXacAdaFlowForPods(ws, contextMap, fields)
+			podData, td = getPartnerFromAccountDataService(ws, contextMap, fields)
 			if podData != nil && podData.AccountId != "" {
 				if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
 					contextMap[common.ACCOUNT_ID] = podData.AccountId
