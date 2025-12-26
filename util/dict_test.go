@@ -23,7 +23,7 @@ import (
 
 func TestUtilPrettyPrint(t *testing.T) {
 	line := `{"foo":"bar", "enabled": true, "age": 30}`
-	t.Logf(PrettyJson(line))
+	t.Log(PrettyJson(line))
 
 	a := Dict{
 		"broadcast_ssid":  true,
@@ -34,7 +34,7 @@ func TestUtilPrettyPrint(t *testing.T) {
 		"wifi_security":   4,
 		"wifi_passphrase": "password1",
 	}
-	t.Logf(PrettyJson(a))
+	t.Log(PrettyJson(a))
 
 	b := []Dict{
 		Dict{
@@ -56,5 +56,5 @@ func TestUtilPrettyPrint(t *testing.T) {
 			"wifi_passphrase": "password5",
 		},
 	}
-	t.Logf(PrettyJson(b))
+	t.Log(PrettyJson(b))
 }

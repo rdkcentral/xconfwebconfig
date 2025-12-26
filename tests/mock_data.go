@@ -685,31 +685,31 @@ func GetFirmwareRuleStr2() string {
 }
 
 func GetFirmwareRuleStr3() string {
-	return fmt.Sprintf(fmt.Sprintf(fwRuleJsonTemplate3, firmwareRuleId3, namespaceListKey, FirmwareConfigId3))
+	return fmt.Sprintf(fwRuleJsonTemplate3, firmwareRuleId3, namespaceListKey, FirmwareConfigId3)
 }
 
 func GetFirmwareRuleStr4() string {
-	return fmt.Sprintf(fmt.Sprintf(fwRuleJsonTemplate4, firmwareRuleId4, NamespaceIPListKey, FirmwareConfigId1))
+	return fmt.Sprintf(fwRuleJsonTemplate4, firmwareRuleId4, NamespaceIPListKey, FirmwareConfigId1)
 }
 
 func GetRDKCDownloadLocationROUNDROBINFILTERVALUE() string {
-	return fmt.Sprintf(fmt.Sprintf(RDKCLOUD_DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE_TEMPLATE, shared.STB, IpAddress3, IpAddress4, IPAddressV61, IPAddressV62))
+	return fmt.Sprintf(RDKCLOUD_DOWNLOAD_LOCATION_ROUND_ROBIN_FILTER_VALUE_TEMPLATE, shared.STB, IpAddress3, IpAddress4, IPAddressV61, IPAddressV62)
 }
 
 func GetFirmwareTemplateStr1() string {
-	return fmt.Sprintf(firmwareRuleTemplateTemplateOne)
+	return firmwareRuleTemplateTemplateOne
 }
 
 func GetFirmwareTemplateStr2() string {
-	return fmt.Sprintf(firmwareRuleTemplateTemplateTwo)
+	return firmwareRuleTemplateTemplateTwo
 }
 
 func GetFirmwareTemplateStr3() string {
-	return fmt.Sprintf(firmwareRuleTemplateTemplateThree)
+	return firmwareRuleTemplateTemplateThree
 }
 
 func GetFirmwareTemplateStr4() string {
-	return fmt.Sprintf(firmwareRuleTemplateTemplateFour)
+	return firmwareRuleTemplateTemplateFour
 }
 
 var (
