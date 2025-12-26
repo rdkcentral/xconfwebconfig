@@ -307,7 +307,7 @@ func GetDCMGenericRuleListForAS() []*DCMGenericRule {
 func GetOneDCMGenericRule(id string) *DCMGenericRule {
 	dmcRuleInst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_DCM_RULE, id)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no dmcRule found for " + id))
+		log.Warn(fmt.Sprintf("no dmcRule found for:%s ", id))
 		return nil
 	}
 	dmcRule := dmcRuleInst.(*DCMGenericRule)
