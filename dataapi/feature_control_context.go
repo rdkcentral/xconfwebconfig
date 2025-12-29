@@ -162,23 +162,28 @@ func getPartnerFromAccountDataService(ws *xhttp.XconfServer, contextMap map[stri
 		return nil, nil
 	}
 
-	// Extract Partner from ADA response
-	var partnerId string
+	// Extract Partner and TimeZone from ADA response
+	var partnerId, timeZone string
 	if partner, ok := accountProducts["Partner"]; ok && partner != "" {
 		partnerId = strings.ToUpper(partner)
 		log.WithFields(fields).Info(fmt.Sprintf("Partner='%s' retrieved from ADA for pods", partnerId))
+	}
+	if tz, ok := accountProducts["TimeZone"]; ok && tz != "" {
+		timeZone = tz
+		log.WithFields(fields).Info(fmt.Sprintf("TimeZone='%s' retrieved from ADA for pods", timeZone))
 	}
 
 	// Create PodData and AccountServiceData with retrieved information
 	podData = &PodData{
 		AccountId: accountId,
 		PartnerId: partnerId,
-		// Note: TimeZone is not available from ADA, would need additional call if required
+		TimeZone:  timeZone,
 	}
 
 	td = &AccountServiceData{
 		AccountId: accountId,
 		PartnerId: partnerId,
+		TimeZone:  timeZone,
 	}
 
 	return podData, td
@@ -196,7 +201,12 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 
 	tfields := common.FilterLogFields(fields)
 
-	if Xc.EnableMacAccountServiceCall && strings.HasPrefix(strings.ToUpper(contextMap[common.SERIAL_NUM]), Xc.AccountServiceMacPrefix) {
+		if Xc.EnableMacAccountServiceCall && strings.HasPrefix(strings.ToUpper(contextMap[common.SERIAL_NUM]), Xc.AccountServiceMacPrefix) {
+			// Remove colons from ecmMacAddress before sending to XAC
+			if ecmMac, ok := contextMap[common.ECM_MAC]; ok && ecmMac != "" {
+				contextMap[common.ECM_MAC] = strings.ReplaceAll(ecmMac, ":", "")
+			}
+		log.WithFields(tfields).Infof("Trying XAC/ADA for partner retrieval using serialum='%s' and contextMap[common.ECM_MAC]='%s'", contextMap[common.SERIAL_NUM], contextMap[common.ECM_MAC])
 		// Try XAC → ADA flow first if enabled
 		if Xc.EnableAccountDataService {
 			podData, td = getPartnerFromAccountDataService(ws, contextMap, fields)
