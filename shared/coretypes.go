@@ -47,6 +47,24 @@ type AppSetting struct {
 	Value   interface{} `json:"value"`
 }
 
+// ApplicationType table object
+type ApplicationType struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	CreatedBy   string `json:"createdBy"`
+	CreatedAt   int64  `json:"createdAt"`
+	UpdatedAt   int64  `json:"updatedAt,omitempty"`
+}
+
+func (obj *ApplicationType) Clone() (*ApplicationType, error) {
+	cloneObj, err := util.Copy(obj)
+	if err != nil {
+		return nil, err
+	}
+	return cloneObj.(*ApplicationType), nil
+}
+
 func isValid(at string) bool {
 	if at == STB || at == XHOME || at == RDKCLOUD || at == SKY {
 		return true
@@ -117,6 +135,9 @@ func (obj *Environment) Validate() error {
 
 	return errors.New("Id is invalid")
 }
+func NewApplicationTypeInf() interface{} {
+	return &ApplicationType{}
+}
 
 // NewEnvironmentInf constructor
 func NewEnvironmentInf() interface{} {
@@ -164,7 +185,7 @@ func GetAllEnvironmentList() []*Environment {
 func GetOneEnvironment(id string) *Environment {
 	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_ENVIRONMENT, id)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no environment found for " + id))
+		log.Warn(fmt.Sprintf("no environment found for:%s ", id))
 		return nil
 	}
 	return inst.(*Environment)
@@ -243,7 +264,7 @@ func GetAllModelList() []*Model {
 func GetOneModel(id string) *Model {
 	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_MODEL, id)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no model found for " + id))
+		log.Warn(fmt.Sprintf("no model found for:%s ", id))
 		return nil
 	}
 	return inst.(*Model)
@@ -394,7 +415,7 @@ func GetStringAppSetting(key string, vargs ...string) string {
 
 	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no AppSetting found for " + key))
+		log.Warn(fmt.Sprintf("no AppSetting found for:%s ", key))
 		return defaultVal
 	}
 
