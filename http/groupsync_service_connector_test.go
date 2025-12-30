@@ -153,7 +153,7 @@ func TestDefaultGroupServiceSync_AddSecurityTokenInfo_Success(t *testing.T) {
 
 	// Create test security token info
 	tokenInfo := map[string]string{
-		"token":      "test-token-123",
+		"token":      "test-token-123", // Mock token for testing purposes only - not a real credential
 		"expires_at": "2025-12-31",
 		"scope":      "read write",
 	}
@@ -187,7 +187,7 @@ func TestDefaultGroupServiceSync_AddSecurityTokenInfo_ServerError(t *testing.T) 
 	fields := log.Fields{"test": "error"}
 
 	tokenInfo := map[string]string{
-		"token": "test-token",
+		"token": "test-token", // Mock token for testing purposes only - not a real credential
 	}
 
 	err := service.AddSecurityTokenInfo("error-id", tokenInfo, fields)

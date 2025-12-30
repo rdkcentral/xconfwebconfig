@@ -135,7 +135,7 @@ func TestDefaultSatService_MultipleUpdates(t *testing.T) {
 // Test SatServiceResponse structure
 func TestSatServiceResponse_AllFields(t *testing.T) {
 	response := SatServiceResponse{
-		AccessToken:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+		AccessToken:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", // Mock JWT token for testing only - not a real credential
 		ExpiresIn:    3600,
 		Scope:        "read write",
 		TokenType:    "Bearer",

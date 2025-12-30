@@ -267,7 +267,7 @@ func TestDefaultGroupService_GetSecurityTokenInfo_Success(t *testing.T) {
 		// Create a test XdasHashes protobuf message for security token info
 		testHashes := &conversion.XdasHashes{
 			Fields: map[string]string{
-				"token":      "abc123token",
+				"token":      "abc123token", // Mock token for testing purposes only - not a real credential
 				"expires_at": "2025-12-31",
 				"scope":      "read",
 			},
@@ -350,8 +350,8 @@ func TestDefaultGroupService_GetSecurityTokenInfo_MultipleFields(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		testHashes := &conversion.XdasHashes{
 			Fields: map[string]string{
-				"access_token":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
-				"refresh_token": "refresh_abc123",
+				"access_token":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", // Mock JWT token for testing only - not a real credential
+				"refresh_token": "refresh_abc123",                       // Mock refresh token for testing only - not a real credential
 				"token_type":    "Bearer",
 				"expires_in":    "3600",
 				"scope":         "read write",

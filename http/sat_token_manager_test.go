@@ -87,7 +87,7 @@ func TestSatTokenMgr_SetTestOnly_Toggle(t *testing.T) {
 // Test SatToken structure
 func TestSatToken_AllFields(t *testing.T) {
 	token := &SatToken{
-		Token:    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+		Token:    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", // Mock JWT token for testing only - not a real credential
 		Source:   "sat-service-prod",
 		KeyName:  "sat_token_prod",
 		Expiry:   "2025-12-31 23:59:59",
@@ -113,7 +113,7 @@ func TestSatToken_EmptyFields(t *testing.T) {
 
 func TestSatToken_PartialFields(t *testing.T) {
 	token := &SatToken{
-		Token:  "token123",
+		Token:  "token123", // Mock token for testing purposes only - not a real credential
 		Source: "test-source",
 	}
 
@@ -150,7 +150,7 @@ func TestNewSatTokenMgr_WithFalseArg(t *testing.T) {
 
 func TestSatToken_LongExpiry(t *testing.T) {
 	token := &SatToken{
-		Token:    "long-lived-token",
+		Token:    "long-lived-token", // Mock token for testing purposes only - not a real credential
 		Source:   "sat-prod",
 		KeyName:  "sat_token_key",
 		Expiry:   "2030-01-01 00:00:00",
@@ -163,7 +163,7 @@ func TestSatToken_LongExpiry(t *testing.T) {
 
 func TestSatToken_ShortExpiry(t *testing.T) {
 	token := &SatToken{
-		Token:    "short-lived-token",
+		Token:    "short-lived-token", // Mock token for testing purposes only - not a real credential
 		Source:   "sat-dev",
 		KeyName:  "sat_token_dev",
 		Expiry:   "2025-11-01 00:01:00",
@@ -258,7 +258,7 @@ func TestIsTokenExpired_WithMockInfrastructure(t *testing.T) {
 
 	// Test IsTokenExpired with an expired token
 	expiredToken := &SatToken{
-		Token:    "expired-token",
+		Token:    "expired-token",       // Mock token for testing purposes only - not a real credential
 		Expiry:   "2020-01-01 00:00:00", // Past date
 		TokenTTL: 3600,
 	}
@@ -268,7 +268,7 @@ func TestIsTokenExpired_WithMockInfrastructure(t *testing.T) {
 
 	// Test IsTokenExpired with a valid token
 	futureToken := &SatToken{
-		Token:    "future-token",
+		Token:    "future-token",        // Mock token for testing purposes only - not a real credential
 		Expiry:   "2030-12-31 23:59:59", // Future date
 		TokenTTL: 3600,
 	}
