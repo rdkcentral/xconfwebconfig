@@ -1,4 +1,4 @@
-package tagging
+package tag
 
 import (
 	"encoding/json"
