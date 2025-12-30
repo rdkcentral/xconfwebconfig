@@ -143,7 +143,7 @@ func (e *EstbFirmwareRuleBase) Eval(ctx map[string]string, convertedContext *cor
 		return result, nil
 	} else {
 		log.WithFields(fields).Debug(fmt.Sprintf("EstbFirmwareRuleBase rule %s : %s is noop: %s ", matchedRule.Type, matchedRule.Name, matchedRule.ID))
-		result.Description = fmt.Sprintf("rule is noop: %s " + matchedRule.ID)
+		result.Description = fmt.Sprintf("rule is noop: %s ", matchedRule.ID)
 		// log.WithFields(fields).Debugf("EstbFirmwareRuleBase.Eval ... End %s: context %v and applicationType %s, finish in %v", result.Description, ctx, applicationType, time.Since(start))
 		return result, nil
 	}
