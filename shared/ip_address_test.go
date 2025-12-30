@@ -78,3 +78,182 @@ func TestIpAddress(t *testing.T) {
 	x9 := NewIpAddress(s9)
 	assert.Assert(t, !ipaddr4.IsInRange(*x9))
 }
+
+// Test IsValidIpAddress
+func TestIsValidIpAddress_ValidIPv4(t *testing.T) {
+	assert.Assert(t, IsValidIpAddress("192.168.1.1"))
+	assert.Assert(t, IsValidIpAddress("10.0.0.1"))
+	assert.Assert(t, IsValidIpAddress("172.16.0.1"))
+	assert.Assert(t, IsValidIpAddress("255.255.255.255"))
+	assert.Assert(t, IsValidIpAddress("0.0.0.0"))
+}
+
+func TestIsValidIpAddress_ValidIPv4CIDR(t *testing.T) {
+	assert.Assert(t, IsValidIpAddress("192.168.1.0/24"))
+	assert.Assert(t, IsValidIpAddress("10.0.0.0/8"))
+	assert.Assert(t, IsValidIpAddress("172.16.0.0/16"))
+}
+
+func TestIsValidIpAddress_ValidIPv6(t *testing.T) {
+	assert.Assert(t, IsValidIpAddress("2001:558:6027:14:c071:6b22:17ae:ea06"))
+	assert.Assert(t, IsValidIpAddress("::1"))
+	assert.Assert(t, IsValidIpAddress("fe80::1"))
+	assert.Assert(t, IsValidIpAddress("2001:db8::1"))
+}
+
+func TestIsValidIpAddress_ValidIPv6CIDR(t *testing.T) {
+	assert.Assert(t, IsValidIpAddress("2001:558:6027:180::/57"))
+	assert.Assert(t, IsValidIpAddress("2001:db8::/32"))
+	assert.Assert(t, IsValidIpAddress("fe80::/10"))
+}
+
+func TestIsValidIpAddress_Invalid(t *testing.T) {
+	assert.Assert(t, !IsValidIpAddress(""))
+	assert.Assert(t, !IsValidIpAddress("invalid"))
+	assert.Assert(t, !IsValidIpAddress("999.999.999.999"))
+	assert.Assert(t, !IsValidIpAddress("192.168.1"))
+	assert.Assert(t, !IsValidIpAddress("192.168.1.1.1"))
+	assert.Assert(t, !IsValidIpAddress("not-an-ip"))
+	assert.Assert(t, !IsValidIpAddress("192.168.1.1/"))
+	assert.Assert(t, !IsValidIpAddress("192.168.1.1/33"))
+}
+
+// Test Equals
+func TestIpAddress_Equals_SameIPv4(t *testing.T) {
+	ip1 := NewIpAddress("192.168.1.1")
+	ip2 := NewIpAddress("192.168.1.1")
+
+	assert.Assert(t, ip1.Equals(*ip2))
+}
+
+func TestIpAddress_Equals_DifferentIPv4(t *testing.T) {
+	ip1 := NewIpAddress("192.168.1.1")
+	ip2 := NewIpAddress("192.168.1.2")
+
+	assert.Assert(t, !ip1.Equals(*ip2))
+}
+
+func TestIpAddress_Equals_SameIPv6(t *testing.T) {
+	ip1 := NewIpAddress("2001:db8::1")
+	ip2 := NewIpAddress("2001:db8::1")
+
+	assert.Assert(t, ip1.Equals(*ip2))
+}
+
+func TestIpAddress_Equals_DifferentIPv6(t *testing.T) {
+	ip1 := NewIpAddress("2001:db8::1")
+	ip2 := NewIpAddress("2001:db8::2")
+
+	assert.Assert(t, !ip1.Equals(*ip2))
+}
+
+func TestIpAddress_Equals_SameCIDR(t *testing.T) {
+	ip1 := NewIpAddress("192.168.1.0/24")
+	ip2 := NewIpAddress("192.168.1.0/24")
+
+	assert.Assert(t, ip1.Equals(*ip2))
+}
+
+func TestIpAddress_Equals_DifferentCIDR(t *testing.T) {
+	ip1 := NewIpAddress("192.168.1.0/24")
+	ip2 := NewIpAddress("192.168.1.0/25")
+
+	assert.Assert(t, !ip1.Equals(*ip2))
+}
+
+func TestIpAddress_Equals_IPv4VsIPv6(t *testing.T) {
+	ip1 := NewIpAddress("192.168.1.1")
+	ip2 := NewIpAddress("2001:db8::1")
+
+	assert.Assert(t, !ip1.Equals(*ip2))
+}
+
+// Test edge cases for NewIpAddress
+func TestNewIpAddress_InvalidCIDR(t *testing.T) {
+	ip := NewIpAddress("192.168.1.1/invalid")
+	assert.Assert(t, ip == nil)
+}
+
+func TestNewIpAddress_InvalidCIDRRange(t *testing.T) {
+	ip := NewIpAddress("192.168.1.1/33")
+	assert.Assert(t, ip == nil)
+}
+
+func TestNewIpAddress_EmptyString(t *testing.T) {
+	ip := NewIpAddress("")
+	assert.Assert(t, ip == nil)
+}
+
+func TestNewIpAddress_InvalidFormat(t *testing.T) {
+	ip := NewIpAddress("not-an-ip-address")
+	assert.Assert(t, ip == nil)
+}
+
+// Test IsInRange with invalid input
+func TestIpAddress_IsInRange_InvalidString(t *testing.T) {
+	ip := NewIpAddress("192.168.1.0/24")
+	assert.Assert(t, !ip.IsInRange("invalid-ip"))
+	assert.Assert(t, !ip.IsInRange("999.999.999.999"))
+}
+
+func TestIpAddress_IsInRange_UnsupportedType(t *testing.T) {
+	ip := NewIpAddress("192.168.1.1")
+	// Passing unsupported type (int) should return false
+	assert.Assert(t, !ip.IsInRange(12345))
+	assert.Assert(t, !ip.IsInRange([]string{"192.168.1.1"}))
+}
+
+// Test GetAddress
+func TestIpAddress_GetAddress_RegularIPv4(t *testing.T) {
+	ip := NewIpAddress("192.168.1.1")
+	assert.Equal(t, "192.168.1.1", ip.GetAddress())
+}
+
+func TestIpAddress_GetAddress_RegularIPv6(t *testing.T) {
+	ip := NewIpAddress("2001:db8::1")
+	assert.Equal(t, "2001:db8::1", ip.GetAddress())
+}
+
+func TestIpAddress_GetAddress_CIDR(t *testing.T) {
+	ip := NewIpAddress("192.168.1.5/24")
+	// CIDR should return normalized network address
+	assert.Equal(t, "192.168.1.0/24", ip.GetAddress())
+}
+
+// Test IP() method
+func TestIpAddress_IP_Method(t *testing.T) {
+	ip := NewIpAddress("192.168.1.1")
+	netIP := ip.IP()
+
+	assert.Assert(t, netIP != nil)
+	assert.Equal(t, "192.168.1.1", netIP.String())
+}
+
+// Test IsIpv6 and IsCidrBlock edge cases
+func TestIpAddress_IPv6Detection(t *testing.T) {
+	// IPv4 should not be detected as IPv6
+	ip4 := NewIpAddress("192.168.1.1")
+	assert.Assert(t, !ip4.IsIpv6())
+
+	// IPv6 should be detected
+	ip6 := NewIpAddress("2001:db8::1")
+	assert.Assert(t, ip6.IsIpv6())
+
+	// IPv6 loopback
+	ip6Loopback := NewIpAddress("::1")
+	assert.Assert(t, ip6Loopback.IsIpv6())
+}
+
+func TestIpAddress_CIDRDetection(t *testing.T) {
+	// Regular IP should not be CIDR
+	ip := NewIpAddress("192.168.1.1")
+	assert.Assert(t, !ip.IsCidrBlock())
+
+	// CIDR notation should be detected
+	cidr := NewIpAddress("192.168.1.0/24")
+	assert.Assert(t, cidr.IsCidrBlock())
+
+	// IPv6 CIDR
+	cidr6 := NewIpAddress("2001:db8::/32")
+	assert.Assert(t, cidr6.IsCidrBlock())
+}
