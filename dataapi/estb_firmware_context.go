@@ -240,24 +240,14 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	} else if Xc.EnableAccountDataService {
 		// Only call XAC/ADA if partner is unknown or empty
 		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) || contextMap[common.PARTNER_ID] == "" {
-			// Try ECM MAC first, then fall back to ESTB MAC
-			   // MACs are already normalized and validated at the start of the function
-			   var macValue string
-			   if contextMap[common.ECM_MAC] != "" {
-				   macValue = contextMap[common.ECM_MAC]
-			   } else if contextMap[common.ECM_MAC_PARAM] != "" {
-				   macValue = contextMap[common.ECM_MAC_PARAM]
-			   } else if contextMap[common.ESTB_MAC] != "" {
-				   macValue = contextMap[common.ESTB_MAC]
-			   }
-
+			macValue := contextMap[common.ESTB_MAC]
 			if macValue != "" {
 				// Remove colons from MAC for XAC call
 				macValueWithoutColons := strings.ReplaceAll(macValue, ":", "")
 
 				xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macValueWithoutColons, fields)
 				if err != nil {
-					log.WithFields(fields).Warn(fmt.Sprintf("XAC call failed for MAC='%s': %v", macValueWithoutColons, err))
+					log.WithFields(fields).Warn(fmt.Sprintf("XAC call failed for MAC='%s': %v", macValue, err))
 				}
 
 				if xAccountId != nil && xAccountId.GetAccountId() != "" {
@@ -275,7 +265,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			}
 
 			// Fallback to old Account Service logic if XAC/ADA didn't return partner
-			if util.IsUnknownValue(contextMap[common.PARTNER_ID]) || contextMap[common.PARTNER_ID] == "" {
+			if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 				log.WithFields(fields).Info("Trying fallback Account Service for partner retrieval")
 				partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
 				if partnerId != "" {
