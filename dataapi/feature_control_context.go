@@ -122,28 +122,16 @@ func getPartnerFromAccountDataService(ws *xhttp.XconfServer, contextMap map[stri
 	var podData *PodData
 	var td *AccountServiceData
 
-	// Skip XAC/ADA if partner already known
-	if !util.IsUnknownValue(contextMap[common.PARTNER_ID]) && contextMap[common.PARTNER_ID] != "" {
-		return nil, nil
-	}
-
 	// Try ECM MAC first, then fall back to ESTB MAC
-	var macValue string
-	if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-		macValue = contextMap[common.ECM_MAC_ADDRESS]
-	} else if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
-		macValue = contextMap[common.ESTB_MAC_ADDRESS]
-	}
-
-	if macValue == "" {
-		return nil, nil
+	var macAddress string
+	if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
+		macAddress = util.GetEcmMacAddress(util.AlphaNumericMacAddress(strings.TrimSpace(contextMap[common.ESTB_MAC_ADDRESS])))
+	} else if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+		macAddress = contextMap[common.ECM_MAC_ADDRESS]
 	}
 
 	// Remove colons from MAC for XAC call
-	macValueWithoutColons := strings.ReplaceAll(macValue, ":", "")
-
-	// Debug: show which MAC we're using and values in contextMap
-	log.WithFields(fields).Infof("[DEBUG] getPartnerFromAccountDataService: selected macValue='%s', stripped='%s', context.ECM_MAC='%s', context.ECM_MAC_ADDRESS='%s', context.ESTB_MAC_ADDRESS='%s'", macValue, macValueWithoutColons, contextMap[common.ECM_MAC], contextMap[common.ECM_MAC_ADDRESS], contextMap[common.ESTB_MAC_ADDRESS])
+	macValueWithoutColons := strings.ReplaceAll(macAddress, ":", "")
 
 	// Call XAC to get AccountId
 	xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macValueWithoutColons, fields)
@@ -204,18 +192,8 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 
 	tfields := common.FilterLogFields(fields)
 
-	// Debug: dump MAC fields and relevant config flags at function entry
-	log.WithFields(tfields).Infof("[DEBUG] AddContextForPods entry: SERIAL_NUM='%s', MODEL='%s', ECM_MAC='%s', ECM_MAC_ADDRESS='%s', ESTB_MAC_ADDRESS='%s', EnableMacAccountServiceCall=%t, EnableAccountDataService=%t", contextMap[common.SERIAL_NUM], contextMap[common.MODEL], contextMap[common.ECM_MAC], contextMap[common.ECM_MAC_ADDRESS], contextMap[common.ESTB_MAC_ADDRESS], Xc.EnableMacAccountServiceCall, Xc.EnableAccountDataService)
-
 	if Xc.EnableMacAccountServiceCall && strings.HasPrefix(strings.ToUpper(contextMap[common.SERIAL_NUM]), Xc.AccountServiceMacPrefix) {
-				// Remove colons from ecmMacAddress before sending to XAC
-				if ecmMac, ok := contextMap[common.ECM_MAC]; ok && ecmMac != "" {
-					contextMap[common.ECM_MAC] = strings.ReplaceAll(ecmMac, ":", "")
-				}
-			log.WithFields(tfields).Infof("Trying XAC/ADA for partner retrieval using serialum='%s' and contextMap[common.ECM_MAC]='%s'", contextMap[common.SERIAL_NUM], contextMap[common.ECM_MAC])
-			// Try XAC → ADA flow first if enabled
 		if Xc.EnableAccountDataService {
-			log.WithFields(tfields).Infof("Trying XAC/ADA for partner retrieval using serialum='%s'", contextMap[common.SERIAL_NUM])
 			podData, td = getPartnerFromAccountDataService(ws, contextMap, fields)
 			if podData != nil && podData.AccountId != "" {
 				if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
@@ -419,14 +397,15 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 		}
 	} else if Xc.EnableAccountDataService {
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-			// Normalize MAC (remove colons) before calling XAC
-			macForXac := contextMap[common.ECM_MAC_ADDRESS]
-			if macForXac == "" {
-				macForXac = contextMap[common.ESTB_MAC_ADDRESS]
+			var macAddress string
+			if contextMap[common.ESTB_MAC_ADDRESS] != "" {
+				macAddress = util.GetEcmMacAddress(util.AlphaNumericMacAddress(strings.TrimSpace(contextMap[common.ESTB_MAC_ADDRESS])))
+			} else {
+				macAddress = contextMap[common.ECM_MAC_ADDRESS]
 			}
-			macForXacStripped := strings.ReplaceAll(macForXac, ":", "")
-			log.WithFields(fields).Infof("[DEBUG] AddFeatureControlContextFromAccountService: calling GetAccountIdData with mac='%s' (stripped='%s')", macForXac, macForXacStripped)
-			xboAccount, err := ws.GroupServiceConnector.GetAccountIdData(macForXacStripped, fields)
+			// Normalize MAC (remove colons) before calling XAC
+			macValue := strings.ReplaceAll(macAddress, ":", "")
+			xboAccount, err := ws.GroupServiceConnector.GetAccountIdData(macValue, fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Error getting accountId information")
 				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
