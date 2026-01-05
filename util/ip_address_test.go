@@ -107,3 +107,20 @@ func TestIsIPv4LiteralAddress(t *testing.T) {
 	ipAddr := "4.5.6"
 	assert.Assert(t, IsIPv4LiteralAddress(ipAddr))
 }
+
+func TestConvertIpBytesToString(t *testing.T) {
+	// Test IPv4 address bytes
+	ipv4Bytes := []byte{192, 168, 1, 1}
+	result := ConvertIpBytesToString(ipv4Bytes)
+	assert.Equal(t, result, "192.168.1.1")
+
+	// Test IPv6 address bytes
+	ipv6Bytes := []byte{0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34}
+	result = ConvertIpBytesToString(ipv6Bytes)
+	assert.Equal(t, result, "2001:db8:85a3::8a2e:370:7334")
+
+	// Test empty bytes
+	emptyBytes := []byte{}
+	result = ConvertIpBytesToString(emptyBytes)
+	assert.Equal(t, result, "<nil>")
+}
