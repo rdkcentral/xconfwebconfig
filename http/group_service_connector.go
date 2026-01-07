@@ -50,8 +50,8 @@ type GroupServiceConnector interface {
 	CreateListFromGroupServiceProto(cpeGroup *conversion.CpeGroup) []string
 	GetFeatureTagsHashedItems(name string, fields log.Fields) (map[string]string, error)
 	GetSecurityTokenInfo(securityIdentifier string, fields log.Fields) (map[string]string, error)
-	GetAccountIdData(ecmMac string, fields log.Fields) (*conversion.XBOAccount, error)
-	GetAccountProducts(name string, fields log.Fields) (map[string]string, error)
+	GetAccountIdData(mac string, fields log.Fields) (*conversion.XBOAccount, error)
+	GetAccountProducts(accountId string, fields log.Fields) (map[string]string, error)
 }
 
 type DefaultGroupService struct {
@@ -177,8 +177,8 @@ func (c *DefaultGroupService) GetSecurityTokenInfo(securityIdentifier string, fi
 	return message.Fields, nil
 }
 
-func (c *DefaultGroupService) GetAccountIdData(ecmMac string, fields log.Fields) (*conversion.XBOAccount, error) {
-	url := fmt.Sprintf(getAccountIdTemplate, c.host, ecmMac)
+func (c *DefaultGroupService) GetAccountIdData(mac string, fields log.Fields) (*conversion.XBOAccount, error) {
+	url := fmt.Sprintf(getAccountIdTemplate, c.host, mac)
 	rbytes, err := c.DoWithRetries(http.MethodGet, url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
@@ -193,8 +193,8 @@ func (c *DefaultGroupService) GetAccountIdData(ecmMac string, fields log.Fields)
 	return &xboAccount, nil
 }
 
-func (c *DefaultGroupService) GetAccountProducts(name string, fields log.Fields) (map[string]string, error) {
-	url := fmt.Sprintf(getAccountProductsTemplate, c.GroupServiceHost(), name)
+func (c *DefaultGroupService) GetAccountProducts(accountId string, fields log.Fields) (map[string]string, error) {
+	url := fmt.Sprintf(getAccountProductsTemplate, c.GroupServiceHost(), accountId)
 	rbytes, err := c.DoWithRetries(http.MethodGet, url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
