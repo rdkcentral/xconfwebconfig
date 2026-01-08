@@ -479,7 +479,7 @@ func getPrecookRfcData(ws *xhttp.XconfServer, contextMap map[string]string, fiel
 	return precookData
 }
 
-func getPrecookRfcPostProcessResponse(postProcessConfigsetHash string, fields log.Fields) *[]rfc.FeatureResponse {
+func getPreprocessedRfcPostProcessResponse(postProcessConfigsetHash string, fields log.Fields) *[]rfc.FeatureResponse {
 	var postProcessingPrecookResponse []rfc.FeatureResponse
 	tfields := common.FilterLogFields(fields)
 
@@ -494,7 +494,7 @@ func getPrecookRfcPostProcessResponse(postProcessConfigsetHash string, fields lo
 	return &postProcessingPrecookResponse
 }
 
-func getPrecookRfcRulesEngineResponse(rulesEngineConfigsetHash string, fields log.Fields) *[]rfc.FeatureResponse {
+func getPreprocessedRfcRulesEngineResponse(rulesEngineConfigsetHash string, fields log.Fields) *[]rfc.FeatureResponse {
 	var ruleEnginePrecookResponse []rfc.FeatureResponse
 	tfields := common.FilterLogFields(fields)
 

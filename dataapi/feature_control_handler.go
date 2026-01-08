@@ -200,15 +200,15 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// return response from XPC precook table if possible
 	if canPrecookRfcResponse && precookData != nil {
 		if isFwVersionMatched {
-			precookRulesEngineResponse = getPrecookRfcRulesEngineResponse(precookData.RfcRulesEngineHash, fields)
+			precookRulesEngineResponse = getPreprocessedRfcRulesEngineResponse(precookData.RfcRulesEngineHash, fields)
 		} else if isRfcPrecookForOfferedFwEnabled && isOfferedFwMatched {
 			log.Debugf("Using offered firmware version for precook rules engine response, OfferedFwRfcRulesEngineHash: %v, offeredFwVersion: %v", precookData.OfferedFwRfcRulesEngineHash, precookData.OfferedFwVersion)
-			precookRulesEngineResponse = getPrecookRfcRulesEngineResponse(precookData.OfferedFwRfcRulesEngineHash, fields)
+			precookRulesEngineResponse = getPreprocessedRfcRulesEngineResponse(precookData.OfferedFwRfcRulesEngineHash, fields)
 		}
 
 		// ensure isSecureConnection is true first, if not, need to build on the fly so we don't expose accountId info
 		if isSecuredConnection {
-			precookPostProcessingResponse = getPrecookRfcPostProcessResponse(precookData.RfcPostProcessingHash, fields)
+			precookPostProcessingResponse = getPreprocessedRfcPostProcessResponse(precookData.RfcPostProcessingHash, fields)
 		}
 	}
 	featureControl := &rfc.FeatureControl{}
