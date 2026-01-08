@@ -41,9 +41,9 @@ func ExecuteRequest(r *http.Request, handler http.Handler) *httptest.ResponseRec
 }
 
 func TestMain(m *testing.M) {
-	testConfigFile = "/app/ossxconfds/ossxconfds.conf"
+	testConfigFile = "/app/xconfwebconfig/xconfwebconfig.conf"
 	if _, err := os.Stat(testConfigFile); os.IsNotExist(err) {
-		testConfigFile = "../config/sample_ossxconfds.conf"
+		testConfigFile = "../config/sample_xconfwebconfig.conf"
 	}
 
 	sid := os.Getenv("SAT_CLIENT_ID")
@@ -63,7 +63,7 @@ func TestMain(m *testing.M) {
 
 	securityTokenKey := os.Getenv("SECURITY_TOKEN_KEY")
 	if len(securityTokenKey) == 0 {
-		os.Setenv("SECURITY_TOKEN_KEY", "dGVzdC1jMDctZDBkMS00MTBiLTg5Y2EtNmM1NWY1ZTU=")
+		os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey=")
 	}
 
 	awsS3SsecKey := os.Getenv("AWS_S3_SSEC_KEY")

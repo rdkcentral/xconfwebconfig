@@ -829,7 +829,7 @@ func SetTelemetryProfile(rowKey string, telemetry TelemetryProfile) {
 func GetOneTelemetryProfile(rowKey string) *TelemetryProfile {
 	telemetryInst, err := GetCachedSimpleDaoFunc().GetOne(db.TABLE_TELEMETRY, rowKey)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no telemetryProfile found for:%s ", rowKey))
+		log.Warn("no telemetryProfile found for: " + rowKey)
 		return nil
 	}
 	telemetry := telemetryInst.(TelemetryProfile)
@@ -942,7 +942,7 @@ func GetTelemetryRuleList() []*TelemetryRule {
 func GetOnePermanentTelemetryProfile(rowKey string) *PermanentTelemetryProfile {
 	telemetryInst, err := GetCachedSimpleDaoFunc().GetOne(db.TABLE_PERMANENT_TELEMETRY, rowKey)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no telemetryProfile found for:%s ", rowKey))
+		log.Warn("no telemetryProfile found for: " + rowKey)
 		return nil
 	}
 	telemetry := telemetryInst.(*PermanentTelemetryProfile)
@@ -1010,7 +1010,7 @@ func GetTelemetryTwoRuleListForAS() []*TelemetryTwoRule {
 func GetOneTelemetryTwoProfile(rowKey string) *TelemetryTwoProfile {
 	telemetryInst, err := GetCachedSimpleDaoFunc().GetOne(db.TABLE_TELEMETRY_TWO_PROFILES, rowKey)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no TelemetryTwoProfile found for: %s ", rowKey))
+		log.Warn("no TelemetryTwoProfile found for: " + rowKey)
 		return nil
 	}
 	telemetry := telemetryInst.(*TelemetryTwoProfile)
