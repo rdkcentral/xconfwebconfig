@@ -81,6 +81,9 @@ type AppMetrics struct {
 	ipAddressNotInSameNetworkCounter      *prometheus.CounterVec
 	ipAddressNotInSameNetworkIn200Counter *prometheus.CounterVec
 	AccountServiceEmptyResponseCounter    *prometheus.CounterVec
+	xDasAccountDataFetchCounter           *prometheus.CounterVec
+	titanFetchDataCounter                 *prometheus.CounterVec
+	accountIdUnknownCounter               *prometheus.CounterVec
 }
 
 var metrics *AppMetrics
@@ -922,4 +925,61 @@ func IncreaseTitanEmptyResponseCounter(model string) {
 		"model": model,
 	}
 	metrics.titanEmptyResponseCounter.With(labels).Inc()
+}
+
+func IncreaseXdasFetchCounter(partner, model string) {
+	if metrics == nil {
+		return
+	}
+	if len(partner) == 0 {
+		partner = "null"
+	}
+	if len(model) == 0 {
+		model = "null"
+	}
+
+	labels := prometheus.Labels{
+		"app":     AppName(),
+		"partner": partner,
+		"model":   model,
+	}
+	metrics.xDasAccountDataFetchCounter.With(labels).Inc()
+}
+
+func IncreaseUnknownAccountIdCounter(partner, model string) {
+	if metrics == nil {
+		return
+	}
+	if len(partner) == 0 {
+		partner = "null"
+	}
+	if len(model) == 0 {
+		model = "null"
+	}
+
+	labels := prometheus.Labels{
+		"app":     AppName(),
+		"partner": partner,
+		"model":   model,
+	}
+	metrics.accountIdUnknownCounter.With(labels).Inc()
+}
+
+func IncreaseTitanFetchCounter(partner, model string) {
+	if metrics == nil {
+		return
+	}
+	if len(partner) == 0 {
+		partner = "null"
+	}
+	if len(model) == 0 {
+		model = "null"
+	}
+
+	labels := prometheus.Labels{
+		"app":     AppName(),
+		"partner": partner,
+		"model":   model,
+	}
+	metrics.titanFetchDataCounter.With(labels).Inc()
 }
