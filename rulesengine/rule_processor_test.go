@@ -625,3 +625,189 @@ func TestProcessorMethods(t *testing.T) {
 	processor.AddEvaluators(evaluators)
 	assert.Equal(t, oldSize+2, processor.Size())
 }
+
+func TestRuleProcessor_EvaluateTest(t *testing.T) {
+	processor := NewRuleProcessor()
+	
+	context := map[string]string{
+		"model": "TG1682G",
+		"env":   "QA",
+	}
+	
+	fields := log.Fields{
+		"firmware_id": "test-firmware",
+	}
+	
+	testCases := []struct {
+		name           string
+		rule           *Rule
+		context        map[string]string
+		vargNegations  []bool
+		expectedResult bool
+	}{
+		{
+			name: "Simple condition rule",
+			rule: &Rule{
+				Condition: NewCondition(
+					NewFreeArg(StandardFreeArgTypeString, "model"),
+					StandardOperationIs,
+					NewFixedArg("TG1682G"),
+				),
+			},
+			context:        context,
+			expectedResult: true,
+		},
+		{
+			name: "Simple condition rule with negation",
+			rule: &Rule{
+				Condition: NewCondition(
+					NewFreeArg(StandardFreeArgTypeString, "model"),
+					StandardOperationIs,
+					NewFixedArg("XB3"),
+				),
+			},
+			context:        context,
+			vargNegations:  []bool{true},
+			expectedResult: true, // negated because model != XB3
+		},
+		{
+			name: "Negated rule",
+			rule: &Rule{
+				Negated: true,
+				Condition: NewCondition(
+					NewFreeArg(StandardFreeArgTypeString, "model"),
+					StandardOperationIs,
+					NewFixedArg("XB3"),
+				),
+			},
+			context:        context,
+			expectedResult: true, // negated because model != XB3
+		},
+		{
+			name: "Compound rule",
+			rule: &Rule{
+				CompoundParts: []Rule{
+					{
+						Condition: NewCondition(
+							NewFreeArg(StandardFreeArgTypeString, "model"),
+							StandardOperationIs,
+							NewFixedArg("TG1682G"),
+						),
+					},
+					{
+						Relation: RelationAnd,
+						Condition: NewCondition(
+							NewFreeArg(StandardFreeArgTypeString, "env"),
+							StandardOperationIs,
+							NewFixedArg("QA"),
+						),
+					},
+				},
+			},
+			context:        context,
+			expectedResult: true,
+		},
+	}
+	
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := processor.EvaluateTest(tc.rule, tc.context, fields, tc.vargNegations...)
+			assert.Equal(t, tc.expectedResult, result, "EvaluateTest result should match expected")
+		})
+	}
+}
+
+func TestRuleProcessor_GetEvaluatorOK(t *testing.T) {
+	processor := NewRuleProcessor()
+	
+	testCases := []struct {
+		name     string
+		rule     *Rule
+		expected bool
+	}{
+		{
+			name: "Valid simple rule",
+			rule: &Rule{
+				Condition: NewCondition(
+					NewFreeArg(StandardFreeArgTypeString, "model"),
+					StandardOperationIs,
+					NewFixedArg("TG1682G"),
+				),
+			},
+			expected: true,
+		},
+		{
+			name: "Rule with nil condition",
+			rule: &Rule{
+				Condition: nil,
+			},
+			expected: true, // Rule with nil condition is considered compound with empty parts -> returns true
+		},
+		{
+			name: "Rule with nil free arg",
+			rule: &Rule{
+				Condition: &Condition{
+					FreeArg:   nil,
+					Operation: StandardOperationIs,
+					FixedArg:  NewFixedArg("TG1682G"),
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "Rule with EXISTS operation and nil fixed arg",
+			rule: &Rule{
+				Condition: &Condition{
+					FreeArg:   NewFreeArg(StandardFreeArgTypeAny, "model"), // EXISTS works with ANY type
+					Operation: StandardOperationExists,
+					FixedArg:  nil,
+				},
+			},
+			expected: true, // EXISTS operation allows nil fixed arg and has evaluator for ANY type
+		},
+		{
+			name: "Rule with EXISTS operation on STRING type (unsupported)",
+			rule: &Rule{
+				Condition: &Condition{
+					FreeArg:   NewFreeArg(StandardFreeArgTypeString, "model"), // EXISTS doesn't work with STRING type
+					Operation: StandardOperationExists,
+					FixedArg:  nil,
+				},
+			},
+			expected: false, // EXISTS operation on STRING type has no evaluator
+		},
+		{
+			name: "Rule with non-EXISTS operation and nil fixed arg",
+			rule: &Rule{
+				Condition: &Condition{
+					FreeArg:   NewFreeArg(StandardFreeArgTypeString, "model"),
+					Operation: StandardOperationIs,
+					FixedArg:  nil,
+				},
+			},
+			expected: false, // Non-EXISTS operations require fixed arg
+		},
+		{
+			name: "Compound rule",
+			rule: &Rule{
+				CompoundParts: []Rule{
+					{
+						Condition: NewCondition(
+							NewFreeArg(StandardFreeArgTypeString, "model"),
+							StandardOperationIs,
+							NewFixedArg("TG1682G"),
+						),
+					},
+				},
+			},
+			expected: true, // Compound rules are always considered valid
+		},
+	}
+	
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := processor.GetEvaluatorOK(tc.rule)
+			assert.Equal(t, tc.expected, result, "GetEvaluatorOK result should match expected")
+		})
+	}
+}
