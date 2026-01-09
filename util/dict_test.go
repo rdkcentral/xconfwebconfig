@@ -116,8 +116,9 @@ func TestDict_MsecsToTime(t *testing.T) {
 		t.Errorf("intField should be converted to time.Time, got %T", val)
 	}
 
-	if timeVal.Year() != 2021 {
-		t.Errorf("Expected year 2021, got %d", timeVal.Year())
+	// Convert to UTC for timezone-independent comparison
+	if timeVal.UTC().Year() != 2021 {
+		t.Errorf("Expected year 2021, got %d", timeVal.UTC().Year())
 	}
 
 	// Test with float64 milliseconds
@@ -129,8 +130,9 @@ func TestDict_MsecsToTime(t *testing.T) {
 		t.Error("floatField should be converted to time.Time")
 	}
 
-	if timeVal2.Year() != 2021 {
-		t.Errorf("Expected year 2021 from float64, got %d", timeVal2.Year())
+	// Convert to UTC for timezone-independent comparison
+	if timeVal2.UTC().Year() != 2021 {
+		t.Errorf("Expected year 2021 from float64, got %d", timeVal2.UTC().Year())
 	}
 }
 
