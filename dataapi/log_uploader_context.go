@@ -63,11 +63,12 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 		return err
 	}
 	satToken := localToken.Token
-
-	if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
-		partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
-		if partnerId != "" {
-			contextMap[common.PARTNER_ID] = partnerId
+	if Xc.EnableAccountService {
+		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
+			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
+			if partnerId != "" {
+				contextMap[common.PARTNER_ID] = partnerId
+			}
 		}
 	}
 	AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)

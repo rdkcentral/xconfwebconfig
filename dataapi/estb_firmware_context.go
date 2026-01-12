@@ -267,13 +267,14 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 		} else {
 			log.WithFields(fields).Error(fmt.Sprintf("Failed to Get AccountId via Grp Service for MAC='%s',Err %v", macPart, err))
 			// Fallback to old Account Service logic if XAC/ADA didn't return partner
-			log.WithFields(fields).Warn("Trying fallback via Old Account Service ")
-			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
-			if partnerId != "" {
-				contextMap[common.PARTNER_ID] = partnerId
+			if Xc.EnableAccountService {
+				log.WithFields(fields).Warn("Trying fallback via Old Account Service ")
+				partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
+				if partnerId != "" {
+					contextMap[common.PARTNER_ID] = partnerId
+				}
 			}
 		}
-
 	}
 	AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
 	AddGroupServiceFTContext(Ws, common.ESTB_MAC, contextMap, true, fields)
