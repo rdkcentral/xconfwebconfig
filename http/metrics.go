@@ -81,9 +81,9 @@ type AppMetrics struct {
 	ipAddressNotInSameNetworkCounter      *prometheus.CounterVec
 	ipAddressNotInSameNetworkIn200Counter *prometheus.CounterVec
 	AccountServiceEmptyResponseCounter    *prometheus.CounterVec
-	xDasAccountDataFetchCounter           *prometheus.CounterVec
-	titanFetchDataCounter                 *prometheus.CounterVec
-	accountIdUnknownCounter               *prometheus.CounterVec
+	grpServiceAccountDataFetchCounter     *prometheus.CounterVec
+	accountServiceFetchedDataCounter      *prometheus.CounterVec
+	unknownAccountIdReceivedCounter       *prometheus.CounterVec
 }
 
 var metrics *AppMetrics
@@ -334,6 +334,27 @@ func NewMetrics() *AppMetrics {
 			},
 			[]string{"app", "model"},
 		),
+		grpServiceAccountDataFetchCounter: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "xDas_Account_Data_Fetched_Counter",
+				Help: "A counter for successful accountProducts responses from Xdas",
+			},
+			[]string{"app", "model", "partner"},
+		),
+		accountServiceFetchedDataCounter: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "accountServiceFetchedDataCounter",
+				Help: "A counter for total no.of titan account data fetch",
+			},
+			[]string{"app", "model", "partner"},
+		),
+		unknownAccountIdReceivedCounter: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "accountId_Unknown_Counter",
+				Help: "A counter for successful accountProducts responses from Xdas",
+			},
+			[]string{"app", "model", "partner"},
+		),
 	}
 	prometheus.MustRegister(metrics.inFlight, metrics.counter, metrics.duration,
 		metrics.extAPICounts, metrics.extAPIDuration,
@@ -344,7 +365,7 @@ func NewMetrics() *AppMetrics {
 		metrics.noPrecookDataCounter, metrics.precookExcludeMacListCounter, metrics.precookCtxHashMismatchCounter,
 		metrics.modelChangedCounter, metrics.partnerChangedCounter, metrics.fwVersionChangedCounter, metrics.fwVersionMismatchCounter, metrics.offeredFwVersionMatchedCounter, metrics.experienceChangedCounter, metrics.accountIdChangedCounter, metrics.ipAddressNotInSameNetworkCounter,
 		metrics.modelChangedIn200Counter, metrics.partnerChangedIn200Counter, metrics.fwVersionChangedIn200Counter, metrics.experienceChangedIn200Counter, metrics.accountIdChangedIn200Counter, metrics.ipAddressNotInSameNetworkIn200Counter,
-		metrics.titanEmptyResponseCounter, metrics.modelRequestsCounter, metrics.AccountServiceEmptyResponseCounter,
+		metrics.titanEmptyResponseCounter, metrics.modelRequestsCounter, metrics.AccountServiceEmptyResponseCounter, metrics.grpServiceAccountDataFetchCounter, metrics.unknownAccountIdReceivedCounter, metrics.accountServiceFetchedDataCounter,
 	)
 	return metrics
 }
@@ -927,7 +948,7 @@ func IncreaseTitanEmptyResponseCounter(model string) {
 	metrics.titanEmptyResponseCounter.With(labels).Inc()
 }
 
-func IncreaseXdasFetchCounter(partner, model string) {
+func IncreaseGrpServiceFetchCounter(model, partner string) {
 	if metrics == nil {
 		return
 	}
@@ -940,13 +961,13 @@ func IncreaseXdasFetchCounter(partner, model string) {
 
 	labels := prometheus.Labels{
 		"app":     AppName(),
-		"partner": partner,
 		"model":   model,
+		"partner": partner,
 	}
-	metrics.xDasAccountDataFetchCounter.With(labels).Inc()
+	metrics.grpServiceAccountDataFetchCounter.With(labels).Inc()
 }
 
-func IncreaseUnknownAccountIdCounter(partner, model string) {
+func IncreaseUnknownAccountIdCounter(model, partner string) {
 	if metrics == nil {
 		return
 	}
@@ -959,13 +980,13 @@ func IncreaseUnknownAccountIdCounter(partner, model string) {
 
 	labels := prometheus.Labels{
 		"app":     AppName(),
-		"partner": partner,
 		"model":   model,
+		"partner": partner,
 	}
-	metrics.accountIdUnknownCounter.With(labels).Inc()
+	metrics.unknownAccountIdReceivedCounter.With(labels).Inc()
 }
 
-func IncreaseTitanFetchCounter(partner, model string) {
+func IncreaseTitanFetchCounter(model, partner string) {
 	if metrics == nil {
 		return
 	}
@@ -978,8 +999,8 @@ func IncreaseTitanFetchCounter(partner, model string) {
 
 	labels := prometheus.Labels{
 		"app":     AppName(),
-		"partner": partner,
 		"model":   model,
+		"partner": partner,
 	}
-	metrics.titanFetchDataCounter.With(labels).Inc()
+	metrics.accountServiceFetchedDataCounter.With(labels).Inc()
 }
