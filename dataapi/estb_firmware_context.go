@@ -263,6 +263,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 				if TimeZone, ok := accountProducts["TimeZone"]; ok {
 					contextMap[common.TIME_ZONE] = TimeZone
 				}
+				log.WithFields(fields).Infof("AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
 			}
 		} else {
 			log.WithFields(fields).Error(fmt.Sprintf("Failed to Get AccountId via Grp Service for MAC='%s',Err %v", macPart, err))
