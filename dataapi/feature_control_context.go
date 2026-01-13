@@ -124,7 +124,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 
 	var macAddress string
 	if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
-		macAddress = util.GetEcmMacAddress((contextMap[common.ESTB_MAC_ADDRESS]))
+		macAddress = util.GetEcmMacAddress(util.AlphaNumericMacAddress(strings.TrimSpace(contextMap[common.ESTB_MAC_ADDRESS])))
 	} else if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
 		macAddress = contextMap[common.ECM_MAC_ADDRESS]
 	}
@@ -165,7 +165,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 		contextMap[common.COUNTRY_CODE] = countryCode
 	}
 	if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
-		xhttp.IncreaseXdasFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+		xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 	}
 
 	log.WithFields(fields).Infof("AddContextForPods AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
@@ -387,7 +387,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
 			var macAddress string
 			if contextMap[common.ESTB_MAC_ADDRESS] != "" {
-				macAddress = util.GetEcmMacAddress(contextMap[common.ESTB_MAC_ADDRESS])
+				macAddress = util.GetEcmMacAddress(util.AlphaNumericMacAddress(strings.TrimSpace(contextMap[common.ESTB_MAC_ADDRESS])))
 			} else {
 				macAddress = contextMap[common.ECM_MAC_ADDRESS]
 			}
@@ -470,12 +470,14 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	// if/else statement to check if we should call DeviceService or AccountService
 	if strings.EqualFold("XPC", contextMap[common.ACCOUNT_MGMT]) && util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 		podData, td = AddContextForPods(ws, contextMap, satToken, fields)
-		xhttp.IncreaseUnknownAccountIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-	} else if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || util.IsUnknownValue(contextMap[common.PARTNER_ID]) || util.IsUnknownValue(contextMap[common.ACCOUNT_HASH]) {
-		if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
+		if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
 			xhttp.IncreaseUnknownAccountIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		}
+	} else if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || util.IsUnknownValue(contextMap[common.PARTNER_ID]) || util.IsUnknownValue(contextMap[common.ACCOUNT_HASH]) {
 		td = AddFeatureControlContextFromAccountService(ws, contextMap, satToken, fields)
+		if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
+			xhttp.IncreaseUnknownAccountIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+		}
 	}
 	tags := AddContextFromTaggingService(ws, contextMap, satToken, configSetHash, true, fields)
 	ftTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, false, fields)
