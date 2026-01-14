@@ -230,50 +230,40 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 		return err
 	}
 	satToken := localToken.Token
+	//default flow calling xac/ada keyspace
+	macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC])
+	xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
 
-	if Xc.EnableAccountService {
+	if err == nil && xAccountId != nil {
+		accountId := xAccountId.GetAccountId()
+		contextMap[common.ACCOUNT_ID] = accountId
+		accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
+		if err != nil {
+			log.WithFields(fields).Error(fmt.Sprintf("Failed to Get AccountProducts for AccountId='%s',Err %v", accountId, err))
+		} else {
+			if partner, ok := accountProducts["Partner"]; ok {
+				contextMap[common.PARTNER_ID] = partner
+			}
+
+			if accountProductsVal, ok := accountProducts["AccountProducts"]; ok {
+				contextMap[common.ACCOUNT_PRODUCTS] = accountProductsVal
+			}
+
+			if countryCode, ok := accountProducts["CountryCode"]; ok {
+				contextMap[common.COUNTRY_CODE] = countryCode
+			}
+
+			if TimeZone, ok := accountProducts["TimeZone"]; ok {
+				contextMap[common.TIME_ZONE] = TimeZone
+			}
+			log.WithFields(fields).Debugf("AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
+		}
+	} else {
+		log.WithFields(fields).Error(fmt.Sprintf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s',Err %v", macPart, err))
 		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
 			if partnerId != "" {
 				contextMap[common.PARTNER_ID] = partnerId
-			}
-		}
-	} else if Xc.EnableXacGroupService {
-		macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC])
-		xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
-
-		if err == nil && xAccountId != nil {
-			accountId := xAccountId.GetAccountId()
-			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
-			if err != nil {
-				log.WithFields(fields).Error(fmt.Sprintf("Failed to Get AccountProducts for AccountId='%s',Err %v", accountId, err))
-			} else {
-				if partner, ok := accountProducts["Partner"]; ok {
-					contextMap[common.PARTNER_ID] = partner
-				}
-
-				if accountProductsVal, ok := accountProducts["AccountProducts"]; ok {
-					contextMap[common.ACCOUNT_PRODUCTS] = accountProductsVal
-				}
-
-				if countryCode, ok := accountProducts["CountryCode"]; ok {
-					contextMap[common.COUNTRY_CODE] = countryCode
-				}
-
-				if TimeZone, ok := accountProducts["TimeZone"]; ok {
-					contextMap[common.TIME_ZONE] = TimeZone
-				}
-				log.WithFields(fields).Infof("AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
-			}
-		} else {
-			log.WithFields(fields).Error(fmt.Sprintf("Failed to Get AccountId via Grp Service for MAC='%s',Err %v", macPart, err))
-			// Fallback to old Account Service logic if XAC/ADA didn't return partner
-			if Xc.EnableAccountService {
-				log.WithFields(fields).Warn("Trying fallback via Old Account Service ")
-				partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
-				if partnerId != "" {
-					contextMap[common.PARTNER_ID] = partnerId
-				}
 			}
 		}
 	}
