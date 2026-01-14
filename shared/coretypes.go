@@ -164,7 +164,7 @@ func GetAllEnvironmentList() []*Environment {
 func GetOneEnvironment(id string) *Environment {
 	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_ENVIRONMENT, id)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no environment found for " + id))
+		log.Warn("no environment found for: " + id)
 		return nil
 	}
 	return inst.(*Environment)
@@ -243,7 +243,7 @@ func GetAllModelList() []*Model {
 func GetOneModel(id string) *Model {
 	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_MODEL, id)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no model found for " + id))
+		log.Warn(fmt.Sprintf("no model found for:%s ", id))
 		return nil
 	}
 	return inst.(*Model)
@@ -394,7 +394,7 @@ func GetStringAppSetting(key string, vargs ...string) string {
 
 	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
 	if err != nil {
-		log.Warn(fmt.Sprintf("no AppSetting found for " + key))
+		log.Warn("no AppSetting found for: " + key)
 		return defaultVal
 	}
 
