@@ -20,6 +20,7 @@ package dataapi
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/rdkcentral/xconfwebconfig/util"
 
@@ -49,6 +50,7 @@ func NormalizeLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, context
 // AddLogUploaderContext ..
 func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap map[string]string, usePartnerAppType bool, vargs ...log.Fields) error {
 	var fields log.Fields
+	var accountId string
 	if len(vargs) > 0 {
 		fields = vargs[0]
 	} else {
@@ -63,7 +65,52 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 		return err
 	}
 	satToken := localToken.Token
-	if Xc.EnableAccountService {
+	if Xc.EnableXacGroupService {
+		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+			var macAddress string
+			if contextMap[common.ESTB_MAC_ADDRESS] != "" {
+				macAddress = util.GetEcmMacAddress(util.AlphaNumericMacAddress(strings.TrimSpace(contextMap[common.ESTB_MAC_ADDRESS])))
+			} else {
+				macAddress = contextMap[common.ECM_MAC_ADDRESS]
+			}
+
+			macValue := util.RemoveNonAlphabeticSymbols(macAddress)
+			xboAccount, err := ws.GroupServiceConnector.GetAccountIdData(macValue, fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("Error getting accountId information from Grp Service")
+			}
+			if xboAccount != nil && xboAccount.GetAccountId() != "" {
+				accountId = xboAccount.GetAccountId()
+				contextMap[common.ACCOUNT_ID] = accountId
+			} else {
+				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
+			}
+
+			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("Error getting accountProducts information from Grp Service")
+			} else {
+				if partner, ok := accountProducts["Partner"]; ok && partner != "" {
+					contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
+				}
+
+				contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
+
+				if accountProductsVal, ok := accountProducts["AccountProducts"]; ok {
+					contextMap[common.ACCOUNT_PRODUCTS] = accountProductsVal
+				}
+
+				if countryCode, ok := accountProducts["CountryCode"]; ok {
+					contextMap[common.COUNTRY_CODE] = countryCode
+				}
+
+				xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+				log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
+			}
+		}
+	}
+
+	if contextMap[common.PARTNER_ID] == "" {
 		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
 			if partnerId != "" {
