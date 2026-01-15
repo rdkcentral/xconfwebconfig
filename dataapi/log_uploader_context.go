@@ -96,14 +96,22 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 
 				contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
 
-				if accountProductsVal, ok := accountProducts["AccountProducts"]; ok {
-					contextMap[common.ACCOUNT_PRODUCTS] = accountProductsVal
-				}
-
 				if countryCode, ok := accountProducts["CountryCode"]; ok {
 					contextMap[common.COUNTRY_CODE] = countryCode
 				}
 
+				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
+					var ap map[string]string
+					err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
+					if err == nil {
+						for key, val := range ap {
+							contextMap[key] = val
+						}
+					} else {
+						log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
+					}
+
+				}
 				xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 				log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
 			}
