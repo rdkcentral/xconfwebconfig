@@ -24,7 +24,7 @@ import (
 )
 
 func TestGetMatchedPrecookHash_WithMatchingRfcHash(t *testing.T) {
-	precookData := &PrecookData{
+	precookData := &PreprocessedData{
 		RfcHash:          "hash123",
 		OfferedFwRfcHash: "hash456",
 	}
@@ -33,7 +33,7 @@ func TestGetMatchedPrecookHash_WithMatchingRfcHash(t *testing.T) {
 }
 
 func TestGetMatchedPrecookHash_WithMatchingOfferedFwHash(t *testing.T) {
-	precookData := &PrecookData{
+	precookData := &PreprocessedData{
 		RfcHash:          "hash123",
 		OfferedFwRfcHash: "hash456",
 	}
@@ -42,7 +42,7 @@ func TestGetMatchedPrecookHash_WithMatchingOfferedFwHash(t *testing.T) {
 }
 
 func TestGetMatchedPrecookHash_WithNoMatch(t *testing.T) {
-	precookData := &PrecookData{
+	precookData := &PreprocessedData{
 		RfcHash:          "hash123",
 		OfferedFwRfcHash: "hash456",
 	}
@@ -56,7 +56,7 @@ func TestGetMatchedPrecookHash_WithNilPrecookData(t *testing.T) {
 }
 
 func TestGetMatchedPrecookHash_WithEmptyConfigSetHash(t *testing.T) {
-	precookData := &PrecookData{
+	precookData := &PreprocessedData{
 		RfcHash: "hash123",
 	}
 	result := getMatchedPrecookHash("", precookData, false)
@@ -64,7 +64,7 @@ func TestGetMatchedPrecookHash_WithEmptyConfigSetHash(t *testing.T) {
 }
 
 func TestGetMatchedPrecookHash_OfferedFwDisabled(t *testing.T) {
-	precookData := &PrecookData{
+	precookData := &PreprocessedData{
 		RfcHash:          "hash123",
 		OfferedFwRfcHash: "hash456",
 	}
@@ -73,7 +73,7 @@ func TestGetMatchedPrecookHash_OfferedFwDisabled(t *testing.T) {
 }
 
 func TestGetMatchedPrecookHash_BothHashesEmpty(t *testing.T) {
-	precookData := &PrecookData{
+	precookData := &PreprocessedData{
 		RfcHash:          "",
 		OfferedFwRfcHash: "",
 	}
@@ -82,7 +82,7 @@ func TestGetMatchedPrecookHash_BothHashesEmpty(t *testing.T) {
 }
 
 func TestGetMatchedPrecookHash_OnlyRfcHashSet(t *testing.T) {
-	precookData := &PrecookData{
+	precookData := &PreprocessedData{
 		RfcHash:          "hash123",
 		OfferedFwRfcHash: "",
 	}
@@ -91,7 +91,7 @@ func TestGetMatchedPrecookHash_OnlyRfcHashSet(t *testing.T) {
 }
 
 func TestGetMatchedPrecookHash_OnlyOfferedFwHashSet(t *testing.T) {
-	precookData := &PrecookData{
+	precookData := &PreprocessedData{
 		RfcHash:          "",
 		OfferedFwRfcHash: "hash456",
 	}
@@ -100,7 +100,7 @@ func TestGetMatchedPrecookHash_OnlyOfferedFwHashSet(t *testing.T) {
 }
 
 func TestGetMatchedPrecookHash_CaseSensitivity(t *testing.T) {
-	precookData := &PrecookData{
+	precookData := &PreprocessedData{
 		RfcHash:          "HASH123",
 		OfferedFwRfcHash: "hash456",
 	}
@@ -109,7 +109,7 @@ func TestGetMatchedPrecookHash_CaseSensitivity(t *testing.T) {
 }
 
 func TestGetMatchedPrecookHash_MatchRfcHashWhenBothEnabled(t *testing.T) {
-	precookData := &PrecookData{
+	precookData := &PreprocessedData{
 		RfcHash:          "hash123",
 		OfferedFwRfcHash: "hash456",
 	}

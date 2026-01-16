@@ -53,23 +53,20 @@ func GetPreprocessFeatureControlSettingsHandler(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	clientProtocolHeader := GetClientProtocolHeaderValue(r)
-
-	isSecuredConnection := IsSecureConnection(clientProtocolHeader)
-	var precookData *PrecookData
-	precookData = getPrecookRfcData(Ws, contextMap, fields)
+	var preprocessedData *PreprocessedData
+	preprocessedData = GetPreprocessedRfcData(Ws, contextMap, fields)
 
 	featureControl := &rfc.FeatureControl{}
 
 	var preprocessedRulesEngineResponse, preprocessedPostProcessingResponse *[]rfc.FeatureResponse
-	if precookData == nil || len(precookData.RfcHash) == 0 {
+	if preprocessedData == nil || len(preprocessedData.RfcHash) == 0 {
 		log.WithFields(fields).Infof("No precook data found")
 		xhttp.WriteXconfResponse(w, http.StatusNotFound, []byte("No preprocessed featureControl data found"))
 		return
 	} else {
-		preprocessedRulesEngineResponse = getPreprocessedRfcRulesEngineResponse(precookData.RfcRulesEngineHash, fields)
-		if isSecuredConnection && precookData.RfcPostProcessingHash != "" {
-			preprocessedPostProcessingResponse = getPreprocessedRfcPostProcessResponse(precookData.RfcPostProcessingHash, fields)
+		preprocessedRulesEngineResponse = GetPreprocessedRfcRulesEngineResponse(preprocessedData.RfcRulesEngineHash, fields)
+		if preprocessedData.RfcPostProcessingHash != "" {
+			preprocessedPostProcessingResponse = GetPreprocessedRfcPostProcessResponse(preprocessedData.RfcPostProcessingHash, fields)
 		}
 	}
 

@@ -658,7 +658,7 @@ func TestAccountServiceData_Structure(t *testing.T) {
 }
 
 func TestPrecookData_Structure(t *testing.T) {
-	precookData := PrecookData{
+	precookData := PreprocessedData{
 		AccountId:       "acc123",
 		PartnerId:       "partner1",
 		Model:           "MODEL123",
