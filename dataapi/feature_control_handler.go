@@ -106,14 +106,14 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var precookData *PrecookData
+	var precookData *PreprocessedData
 	// we need to check the current reported firmware version against the ones in precook data.
 	isFwVersionMatched := false
 	isOfferedFwMatched := false
 
 	// if any of these precook flags are on, we'll need precook data from XDAS
 	if canPrecookRfcResponse || isRfcPrecook304Enabled {
-		precookData = getPrecookRfcData(Ws, contextMap, fields)
+		precookData = GetPreprocessedRfcData(Ws, contextMap, fields)
 		tfields = common.FilterLogFields(fields)
 		if precookData == nil || len(precookData.RfcHash) == 0 {
 			xhttp.IncreaseNoPrecookDataCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
@@ -200,15 +200,15 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// return response from XPC precook table if possible
 	if canPrecookRfcResponse && precookData != nil {
 		if isFwVersionMatched {
-			precookRulesEngineResponse = getPreprocessedRfcRulesEngineResponse(precookData.RfcRulesEngineHash, fields)
+			precookRulesEngineResponse = GetPreprocessedRfcRulesEngineResponse(precookData.RfcRulesEngineHash, fields)
 		} else if isRfcPrecookForOfferedFwEnabled && isOfferedFwMatched {
 			log.Debugf("Using offered firmware version for precook rules engine response, OfferedFwRfcRulesEngineHash: %v, offeredFwVersion: %v", precookData.OfferedFwRfcRulesEngineHash, precookData.OfferedFwVersion)
-			precookRulesEngineResponse = getPreprocessedRfcRulesEngineResponse(precookData.OfferedFwRfcRulesEngineHash, fields)
+			precookRulesEngineResponse = GetPreprocessedRfcRulesEngineResponse(precookData.OfferedFwRfcRulesEngineHash, fields)
 		}
 
 		// ensure isSecureConnection is true first, if not, need to build on the fly so we don't expose accountId info
 		if isSecuredConnection {
-			precookPostProcessingResponse = getPreprocessedRfcPostProcessResponse(precookData.RfcPostProcessingHash, fields)
+			precookPostProcessingResponse = GetPreprocessedRfcPostProcessResponse(precookData.RfcPostProcessingHash, fields)
 		}
 	}
 	featureControl := &rfc.FeatureControl{}
@@ -375,7 +375,7 @@ func UpdatePenetrationMetrics(context map[string]string, AccountServiceData *Acc
 	}
 }
 
-func getMatchedPrecookHash(configSetHash string, precookData *PrecookData, isRfcPrecookForOfferedFwEnabled bool) string {
+func getMatchedPrecookHash(configSetHash string, precookData *PreprocessedData, isRfcPrecookForOfferedFwEnabled bool) string {
 	if precookData == nil || configSetHash == "" {
 		return ""
 	}
