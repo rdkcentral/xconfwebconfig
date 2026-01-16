@@ -230,46 +230,52 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 		log.WithFields(log.Fields{"error": err}).Error("Error getting sat token")
 		return err
 	}
+
+	var macAddress string
 	satToken := localToken.Token
 	//default flow calling xac/ada keyspace
-	macAddress := util.GetEcmMacAddress(util.AlphaNumericMacAddress(strings.TrimSpace(contextMap[common.ESTB_MAC])))
-	macPart := util.RemoveNonAlphabeticSymbols(macAddress)
-	xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+	if Xc.EnableXacGroupService {
+		macAddress = util.GetEcmMacAddress(util.AlphaNumericMacAddress(strings.TrimSpace(contextMap[common.ESTB_MAC])))
+		macPart := util.RemoveNonAlphabeticSymbols(macAddress)
+		xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
 
-	if err == nil && xAccountId != nil {
-		accountId := xAccountId.GetAccountId()
-		contextMap[common.ACCOUNT_ID] = accountId
-		accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
-		if err != nil {
-			log.WithFields(fields).Error(fmt.Sprintf("Failed to Get AccountProducts for AccountId='%s',Err %v", accountId, err))
-		} else {
-			if partner, ok := accountProducts["Partner"]; ok {
-				contextMap[common.PARTNER_ID] = partner
-			}
-			if countryCode, ok := accountProducts["CountryCode"]; ok {
-				contextMap[common.COUNTRY_CODE] = countryCode
-			}
-
-			if TimeZone, ok := accountProducts["TimeZone"]; ok {
-				contextMap[common.TIME_ZONE] = TimeZone
-			}
-
-			if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
-				var ap map[string]string
-				err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
-				if err == nil {
-					for key, val := range ap {
-						contextMap[key] = val
-					}
-				} else {
-					log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
+		if err == nil && xAccountId != nil {
+			accountId := xAccountId.GetAccountId()
+			contextMap[common.ACCOUNT_ID] = accountId
+			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
+			if err != nil {
+				log.WithFields(fields).Error(fmt.Sprintf("Failed to Get AccountProducts for AccountId='%s',Err %v", accountId, err))
+			} else {
+				if partner, ok := accountProducts["Partner"]; ok {
+					contextMap[common.PARTNER_ID] = partner
+				}
+				if countryCode, ok := accountProducts["CountryCode"]; ok {
+					contextMap[common.COUNTRY_CODE] = countryCode
 				}
 
+				if TimeZone, ok := accountProducts["TimeZone"]; ok {
+					contextMap[common.TIME_ZONE] = TimeZone
+				}
+
+				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
+					var ap map[string]string
+					err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
+					if err == nil {
+						for key, val := range ap {
+							contextMap[key] = val
+						}
+					} else {
+						log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
+					}
+
+				}
+				log.WithFields(fields).Debugf("AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
 			}
-			log.WithFields(fields).Debugf("AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
 		}
-	} else {
-		log.WithFields(fields).Error(fmt.Sprintf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s',Err %v", macPart, err))
+	}
+
+	if Xc.EnableAccountService && contextMap[common.PARTNER_ID] == "" {
+		log.WithFields(fields).Error(fmt.Sprintf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s',Err %v", macAddress, err))
 		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
 			if partnerId != "" {
