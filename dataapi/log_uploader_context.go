@@ -118,7 +118,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 		}
 	}
 
-	if contextMap[common.PARTNER_ID] == "" {
+	if Xc.EnableAccountService && util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
 			if partnerId != "" {
