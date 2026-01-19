@@ -274,13 +274,11 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 		}
 	}
 
-	if Xc.EnableAccountService && contextMap[common.PARTNER_ID] == "" {
+	if Xc.EnableAccountService && util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 		log.WithFields(fields).Error(fmt.Sprintf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s',Err %v", macAddress, err))
-		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
-			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
-			if partnerId != "" {
-				contextMap[common.PARTNER_ID] = partnerId
-			}
+		partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
+		if partnerId != "" {
+			contextMap[common.PARTNER_ID] = partnerId
 		}
 	}
 	AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
