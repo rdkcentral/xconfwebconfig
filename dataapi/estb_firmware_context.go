@@ -234,7 +234,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	var macAddress string
 	satToken := localToken.Token
 	//default flow calling xac/ada keyspace
-	if Xc.EnableXacGroupService {
+	if Xc.EnableXacGroupService && util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 		macAddress = util.GetEcmMacAddress(util.AlphaNumericMacAddress(strings.TrimSpace(contextMap[common.ESTB_MAC])))
 		macPart := util.RemoveNonAlphabeticSymbols(macAddress)
 		xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
@@ -244,7 +244,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			contextMap[common.ACCOUNT_ID] = accountId
 			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 			if err != nil {
-				log.WithFields(fields).Error(fmt.Sprintf("Failed to Get AccountProducts for AccountId='%s',Err %v", accountId, err))
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", accountId)
 			} else {
 				if partner, ok := accountProducts["Partner"]; ok {
 					contextMap[common.PARTNER_ID] = partner
@@ -267,15 +267,16 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					} else {
 						log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
 					}
-
 				}
-				log.WithFields(fields).Debugf("AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
+				log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' ,AccntPrd='%v' retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 			}
+		} else {
+			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
 		}
 	}
 
 	if Xc.EnableAccountService && util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
-		log.WithFields(fields).Error(fmt.Sprintf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s',Err %v", macAddress, err))
+		log.WithFields(fields).Errorf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s' due to Flag Disabled or err ,Err %v", macAddress, err)
 		partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
 		if partnerId != "" {
 			contextMap[common.PARTNER_ID] = partnerId
