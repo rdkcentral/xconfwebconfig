@@ -86,3 +86,8 @@ func GetPreprocessFeatureControlSettingsHandler(w http.ResponseWriter, r *http.R
 	response, _ := util.XConfJSONMarshal(featureControlMap, true)
 	xhttp.WriteXconfResponseWithHeaders(w, nil, http.StatusOK, []byte(response))
 }
+
+func GetPreprocessFeatureControlSettingsHandlerRaw(w http.ResponseWriter, r *http.Request) {
+	xw := xhttp.NewXResponseWriter(w)
+	GetPreprocessFeatureControlSettingsHandler(xw, r)
+}
