@@ -132,7 +132,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 
 	xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
 	if err != nil {
-		log.WithFields(fields).Error(fmt.Sprintf("Failed to Get AccountId call via GrpService for ecmMac='%s' ,Err: %v", macPart, err))
+		log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
 		return nil, nil
 	}
 
@@ -142,7 +142,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 
 	accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 	if err != nil {
-		log.WithFields(fields).Error(fmt.Sprintf("GrpService Get AccountProducts call failed for AccountId='%s', Err: %v", accountId, err))
+		log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", accountId)
 		return nil, nil
 	}
 
@@ -177,7 +177,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 		xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 	}
 
-	log.WithFields(fields).Debugf("AddContextForPods AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
+	log.WithFields(fields).Debugf("AddContextForPods AcntId='%s' ,AccntPrd='%v' retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 	// Create PodData and AccountServiceData with retrieved information
 	podData = &PodData{
 		AccountId: accountId,
@@ -210,7 +210,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 	}
 
 	if podData == nil {
-		log.WithFields(fields).Warn("Fallback Trying via Old Account Service,since Failed to Get AccountId via Grp Service")
+		log.WithFields(fields).Warn("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service")
 		if Xc.EnableMacAccountServiceCall && strings.HasPrefix(strings.ToUpper(contextMap[common.SERIAL_NUM]), Xc.AccountServiceMacPrefix) {
 			AccountServiceDeviceObject, err := ws.AccountServiceConnector.GetDevices(common.SERIAL_NUMBER_PARAM, contextMap[common.SERIAL_NUM], satToken, fields)
 			if err != nil {
@@ -337,7 +337,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 			macValue := util.RemoveNonAlphabeticSymbols(macAddress)
 			xboAccount, err := ws.GroupServiceConnector.GetAccountIdData(macValue, fields)
 			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("Error getting accountId information from from Grp Service")
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
 				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
 				return td
 			}
@@ -351,7 +351,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 
 			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("Error getting accountProducts information from Grp Service")
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", accountId)
 			} else {
 				if partner, ok := accountProducts["Partner"]; ok && partner != "" {
 					contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
@@ -378,7 +378,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 					}
 
 				}
-				log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
+				log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 				return td
 			}
 		}
@@ -386,7 +386,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 
 	if Xc.EnableAccountService {
 		if contextMap[common.ACCOUNT_ID] == "" || contextMap[common.PARTNER_ID] == "" {
-			log.WithFields(fields).Error("Fallback Trying via Old Account Service,since Failed to Get AccountId via Grp Service")
+			log.WithFields(fields).Error("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service due to Flag Disabled or err")
 			var accountServiceObject xhttp.AccountServiceDevices
 			if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
 				accountServiceObject, err = ws.AccountServiceConnector.GetDevices(common.HOST_MAC_PARAM, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
