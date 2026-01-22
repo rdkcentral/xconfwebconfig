@@ -235,6 +235,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	satToken := localToken.Token
 	//default flow calling xac/ada keyspace
 	if Xc.EnableXacGroupService && util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
+		xhttp.IncreaseUnknownAccountIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		macAddress = util.GetEcmMacAddress(util.AlphaNumericMacAddress(strings.TrimSpace(contextMap[common.ESTB_MAC])))
 		macPart := util.RemoveNonAlphabeticSymbols(macAddress)
 		xAccountId, err := ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
@@ -268,6 +269,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 						log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
 					}
 				}
+				xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 				log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' ,AccntPrd='%v' retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 			}
 		} else {
@@ -280,6 +282,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 		partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
 		if partnerId != "" {
 			contextMap[common.PARTNER_ID] = partnerId
+			xhttp.IncreaseTitanFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		}
 	}
 	AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
