@@ -70,23 +70,6 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 
 	if Xc.EnableXacGroupService {
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-			// if contextMap[common.ESTB_MAC_ADDRESS] != "" {
-			// 	macAddress = util.GetEcmMacAddress(util.AlphaNumericMacAddress(strings.TrimSpace(contextMap[common.ESTB_MAC_ADDRESS])))
-			// } else {
-			// 	macAddress = contextMap[common.ECM_MAC_ADDRESS]
-			// }
-
-			// macValue := util.RemoveNonAlphabeticSymbols(macAddress)
-			// xboAccount, err := ws.GroupServiceConnector.GetAccountIdData(macValue, fields)
-			// if err != nil {
-			// 	log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
-			// }
-			// if xboAccount != nil && xboAccount.GetAccountId() != "" {
-			// 	accountId = xboAccount.GetAccountId()
-			// 	contextMap[common.ACCOUNT_ID] = accountId
-			// } else {
-			// 	xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
-			// }
 			var xAccountId *conversion.XBOAccount
 			var err error
 			if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
