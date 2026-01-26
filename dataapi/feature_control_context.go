@@ -181,10 +181,8 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 			}
 
 		}
-		if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
-			xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-		}
 
+		xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		log.WithFields(fields).Debugf("AddContextForPods AcntId='%s' ,AccntPrd='%v' retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 		// Create PodData and AccountServiceData with retrieved information
 		podData = &PodData{
@@ -257,7 +255,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 			}
 			podData.TimeZone = AccountServiceAccountObject.AccountData.AccountAttributes.TimeZone
 			log.WithFields(tfields).Infof("Successfully got AccountService information  for XLE device: accountId=%s, serialNum=%s", AccountServiceDeviceObject.DeviceData.ServiceAccountUri, contextMap[common.SERIAL_NUM])
-			xhttp.IncreaseTitanFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+			xhttp.IncreaseTitanFetchCounter(contextMap[common.MODEL], AccountServiceDeviceObject.DeviceData.Partner)
 		} else if Xc.EnableDeviceDBLookup && contextMap[common.SERIAL_NUM] != "" && !strings.HasPrefix(contextMap[common.MODEL], GR_PREFIX) {
 			ecmMacAddress, err := ws.GetEcmMacFromPodTable(contextMap[common.SERIAL_NUM])
 			if err != nil {
@@ -304,7 +302,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 				return podData, td
 			}
 			podData.TimeZone = accountServiceAccountObject.AccountData.AccountAttributes.TimeZone
-			xhttp.IncreaseTitanFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+			xhttp.IncreaseTitanFetchCounter(contextMap[common.MODEL], AccountServiceDeviceObject.DeviceData.Partner)
 		} else if Xc.EnableDeviceService && contextMap[common.SERIAL_NUM] != "" && !strings.HasPrefix(contextMap[common.MODEL], GR_PREFIX) {
 			deviceServiceObject, err := ws.DeviceServiceConnector.GetMeshPodAccountBySerialNum(contextMap[common.SERIAL_NUM], fields)
 			if err != nil {
@@ -396,9 +394,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 
 				}
 
-				if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
-					xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-				}
+				xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 				log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 				return td
 			}
@@ -442,9 +438,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 			}
 		}
 
-		if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
-			xhttp.IncreaseTitanFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-		}
+		xhttp.IncreaseTitanFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 
 		if Xc.RfcReturnCountryCode {
 			// query for account data to get country code only if accountId is not empty or unknown
