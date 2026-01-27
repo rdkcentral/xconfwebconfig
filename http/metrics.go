@@ -986,7 +986,7 @@ func IncreaseUnknownAccountIdCounter(model, partner string) {
 	metrics.unknownAccountIdReceivedCounter.With(labels).Inc()
 }
 
-func IncreaseTitanFetchCounter(model, partner string) {
+func IncreaseAccountFetchCounter(model, partner string) {
 	if metrics == nil {
 		return
 	}
