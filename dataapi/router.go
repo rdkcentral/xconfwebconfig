@@ -362,10 +362,6 @@ func RouteXconfDataserviceApis(r *mux.Router, s *xhttp.XconfServer) {
 	getFeatureSettingsPath.HandleFunc("", GetFeatureControlSettingsHandler).Methods("GET", "HEAD")
 	paths = append(paths, getFeatureSettingsPath)
 
-	getPrecookFeatureSettingsPath := r.Path("/preprocess/rfc/{mac}").Subrouter()
-	getPrecookFeatureSettingsPath.HandleFunc("", GetPreprocessFeatureControlSettingsHandler).Methods("GET", "HEAD")
-	paths = append(paths, getPrecookFeatureSettingsPath)
-
 	getFeatureSettingsApplicationTypePath := r.Path("/featureControl/getSettings/{applicationType}").Subrouter()
 	getFeatureSettingsApplicationTypePath.HandleFunc("", GetFeatureControlSettingsHandler).Methods("GET", "HEAD")
 	paths = append(paths, getFeatureSettingsApplicationTypePath)
