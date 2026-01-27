@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS "TagMembersBucketed" (
     PRIMARY KEY ((tag_id, bucket_id), member)
 ) WITH CLUSTERING ORDER BY (member ASC)
     AND compaction = {'class': 'SizeTieredCompactionStrategy'}
-    AND compression = {'class': 'LZ4Compressor'};
+    AND compression = {'sstable_compression': 'LZ4Compressor'};
 
 CREATE TABLE IF NOT EXISTS "TagBucketMetadata" (
     tag_id TEXT,
