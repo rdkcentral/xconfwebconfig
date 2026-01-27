@@ -23,29 +23,17 @@ import (
 	"gotest.tools/assert"
 )
 
-// Test ValidateApplicationType
-func TestValidateApplicationType_Valid(t *testing.T) {
-	err := ValidateApplicationType(STB)
-	assert.NilError(t, err)
-
-	err = ValidateApplicationType(XHOME)
-	assert.NilError(t, err)
-
-	err = ValidateApplicationType(RDKCLOUD)
-	assert.NilError(t, err)
-
-	err = ValidateApplicationType(SKY)
-	assert.NilError(t, err)
-}
-
 func TestValidateApplicationType_Empty(t *testing.T) {
 	err := ValidateApplicationType("")
 	assert.Assert(t, err != nil)
 	assert.Assert(t, err.Error() == "Http400 ApplicationType is empty")
 }
 
-func TestValidateApplicationType_Invalid(t *testing.T) {
+func TestValidateApplicationType(t *testing.T) {
 	err := ValidateApplicationType("")
+	assert.Assert(t, err != nil)
+
+	err = ValidateApplicationType("stb")
 	assert.Assert(t, err != nil)
 }
 

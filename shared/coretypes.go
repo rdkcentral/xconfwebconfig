@@ -70,7 +70,41 @@ func ValidateApplicationType(applicationType string) error {
 	if applicationType == "" {
 		return common.NewRemoteError(http.StatusBadRequest, "ApplicationType is empty")
 	}
+	if !IsValidApplicationType(applicationType) {
+		return common.NewRemoteError(http.StatusBadRequest, fmt.Sprintf("ApplicationType '%s' is invalid or does not exist", applicationType))
+	}
 	return nil
+}
+
+func IsValidApplicationType(applicationType string) bool {
+	if util.IsBlank(applicationType) {
+		return false
+	}
+	allTypes, err := GetAllApplicationTypeList()
+	if err != nil || len(allTypes) == 0 {
+		log.Warn(err)
+		return false
+	}
+	for _, appType := range allTypes {
+		if strings.EqualFold(appType.Name, applicationType) {
+			return true
+		}
+	}
+	return false
+}
+
+func GetAllApplicationTypeList() ([]*ApplicationType, error) {
+	result := []*ApplicationType{}
+	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_APPLICATION_TYPES, 0)
+	if err != nil {
+		log.Warn("no application types found")
+		return result, err
+	}
+	for _, item := range list {
+		appType := item.(*ApplicationType)
+		result = append(result, appType)
+	}
+	return result, nil
 }
 
 const (
