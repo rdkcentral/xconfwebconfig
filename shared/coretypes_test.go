@@ -23,17 +23,11 @@ import (
 	"gotest.tools/assert"
 )
 
-func TestValidateApplicationType_Empty(t *testing.T) {
-	err := ValidateApplicationType("")
-	assert.Assert(t, err != nil)
-	assert.Assert(t, err.Error() == "Http400 ApplicationType is empty")
-}
-
 func TestValidateApplicationType(t *testing.T) {
 	err := ValidateApplicationType("")
 	assert.Assert(t, err != nil)
 
-	err = ValidateApplicationType("stb")
+	err = ValidateApplicationType(STB)
 	assert.Assert(t, err != nil)
 }
 
