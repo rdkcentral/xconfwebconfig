@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS "AppSettings" (key text, column1 text, value blob, PR
 
 CREATE TABLE IF NOT EXISTS "RecookingStatus" (module text, partition_id text, state int, updated_time timestamp, primary key (module, partition_id));
 
-CREATE TABLE IF NOT EXISTS "PenetrationMetrics" (estb_mac text, ecm_mac text, serial_number text, partner text, model text, fw_filename text, fw_version text, fw_reported_version text, fw_additional_version_info text, fw_applied_rule text, rfc_applied_rules text, rfc_features text, rfc_ts timestamp, fw_ts timestamp, time_zone text, rfc_account_hash text, rfc_account_id text, rfc_account_mgmt text, AccountService_account_id text, rfc_partner text, AccountService_partner text, rfc_model text, rfc_fw_reported_version text, rfc_env text, rfc_application_type text, rfc_experience text, rfc_time_zone text, precook_rfc_rules text, rfc_configsethash text, precook_configsethash text, precook_rfc_features text, rfc_post_proc text, rfc_query_params text, rfc_tags text, rfc_estb_ip text, client_cert_expiry text, recovery_cert_expiry text, PRIMARY KEY (estb_mac));
+CREATE TABLE IF NOT EXISTS "PenetrationMetrics" (estb_mac text, ecm_mac text, serial_number text, partner text, model text, fw_filename text, fw_version text, fw_reported_version text, fw_additional_version_info text, fw_applied_rule text, rfc_applied_rules text, rfc_features text, rfc_ts timestamp, fw_ts timestamp, time_zone text, rfc_account_hash text, rfc_account_id text, rfc_account_mgmt text, titan_account_id text, rfc_partner text, titan_partner text, rfc_model text, rfc_fw_reported_version text, rfc_env text, rfc_application_type text, rfc_experience text, rfc_time_zone text, precook_rfc_rules text, rfc_configsethash text, precook_configsethash text, precook_rfc_features text, rfc_post_proc text, rfc_query_params text, rfc_tags text, rfc_estb_ip text, client_cert_expiry text, recovery_cert_expiry text, PRIMARY KEY (estb_mac));
 
 CREATE TABLE IF NOT EXISTS "Tag" (key text, column1 text, value blob, PRIMARY KEY ((key), column1));
 
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS "TagMembersBucketed" (
     PRIMARY KEY ((tag_id, bucket_id), member)
 ) WITH CLUSTERING ORDER BY (member ASC)
     AND compaction = {'class': 'SizeTieredCompactionStrategy'}
-    AND compression = {'sstable_compression': 'LZ4Compressor'};
+    AND compression = {'class': 'LZ4Compressor'};
 
 CREATE TABLE IF NOT EXISTS "TagBucketMetadata" (
     tag_id TEXT,
