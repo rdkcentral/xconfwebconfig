@@ -302,7 +302,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 		partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
 		if partnerId != "" {
 			contextMap[common.PARTNER_ID] = partnerId
-			xhttp.IncreaseTitanFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+			xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		}
 	}
 	AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
