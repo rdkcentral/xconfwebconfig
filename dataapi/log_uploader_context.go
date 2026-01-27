@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"strings"
 
+	conversion "github.com/rdkcentral/xconfwebconfig/protobuf"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
@@ -57,6 +58,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 		fields = log.Fields{}
 	}
 
+	var macAddress string
 	NormalizeLogUploaderContext(ws, r, contextMap, usePartnerAppType, fields)
 
 	localToken, err := xhttp.GetLocalSatToken(fields)
@@ -65,64 +67,73 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 		return err
 	}
 	satToken := localToken.Token
+
 	if Xc.EnableXacGroupService {
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-			var macAddress string
-			if contextMap[common.ESTB_MAC_ADDRESS] != "" {
-				macAddress = util.GetEcmMacAddress(util.AlphaNumericMacAddress(strings.TrimSpace(contextMap[common.ESTB_MAC_ADDRESS])))
-			} else {
-				macAddress = contextMap[common.ECM_MAC_ADDRESS]
+			var xAccountId *conversion.XBOAccount
+			var err error
+			if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
+				macAddress = contextMap[common.ESTB_MAC_ADDRESS]
+				macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC_ADDRESS])
+				xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
 			}
 
-			macValue := util.RemoveNonAlphabeticSymbols(macAddress)
-			xboAccount, err := ws.GroupServiceConnector.GetAccountIdData(macValue, fields)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("Error getting accountId information from Grp Service")
+			if xAccountId == nil && err != nil {
+				if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+					macAddress = contextMap[common.ECM_MAC_ADDRESS]
+					macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ECM_MAC_ADDRESS])
+					xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+				}
 			}
-			if xboAccount != nil && xboAccount.GetAccountId() != "" {
-				accountId = xboAccount.GetAccountId()
-				contextMap[common.ACCOUNT_ID] = accountId
-			} else {
+
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
 				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
+				return err
 			}
 
-			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("Error getting accountProducts information from Grp Service")
-			} else {
-				if partner, ok := accountProducts["Partner"]; ok && partner != "" {
-					contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
-				}
-
-				contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
-
-				if countryCode, ok := accountProducts["CountryCode"]; ok {
-					contextMap[common.COUNTRY_CODE] = countryCode
-				}
-
-				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
-					var ap map[string]string
-					err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
-					if err == nil {
-						for key, val := range ap {
-							contextMap[key] = val
-						}
-					} else {
-						log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
+			if xAccountId != nil && xAccountId.GetAccountId() != "" {
+				accountId = xAccountId.GetAccountId()
+				accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
+				if err != nil {
+					log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", accountId)
+				} else {
+					if partner, ok := accountProducts["Partner"]; ok && partner != "" {
+						contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
 					}
 
+					contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
+
+					if countryCode, ok := accountProducts["CountryCode"]; ok {
+						contextMap[common.COUNTRY_CODE] = countryCode
+					}
+
+					if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
+						var ap map[string]string
+						err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
+						if err == nil {
+							for key, val := range ap {
+								contextMap[key] = val
+							}
+						} else {
+							log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
+							return err
+						}
+					}
+					xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 				}
-				xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-				log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%s'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_PRODUCTS])
 			}
 		}
 	}
 
 	if Xc.EnableAccountService && util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
+		log.WithFields(fields).Errorf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s' due to Flag Disabled or err", macAddress)
 		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
 			if partnerId != "" {
 				contextMap[common.PARTNER_ID] = partnerId
+				xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			}
 		}
 	}

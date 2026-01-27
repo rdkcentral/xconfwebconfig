@@ -336,22 +336,22 @@ func NewMetrics() *AppMetrics {
 		),
 		grpServiceAccountDataFetchCounter: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "xDas_Account_Data_Fetched_Counter",
-				Help: "A counter for successful accountProducts responses from Xdas",
+				Name: "Grp_svc_account_data_fetch_count",
+				Help: "A counter for successful accountProducts responses from Grp Service",
 			},
 			[]string{"app", "model", "partner"},
 		),
 		accountServiceFetchedDataCounter: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "accountServiceFetchedDataCounter",
-				Help: "A counter for total no.of titan account data fetch",
+				Name: "account_service_fetch_count",
+				Help: "A counter for total no.of account service fetch",
 			},
 			[]string{"app", "model", "partner"},
 		),
 		unknownAccountIdReceivedCounter: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "accountId_Unknown_Counter",
-				Help: "A counter for successful accountProducts responses from Xdas",
+				Name: "Unknown_accountId_device_request_count",
+				Help: "A counter for total no of unknown accountId from device request",
 			},
 			[]string{"app", "model", "partner"},
 		),
@@ -986,7 +986,7 @@ func IncreaseUnknownAccountIdCounter(model, partner string) {
 	metrics.unknownAccountIdReceivedCounter.With(labels).Inc()
 }
 
-func IncreaseTitanFetchCounter(model, partner string) {
+func IncreaseAccountFetchCounter(model, partner string) {
 	if metrics == nil {
 		return
 	}
