@@ -47,7 +47,7 @@ func NormalizeLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, context
 }
 
 // AddLogUploaderContext ..
-func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap map[string]string, usePartnerAppType bool, vargs ...log.Fields) error {
+func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap map[string]string, usePartnerAppType bool, vargs ...log.Fields) ([]string, error) {
 	var fields log.Fields
 	if len(vargs) > 0 {
 		fields = vargs[0]
@@ -60,7 +60,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 	localToken, err := xhttp.GetLocalSatToken(fields)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Error getting sat token from codebig")
-		return err
+		return nil, err
 	}
 	satToken := localToken.Token
 
@@ -70,8 +70,8 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 			contextMap[common.PARTNER_ID] = partnerId
 		}
 	}
-	AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
-	return nil
+	coastTags := AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
+	return coastTags, nil
 }
 
 func ToTelemetry2Profile(telemetryProfile []logupload.TelemetryElement) []logupload.TelemetryElement {
