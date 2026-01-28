@@ -54,8 +54,9 @@ func GetLogUploaderTelemetryProfilesHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	contextMap, _ := GetContextMapAndSettingTypes(r)
-	AddLogUploaderContext(Ws, r, contextMap, false, fields)
-	AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, true, fields)
+	coastTags, _ := AddLogUploaderContext(Ws, r, contextMap, false, fields)
+	xconfTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, true, fields)
+	CompareTaggingSources(contextMap, coastTags, xconfTags, fields)
 	evaluationResult, err := GetTelemetryTwoProfileResponeDicts(contextMap, fields)
 	if err != nil {
 		xhttp.Error(w, http.StatusInternalServerError, err)
@@ -119,8 +120,9 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 
 	contextMap, settingTypes := GetContextMapAndSettingTypes(r)
 	fields[common.ESTB_MAC_ADDRESS] = contextMap[common.ESTB_MAC_ADDRESS]
-	AddLogUploaderContext(Ws, r, contextMap, true, fields)
-	AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, false, fields)
+	coastTags, _ := AddLogUploaderContext(Ws, r, contextMap, true, fields)
+	xconfTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, false, fields)
+	CompareTaggingSources(contextMap, coastTags, xconfTags, fields)
 	checkNow, err := strconv.ParseBool(contextMap[common.CHECK_NOW])
 	if err == nil && checkNow {
 		telemetryProfileService := telemetry.NewTelemetryProfileService()
