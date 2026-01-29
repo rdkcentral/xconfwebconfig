@@ -27,6 +27,7 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	conversion "github.com/rdkcentral/xconfwebconfig/protobuf"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -117,6 +118,91 @@ func CompareHashWithXDAS(contextMap map[string]string, xdasHash string, tags []s
 	return calculatedHash == xdasHash, nil
 }
 
+// getAccountInfoFromGrpService attempts to retrieve account data
+func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]string, fields log.Fields) (*PodData, *AccountServiceData) {
+	var podData *PodData
+	var td *AccountServiceData
+
+	var xAccountId *conversion.XBOAccount
+	var err error
+	var macAddress string
+	if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
+		macAddress = contextMap[common.ESTB_MAC_ADDRESS]
+		macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC_ADDRESS])
+		xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+	}
+
+	if xAccountId == nil && err != nil {
+		if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+			macAddress = contextMap[common.ECM_MAC_ADDRESS]
+			macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ECM_MAC_ADDRESS])
+			xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+		}
+	}
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
+		return nil, nil
+	}
+	if xAccountId != nil {
+		accountId := xAccountId.GetAccountId()
+		contextMap[common.ACCOUNT_ID] = accountId
+		contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
+
+		accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", accountId)
+			return nil, nil
+		}
+
+		// Extract Partner and TimeZone from ADA response TimeZone
+		var partnerId, timeZone string
+
+		if timeZone, ok := accountProducts["TimeZone"]; ok {
+			contextMap[common.TIME_ZONE] = timeZone
+		}
+
+		if partner, ok := accountProducts["Partner"]; ok && partner != "" {
+			contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
+		}
+
+		if countryCode, ok := accountProducts["CountryCode"]; ok {
+			contextMap[common.COUNTRY_CODE] = countryCode
+		}
+
+		if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
+			var ap map[string]string
+			err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
+			if err == nil {
+				for key, val := range ap {
+					contextMap[key] = val
+				}
+			} else {
+				log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
+			}
+
+		}
+		if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
+			xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+		}
+
+		log.WithFields(fields).Debugf("AddContextForPods AcntId='%s' ,AccntPrd='%v' retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
+		// Create PodData and AccountServiceData with retrieved information
+		podData = &PodData{
+			AccountId: accountId,
+			PartnerId: partnerId,
+			TimeZone:  timeZone,
+		}
+
+		td = &AccountServiceData{
+			AccountId: accountId,
+			PartnerId: partnerId,
+			TimeZone:  timeZone,
+		}
+	}
+
+	return podData, td
+}
+
 func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satToken string, vargs ...log.Fields) (*PodData, *AccountServiceData) {
 	var fields log.Fields
 	var podData *PodData
@@ -128,104 +214,112 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 	}
 
 	tfields := common.FilterLogFields(fields)
+	if Xc.EnableXacGroupService {
+		podData, td = getAccountInfoFromGrpService(ws, contextMap, fields)
+	}
 
-	if Xc.EnableMacAccountServiceCall && strings.HasPrefix(strings.ToUpper(contextMap[common.SERIAL_NUM]), Xc.AccountServiceMacPrefix) {
-		AccountServiceDeviceObject, err := ws.AccountServiceConnector.GetDevices(common.SERIAL_NUMBER_PARAM, contextMap[common.SERIAL_NUM], satToken, fields)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService device information: serialNum=%s", contextMap[common.SERIAL_NUM])
-			return podData, td
-		}
+	if podData == nil {
+		log.WithFields(fields).Warn("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service")
+		if Xc.EnableMacAccountServiceCall && strings.HasPrefix(strings.ToUpper(contextMap[common.SERIAL_NUM]), Xc.AccountServiceMacPrefix) {
+			AccountServiceDeviceObject, err := ws.AccountServiceConnector.GetDevices(common.SERIAL_NUMBER_PARAM, contextMap[common.SERIAL_NUM], satToken, fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService device information: serialNum=%s", contextMap[common.SERIAL_NUM])
+				return podData, td
+			}
 
-		td = &AccountServiceData{
-			AccountId: AccountServiceDeviceObject.DeviceData.ServiceAccountUri,
-			PartnerId: AccountServiceDeviceObject.DeviceData.Partner,
-		}
+			td = &AccountServiceData{
+				AccountId: AccountServiceDeviceObject.DeviceData.ServiceAccountUri,
+				PartnerId: AccountServiceDeviceObject.DeviceData.Partner,
+			}
 
-		if AccountServiceDeviceObject.DeviceData.ServiceAccountUri == "" {
-			log.WithFields(tfields).Infof("No account found in AccountService for XLE device: serialNum=%s", contextMap[common.SERIAL_NUM])
-			return podData, td
-		}
-		podData = &PodData{
-			AccountId: AccountServiceDeviceObject.DeviceData.ServiceAccountUri,
-			PartnerId: strings.ToUpper(AccountServiceDeviceObject.DeviceData.Partner),
-		}
-		if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
-			contextMap[common.ACCOUNT_ID] = podData.AccountId
-		}
-		AccountServiceAccountObject, err := ws.AccountServiceConnector.GetAccountData(podData.AccountId, satToken, fields)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService account information for XLE device: accountId=%s, serialNum=%s", podData.AccountId, contextMap[common.SERIAL_NUM])
-			return podData, td
-		}
-
-		td.TimeZone = AccountServiceAccountObject.AccountData.AccountAttributes.TimeZone
-
-		if AccountServiceAccountObject.AccountData.AccountAttributes.TimeZone == "" {
-			log.WithFields(tfields).Infof("No timezone found in AccountService for XLE device: accountId=%s, serialNum=%s", AccountServiceDeviceObject.DeviceData.ServiceAccountUri, contextMap[common.SERIAL_NUM])
-			return podData, td
-		}
-		podData.TimeZone = AccountServiceAccountObject.AccountData.AccountAttributes.TimeZone
-		log.WithFields(tfields).Infof("Successfully got AccountService information  for XLE device: accountId=%s, serialNum=%s", AccountServiceDeviceObject.DeviceData.ServiceAccountUri, contextMap[common.SERIAL_NUM])
-	} else if Xc.EnableDeviceDBLookup && contextMap[common.SERIAL_NUM] != "" && !strings.HasPrefix(contextMap[common.MODEL], GR_PREFIX) {
-		ecmMacAddress, err := ws.GetEcmMacFromPodTable(contextMap[common.SERIAL_NUM])
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Errorf("Error looking up pod information from odp db: serialNum=%s", contextMap[common.SERIAL_NUM])
-			return podData, td
-		}
-		normalizedEcmMac, err := util.MacAddrComplexFormat(ecmMacAddress)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Errorf("Mac address from odp db is invalid: ecmMac=%s, serialNum=%s", ecmMacAddress, contextMap[common.SERIAL_NUM])
-			return podData, td
-		}
-		AccountServiceDeviceObject, err := ws.AccountServiceConnector.GetDevices(common.ECM_MAC_PARAM, normalizedEcmMac, satToken, fields)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService device information: ecmMac=%s, serialNum=%s", normalizedEcmMac, contextMap[common.SERIAL_NUM])
-			return podData, td
-		}
-
-		td = &AccountServiceData{
-			AccountId: AccountServiceDeviceObject.DeviceData.ServiceAccountUri,
-			PartnerId: AccountServiceDeviceObject.DeviceData.Partner,
-		}
-
-		if AccountServiceDeviceObject.DeviceData.ServiceAccountUri == "" {
-			log.WithFields(tfields).Infof("No account found in AccountService: ecmMac=%s, serialNum=%s", normalizedEcmMac, contextMap[common.SERIAL_NUM])
-			return podData, td
-		}
-		podData = &PodData{
-			AccountId: AccountServiceDeviceObject.DeviceData.ServiceAccountUri,
-			PartnerId: strings.ToUpper(AccountServiceDeviceObject.DeviceData.Partner),
-		}
-		if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
-			contextMap[common.ACCOUNT_ID] = podData.AccountId
-		}
-		accountServiceAccountObject, err := ws.AccountServiceConnector.GetAccountData(podData.AccountId, satToken, fields)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService account information: accountId=%s, ecmMac=%s, serialNum=%s", podData.AccountId, normalizedEcmMac, contextMap[common.SERIAL_NUM])
-			return podData, td
-		}
-
-		td.TimeZone = accountServiceAccountObject.AccountData.AccountAttributes.TimeZone
-
-		if accountServiceAccountObject.AccountData.AccountAttributes.TimeZone == "" {
-			log.WithFields(tfields).Infof("No timezone found in AccountService: accountId=%s, ecmMac=%s, serialNum=%s", AccountServiceDeviceObject.DeviceData.ServiceAccountUri, normalizedEcmMac, contextMap[common.SERIAL_NUM])
-			return podData, td
-		}
-		podData.TimeZone = accountServiceAccountObject.AccountData.AccountAttributes.TimeZone
-	} else if Xc.EnableDeviceService && contextMap[common.SERIAL_NUM] != "" && !strings.HasPrefix(contextMap[common.MODEL], GR_PREFIX) {
-		deviceServiceObject, err := ws.DeviceServiceConnector.GetMeshPodAccountBySerialNum(contextMap[common.SERIAL_NUM], fields)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Errorf("Error getting Device Service information: serialNum=%s", contextMap[common.SERIAL_NUM])
-			return podData, td
-		}
-		if deviceServiceObject.Status == http.StatusOK && util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && deviceServiceObject.DeviceServiceData.AccountId != "" {
-			contextMap[common.ACCOUNT_ID] = deviceServiceObject.DeviceServiceData.AccountId
-		}
-		if deviceServiceObject.DeviceServiceData != nil {
+			if AccountServiceDeviceObject.DeviceData.ServiceAccountUri == "" {
+				log.WithFields(tfields).Infof("No account found in AccountService for XLE device: serialNum=%s", contextMap[common.SERIAL_NUM])
+				return podData, td
+			}
 			podData = &PodData{
-				AccountId: deviceServiceObject.DeviceServiceData.AccountId,
-				PartnerId: deviceServiceObject.DeviceServiceData.PartnerId,
-				TimeZone:  deviceServiceObject.DeviceServiceData.TimeZone,
+				AccountId: AccountServiceDeviceObject.DeviceData.ServiceAccountUri,
+				PartnerId: strings.ToUpper(AccountServiceDeviceObject.DeviceData.Partner),
+			}
+			if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
+				contextMap[common.ACCOUNT_ID] = podData.AccountId
+			}
+			AccountServiceAccountObject, err := ws.AccountServiceConnector.GetAccountData(podData.AccountId, satToken, fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService account information for XLE device: accountId=%s, serialNum=%s", podData.AccountId, contextMap[common.SERIAL_NUM])
+				return podData, td
+			}
+
+			td.TimeZone = AccountServiceAccountObject.AccountData.AccountAttributes.TimeZone
+
+			if AccountServiceAccountObject.AccountData.AccountAttributes.TimeZone == "" {
+				log.WithFields(tfields).Infof("No timezone found in AccountService for XLE device: accountId=%s, serialNum=%s", AccountServiceDeviceObject.DeviceData.ServiceAccountUri, contextMap[common.SERIAL_NUM])
+				return podData, td
+			}
+			podData.TimeZone = AccountServiceAccountObject.AccountData.AccountAttributes.TimeZone
+			log.WithFields(tfields).Infof("Successfully got AccountService information  for XLE device: accountId=%s, serialNum=%s", AccountServiceDeviceObject.DeviceData.ServiceAccountUri, contextMap[common.SERIAL_NUM])
+			xhttp.IncreaseTitanFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+		} else if Xc.EnableDeviceDBLookup && contextMap[common.SERIAL_NUM] != "" && !strings.HasPrefix(contextMap[common.MODEL], GR_PREFIX) {
+			ecmMacAddress, err := ws.GetEcmMacFromPodTable(contextMap[common.SERIAL_NUM])
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Errorf("Error looking up pod information from odp db: serialNum=%s", contextMap[common.SERIAL_NUM])
+				return podData, td
+			}
+			normalizedEcmMac, err := util.MacAddrComplexFormat(ecmMacAddress)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Errorf("Mac address from odp db is invalid: ecmMac=%s, serialNum=%s", ecmMacAddress, contextMap[common.SERIAL_NUM])
+				return podData, td
+			}
+			AccountServiceDeviceObject, err := ws.AccountServiceConnector.GetDevices(common.ECM_MAC_PARAM, normalizedEcmMac, satToken, fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService device information: ecmMac=%s, serialNum=%s", normalizedEcmMac, contextMap[common.SERIAL_NUM])
+				return podData, td
+			}
+
+			td = &AccountServiceData{
+				AccountId: AccountServiceDeviceObject.DeviceData.ServiceAccountUri,
+				PartnerId: AccountServiceDeviceObject.DeviceData.Partner,
+			}
+
+			if AccountServiceDeviceObject.DeviceData.ServiceAccountUri == "" {
+				log.WithFields(tfields).Infof("No account found in AccountService: ecmMac=%s, serialNum=%s", normalizedEcmMac, contextMap[common.SERIAL_NUM])
+				return podData, td
+			}
+			podData = &PodData{
+				AccountId: AccountServiceDeviceObject.DeviceData.ServiceAccountUri,
+				PartnerId: strings.ToUpper(AccountServiceDeviceObject.DeviceData.Partner),
+			}
+			if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
+				contextMap[common.ACCOUNT_ID] = podData.AccountId
+			}
+			accountServiceAccountObject, err := ws.AccountServiceConnector.GetAccountData(podData.AccountId, satToken, fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService account information: accountId=%s, ecmMac=%s, serialNum=%s", podData.AccountId, normalizedEcmMac, contextMap[common.SERIAL_NUM])
+				return podData, td
+			}
+
+			td.TimeZone = accountServiceAccountObject.AccountData.AccountAttributes.TimeZone
+
+			if accountServiceAccountObject.AccountData.AccountAttributes.TimeZone == "" {
+				log.WithFields(tfields).Infof("No timezone found in AccountService: accountId=%s, ecmMac=%s, serialNum=%s", AccountServiceDeviceObject.DeviceData.ServiceAccountUri, normalizedEcmMac, contextMap[common.SERIAL_NUM])
+				return podData, td
+			}
+			podData.TimeZone = accountServiceAccountObject.AccountData.AccountAttributes.TimeZone
+			xhttp.IncreaseTitanFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+		} else if Xc.EnableDeviceService && contextMap[common.SERIAL_NUM] != "" && !strings.HasPrefix(contextMap[common.MODEL], GR_PREFIX) {
+			deviceServiceObject, err := ws.DeviceServiceConnector.GetMeshPodAccountBySerialNum(contextMap[common.SERIAL_NUM], fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting Device Service information: serialNum=%s", contextMap[common.SERIAL_NUM])
+				return podData, td
+			}
+			if deviceServiceObject.Status == http.StatusOK && util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && deviceServiceObject.DeviceServiceData.AccountId != "" {
+				contextMap[common.ACCOUNT_ID] = deviceServiceObject.DeviceServiceData.AccountId
+			}
+			if deviceServiceObject.DeviceServiceData != nil {
+				podData = &PodData{
+					AccountId: deviceServiceObject.DeviceServiceData.AccountId,
+					PartnerId: deviceServiceObject.DeviceServiceData.PartnerId,
+					TimeZone:  deviceServiceObject.DeviceServiceData.TimeZone,
+				}
 			}
 		}
 	}
@@ -234,16 +328,86 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 
 func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMap map[string]string, satToken string, vargs ...log.Fields) *AccountServiceData {
 	var td *AccountServiceData
-
+	var accountId string
 	var fields log.Fields
 	if len(vargs) > 0 {
 		fields = vargs[0]
 	} else {
 		fields = log.Fields{}
 	}
+	var err error
+	if Xc.EnableXacGroupService {
+		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+			var xAccountId *conversion.XBOAccount
+			var err error
+			var macAddress string
+			if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
+				macAddress = contextMap[common.ESTB_MAC_ADDRESS]
+				macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC_ADDRESS])
+				xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+			}
+
+			if xAccountId == nil && err != nil {
+				if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+					macAddress = contextMap[common.ECM_MAC_ADDRESS]
+					macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ECM_MAC_ADDRESS])
+					xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+				}
+			}
+
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
+				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
+				return td
+			}
+
+			if xAccountId != nil && xAccountId.GetAccountId() != "" {
+				accountId = xAccountId.GetAccountId()
+				contextMap[common.ACCOUNT_ID] = accountId
+			}
+
+			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", accountId)
+			} else {
+				if partner, ok := accountProducts["Partner"]; ok && partner != "" {
+					contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
+				}
+				td = &AccountServiceData{
+					AccountId: accountId,
+					PartnerId: contextMap[common.PARTNER_ID],
+				}
+				contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
+
+				if countryCode, ok := accountProducts["CountryCode"]; ok {
+					contextMap[common.COUNTRY_CODE] = countryCode
+				}
+
+				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
+					var ap map[string]string
+					err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
+					if err == nil {
+						for key, val := range ap {
+							contextMap[key] = val
+						}
+					} else {
+						log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
+					}
+
+				}
+
+				if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
+					xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+				}
+				log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
+				return td
+			}
+		}
+	}
+
 	if Xc.EnableAccountService {
+		log.WithFields(fields).Error("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service due to Flag Disabled or err")
 		var accountServiceObject xhttp.AccountServiceDevices
-		var err error
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
 			accountServiceObject, err = ws.AccountServiceConnector.GetDevices(common.HOST_MAC_PARAM, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
 			if err == nil {
@@ -276,6 +440,10 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 			if util.IsUnknownValue(contextMap[common.ACCOUNT_HASH]) && accountServiceObject.DeviceData.ServiceAccountUri != "" {
 				contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountServiceObject.DeviceData.ServiceAccountUri)
 			}
+		}
+
+		if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
+			xhttp.IncreaseTitanFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		}
 
 		if Xc.RfcReturnCountryCode {
@@ -337,9 +505,14 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	// if/else statement to check if we should call DeviceService or AccountService
 	if strings.EqualFold("XPC", contextMap[common.ACCOUNT_MGMT]) && util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 		podData, td = AddContextForPods(ws, contextMap, satToken, fields)
-
+		if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
+			xhttp.IncreaseUnknownAccountIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+		}
 	} else if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || util.IsUnknownValue(contextMap[common.PARTNER_ID]) || util.IsUnknownValue(contextMap[common.ACCOUNT_HASH]) {
 		td = AddFeatureControlContextFromAccountService(ws, contextMap, satToken, fields)
+		if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
+			xhttp.IncreaseUnknownAccountIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+		}
 	}
 	tags := AddContextFromTaggingService(ws, contextMap, satToken, configSetHash, true, fields)
 	ftTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, false, fields)
