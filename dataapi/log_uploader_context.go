@@ -89,7 +89,6 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
 				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
-				return nil, err
 			}
 
 			if xAccountId != nil && xAccountId.GetAccountId() != "" {
