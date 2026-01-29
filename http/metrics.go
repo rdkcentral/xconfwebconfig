@@ -336,7 +336,7 @@ func NewMetrics() *AppMetrics {
 		),
 		grpServiceAccountDataFetchCounter: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "Grp_svc_account_data_fetch_count",
+				Name: "grp_svc_account_data_fetch_count",
 				Help: "A counter for successful accountProducts responses from Grp Service",
 			},
 			[]string{"app", "model", "partner"},
@@ -350,7 +350,7 @@ func NewMetrics() *AppMetrics {
 		),
 		unknownAccountIdReceivedCounter: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "Unknown_Id_device_request_count",
+				Name: "unknown_id_device_request_count",
 				Help: "A counter for total no of unknown accountId from device request",
 			},
 			[]string{"app", "model", "partner"},
