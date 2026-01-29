@@ -433,9 +433,8 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				if util.IsUnknownValue(contextMap[common.ACCOUNT_HASH]) && accountServiceObject.DeviceData.ServiceAccountUri != "" {
 					contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountServiceObject.DeviceData.ServiceAccountUri)
 				}
+				xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			}
-
-			xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 
 			if Xc.RfcReturnCountryCode {
 				// query for account data to get country code only if accountId is not empty or unknown
