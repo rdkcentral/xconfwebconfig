@@ -298,7 +298,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	}
 
 	if Xc.EnableAccountService && util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
-		log.WithFields(fields).Errorf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s' due to Flag Disabled or err ,Err: %v", macAddress, err)
+		log.WithFields(fields).Warnf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s' due to Flag Disabled or err ,Err: %v", macAddress, err)
 		partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
 		if partnerId != "" {
 			contextMap[common.PARTNER_ID] = partnerId
