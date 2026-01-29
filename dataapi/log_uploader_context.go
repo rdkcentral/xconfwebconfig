@@ -115,20 +115,19 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 							for key, val := range ap {
 								contextMap[key] = val
 							}
+							xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+							log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 						} else {
 							log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
-							return nil, err
 						}
 					}
-					xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 				}
 			}
 		}
 	}
 
 	if Xc.EnableAccountService && util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
-		log.WithFields(fields).Errorf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s' due to Flag Disabled or err", macAddress)
+		log.WithFields(fields).Warnf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s' due to Flag Disabled or err", macAddress)
 		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
 			if partnerId != "" {
