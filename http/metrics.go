@@ -83,7 +83,7 @@ type AppMetrics struct {
 	AccountServiceEmptyResponseCounter    *prometheus.CounterVec
 	grpServiceAccountDataFetchCounter     *prometheus.CounterVec
 	accountServiceFetchedDataCounter      *prometheus.CounterVec
-	unknownAccountIdReceivedCounter       *prometheus.CounterVec
+	unknownIdReceivedCounter              *prometheus.CounterVec
 }
 
 var metrics *AppMetrics
@@ -337,7 +337,7 @@ func NewMetrics() *AppMetrics {
 		grpServiceAccountDataFetchCounter: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "grp_svc_account_data_fetch_count",
-				Help: "A counter for successful accountProducts responses from Grp Service",
+				Help: "A counter for successful accountProducts fetch from Grp Service",
 			},
 			[]string{"app", "model", "partner"},
 		),
@@ -348,10 +348,10 @@ func NewMetrics() *AppMetrics {
 			},
 			[]string{"app", "model", "partner"},
 		),
-		unknownAccountIdReceivedCounter: prometheus.NewCounterVec(
+		unknownIdReceivedCounter: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "unknown_id_device_request_count",
-				Help: "A counter for total no of unknown accountId from device request",
+				Help: "A counter for total no of unknown account/partner Id from device request",
 			},
 			[]string{"app", "model", "partner"},
 		),
@@ -365,7 +365,7 @@ func NewMetrics() *AppMetrics {
 		metrics.noPrecookDataCounter, metrics.precookExcludeMacListCounter, metrics.precookCtxHashMismatchCounter,
 		metrics.modelChangedCounter, metrics.partnerChangedCounter, metrics.fwVersionChangedCounter, metrics.fwVersionMismatchCounter, metrics.offeredFwVersionMatchedCounter, metrics.experienceChangedCounter, metrics.accountIdChangedCounter, metrics.ipAddressNotInSameNetworkCounter,
 		metrics.modelChangedIn200Counter, metrics.partnerChangedIn200Counter, metrics.fwVersionChangedIn200Counter, metrics.experienceChangedIn200Counter, metrics.accountIdChangedIn200Counter, metrics.ipAddressNotInSameNetworkIn200Counter,
-		metrics.titanEmptyResponseCounter, metrics.modelRequestsCounter, metrics.AccountServiceEmptyResponseCounter, metrics.grpServiceAccountDataFetchCounter, metrics.unknownAccountIdReceivedCounter, metrics.accountServiceFetchedDataCounter,
+		metrics.titanEmptyResponseCounter, metrics.modelRequestsCounter, metrics.AccountServiceEmptyResponseCounter, metrics.grpServiceAccountDataFetchCounter, metrics.unknownIdReceivedCounter, metrics.accountServiceFetchedDataCounter,
 	)
 	return metrics
 }
@@ -983,7 +983,7 @@ func IncreaseUnknownIdCounter(model, partner string) {
 		"model":   model,
 		"partner": partner,
 	}
-	metrics.unknownAccountIdReceivedCounter.With(labels).Inc()
+	metrics.unknownIdReceivedCounter.With(labels).Inc()
 }
 
 func IncreaseAccountFetchCounter(model, partner string) {
