@@ -242,8 +242,8 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 
 	//default flow calling xac/ada keyspace
 	if Xc.EnableXacGroupService {
-		//metrics for IncreaseUnknownAccountIdCounter
-		xhttp.IncreaseUnknownAccountIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+		//metrics for IncreaseUnknownIdCounter
+		xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 
 		var macAddress string
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
