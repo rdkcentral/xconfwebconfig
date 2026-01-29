@@ -61,11 +61,6 @@ func TestMain(m *testing.M) {
 		os.Setenv("X1_SSR_KEYS", "test-key-1;test-key-2;test-key3")
 	}
 
-	securityTokenKey := os.Getenv("SECURITY_TOKEN_KEY")
-	if len(securityTokenKey) == 0 {
-		os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
-	}
-
 	awsS3SsecKey := os.Getenv("AWS_S3_SSEC_KEY")
 	if len(awsS3SsecKey) == 0 {
 		os.Setenv("AWS_S3_SSEC_KEY", "testAwsS3SsecKey")
@@ -74,6 +69,16 @@ func TestMain(m *testing.M) {
 	md5AwsS3SsecKey := os.Getenv("MD5_AWS_S3_SSEC_KEY")
 	if len(md5AwsS3SsecKey) == 0 {
 		os.Setenv("MD5_AWS_S3_SSEC_KEY", "testMd5AwsS3SsecKey")
+	}
+
+	databaseUser := os.Getenv("DATABASE_USER")
+	if len(databaseUser) == 0 {
+		os.Setenv("DATABASE_USER", "cassandra")
+	}
+
+	databasePassword := os.Getenv("DATABASE_PASSWORD")
+	if len(databasePassword) == 0 {
+		os.Setenv("DATABASE_PASSWORD", "cassandra")
 	}
 
 	var err error
