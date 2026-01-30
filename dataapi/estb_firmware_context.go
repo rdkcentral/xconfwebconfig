@@ -242,8 +242,8 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 
 	//default flow calling xac/ada keyspace
 	if Xc.EnableXacGroupService {
-		//metrics for IncreaseUnknownAccountIdCounter
-		xhttp.IncreaseUnknownAccountIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+		//metrics for IncreaseUnknownIdCounter
+		xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 
 		var macAddress string
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
@@ -305,8 +305,9 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		}
 	}
-	AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
-	AddGroupServiceFTContext(Ws, common.ESTB_MAC, contextMap, true, fields)
+	coastTags := AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
+	xconfTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC, contextMap, true, fields)
+	CompareTaggingSources(contextMap, coastTags, xconfTags, fields)
 	log.Debug(fmt.Sprintf("AddEstbFirmwareContext ... end contextMap %v", contextMap))
 	return nil
 }

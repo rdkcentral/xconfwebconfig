@@ -89,6 +89,7 @@ type XconfConfigs struct {
 	PartnerIdValidationEnabled   bool
 	ValidPartnerIdRegex          *regexp.Regexp
 	SecurityTokenManagerEnabled  bool
+	EnableTaggingComparison      bool
 }
 
 // Function to register the table name and the corresponding model/struct constructor
@@ -338,6 +339,7 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		ValidPartnerIdRegex:          validPartnerIdRegex,
 		PartnerIdValidationEnabled:   partnerIdValidationEnabled,
 		SecurityTokenManagerEnabled:  conf.GetBoolean("xconfwebconfig.xconf.security_token_manager_enabled"),
+		EnableTaggingComparison:      conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_comparison"),
 	}
 	return xc
 }

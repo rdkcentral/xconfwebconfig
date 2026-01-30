@@ -275,6 +275,46 @@ func AddGroupServiceFTContext(ws *xhttp.XconfServer, macAddressKey string, conte
 	return tags
 }
 
+// CompareTaggingSources compares COAST tags with XConf tags and logs differences
+// to track migration progress from COAST to XConf tagging service.
+// Only logs when COAST has tags not present in XConf (indicates incomplete migration).
+func CompareTaggingSources(contextMap map[string]string, coastTags []string, xconfTags []string, fields log.Fields) {
+	if !Xc.EnableTaggingComparison {
+		return
+	}
+	if len(coastTags) == 0 {
+		return
+	}
+
+	xconfTagSet := make(map[string]struct{})
+	for _, tag := range xconfTags {
+		xconfTagSet[tag] = struct{}{}
+	}
+
+	var missingTags []string
+	for _, coastTag := range coastTags {
+		if _, exists := xconfTagSet[coastTag]; !exists {
+			missingTags = append(missingTags, coastTag)
+		}
+	}
+
+	// Log only when missing tags found
+	if len(missingTags) > 0 {
+		estbMac := contextMap[common.ESTB_MAC_ADDRESS]
+		if estbMac == "" {
+			estbMac = contextMap[common.ESTB_MAC]
+		}
+
+		log.WithFields(log.Fields{
+			"estbMac":      estbMac,
+			"partner":      contextMap[common.PARTNER_ID],
+			"model":        contextMap[common.MODEL],
+			"missingTags":  strings.Join(missingTags, ","),
+			"missingCount": len(missingTags),
+		}).Warn("COAST tags missing in XConf tagging service")
+	}
+}
+
 func AddGroupServiceFeatureTags(ws *xhttp.XconfServer, groupName string, contextMap map[string]string, getGroupsData bool, getPrefixData bool, prefixList []string, fields log.Fields) []string {
 	featureTags, err := ws.GroupServiceConnector.GetFeatureTagsHashedItems(groupName, fields)
 	if err != nil {

@@ -433,9 +433,8 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				if util.IsUnknownValue(contextMap[common.ACCOUNT_HASH]) && accountServiceObject.DeviceData.ServiceAccountUri != "" {
 					contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountServiceObject.DeviceData.ServiceAccountUri)
 				}
+				xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			}
-
-			xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 
 			if Xc.RfcReturnCountryCode {
 				// query for account data to get country code only if accountId is not empty or unknown
@@ -497,17 +496,14 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	// if/else statement to check if we should call DeviceService or AccountService
 	if strings.EqualFold("XPC", contextMap[common.ACCOUNT_MGMT]) && util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 		podData, td = AddContextForPods(ws, contextMap, satToken, fields)
-		if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
-			xhttp.IncreaseUnknownAccountIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-		}
+		xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 	} else if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || util.IsUnknownValue(contextMap[common.PARTNER_ID]) || util.IsUnknownValue(contextMap[common.ACCOUNT_HASH]) {
 		td = AddFeatureControlContextFromAccountService(ws, contextMap, satToken, fields)
-		if contextMap[common.MODEL] != "" && contextMap[common.PARTNER_ID] != "" {
-			xhttp.IncreaseUnknownAccountIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-		}
+		xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 	}
 	tags := AddContextFromTaggingService(ws, contextMap, satToken, configSetHash, true, fields)
 	ftTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, false, fields)
+	CompareTaggingSources(contextMap, tags, ftTags, fields)
 	tags = append(tags, ftTags...)
 	return podData, tags, td
 }
