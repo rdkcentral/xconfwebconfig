@@ -89,6 +89,7 @@ type XconfConfigs struct {
 	PartnerIdValidationEnabled   bool
 	ValidPartnerIdRegex          *regexp.Regexp
 	SecurityTokenManagerEnabled  bool
+	EnableTaggingComparison      bool
 }
 
 // Function to register the table name and the corresponding model/struct constructor
@@ -338,6 +339,7 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		ValidPartnerIdRegex:          validPartnerIdRegex,
 		PartnerIdValidationEnabled:   partnerIdValidationEnabled,
 		SecurityTokenManagerEnabled:  conf.GetBoolean("xconfwebconfig.xconf.security_token_manager_enabled"),
+		EnableTaggingComparison:      conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_comparison"),
 	}
 	return xc
 }
@@ -364,10 +366,6 @@ func RouteXconfDataserviceApis(r *mux.Router, s *xhttp.XconfServer) {
 	getFeatureSettingsPath := r.Path("/featureControl/getSettings").Subrouter()
 	getFeatureSettingsPath.HandleFunc("", GetFeatureControlSettingsHandler).Methods("GET", "HEAD")
 	paths = append(paths, getFeatureSettingsPath)
-
-	getPrecookFeatureSettingsPath := r.Path("/preprocess/rfc/{mac}").Subrouter()
-	getPrecookFeatureSettingsPath.HandleFunc("", GetPreprocessFeatureControlSettingsHandler).Methods("GET", "HEAD")
-	paths = append(paths, getPrecookFeatureSettingsPath)
 
 	getFeatureSettingsApplicationTypePath := r.Path("/featureControl/getSettings/{applicationType}").Subrouter()
 	getFeatureSettingsApplicationTypePath.HandleFunc("", GetFeatureControlSettingsHandler).Methods("GET", "HEAD")
