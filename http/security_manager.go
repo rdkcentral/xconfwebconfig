@@ -1,17 +1,13 @@
 package http
 
 import (
-	"crypto/hmac"
-	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/go-akka/configuration"
@@ -51,12 +47,7 @@ type SecurityTokenPathConfig struct {
 type SecurityTokenConfig struct {
 	SecurityTokenOnlyForNewOfferedFwEnabled bool
 	SkipSecurityTokenClientProtocolSet      util.Set
-	SecurityTokenModelSet                   util.Set
-	SecurityTokenDevicePercentEnabled       bool
-	SecurityTokenDevicePercentValue         float64
 	SecurityTokenHostKeyword                string
-	SecurityTokenKey                        string
-	SecurityTokenHashEnabled                bool
 	SecurityTokenGroupServiceEnabled        bool
 }
 
@@ -69,28 +60,13 @@ func NewSecurityTokenConfig(conf *configuration.Config) *SecurityTokenConfig {
 			clientProtocolSet.Add(strings.ToLower(clientProtocol))
 		}
 	}
-	modelString := conf.GetString("xconfwebconfig.xconf.security_token_model_set")
-	modelSet := util.NewSet()
-	if !util.IsBlank(modelString) {
-		for _, model := range strings.Split(modelString, ";") {
-			modelSet.Add(strings.ToLower(model))
-		}
-	}
-	devicePercentEnabled := conf.GetBoolean("xconfwebconfig.xconf.security_token_device_percent_enabled")
-	devicePercentValue := conf.GetFloat64("xconfwebconfig.xconf.security_token_device_percent_value")
 	hostKeyword := conf.GetString("xconfwebconfig.xconf.security_token_host_keyword")
-	securityTokenHashEnabled := conf.GetBoolean("xconfwebconfig.xconf.security_token_hash_enabled")
 	securityTokenGroupServiceEnabled := conf.GetBoolean("xconfwebconfig.xconf.security_token_group_service_enabled")
 
 	return &SecurityTokenConfig{
 		SecurityTokenOnlyForNewOfferedFwEnabled: securityTokenOnlyForNewOfferedFwEnabled,
 		SkipSecurityTokenClientProtocolSet:      clientProtocolSet,
-		SecurityTokenModelSet:                   modelSet,
-		SecurityTokenDevicePercentEnabled:       devicePercentEnabled,
-		SecurityTokenDevicePercentValue:         devicePercentValue,
 		SecurityTokenHostKeyword:                hostKeyword,
-		SecurityTokenKey:                        getSecurityTokenKey(conf),
-		SecurityTokenHashEnabled:                securityTokenHashEnabled,
 		SecurityTokenGroupServiceEnabled:        securityTokenGroupServiceEnabled,
 	}
 }
@@ -119,50 +95,15 @@ func NewLogUploaderNonMtlSsrTokenPathConfig(conf *configuration.Config) *Securit
 	}
 }
 
-func getSecurityTokenKey(conf *configuration.Config) string {
-	key := os.Getenv("SECURITY_TOKEN_KEY")
-	if util.IsBlank(key) {
-		key = conf.GetString("xconfwebconfig.xconf.security_token_key")
-		if util.IsBlank(key) {
-			panic("No env SECURITY_TOKEN_KEY")
-		}
-	}
-	return key
-}
-
 func (s *SecurityTokenPathConfig) getSecurityToken(deviceInfo map[string]string, fields log.Fields) string {
 	if CanSkipSecurityTokenForClientProtocol(deviceInfo) {
 		log.WithFields(fields).Debugf("Client protocol type is in token generation skip list, no security token needed")
 		return ""
 	}
-	if len(Ws.SecurityTokenConfig.SecurityTokenModelSet) > 0 && !Ws.SecurityTokenConfig.SecurityTokenModelSet.Contains(strings.ToLower(deviceInfo[SECURITY_TOKEN_MODEL])) {
-		log.WithFields(fields).Debugf("Model type is not in model list, so no security token needed, model=%s", deviceInfo[SECURITY_TOKEN_MODEL])
-		return ""
-	}
-	if Ws.SecurityTokenConfig.SecurityTokenDevicePercentEnabled && !rulesengine.FitsPercent(deviceInfo[SECURITY_TOKEN_ESTB_MAC], Ws.SecurityTokenConfig.SecurityTokenDevicePercentValue) {
-		log.WithFields(fields).Debugf("Device mac hash does not fall within security token percent, so no security token needed")
-		return ""
-	}
 	token := ""
-	// three scenario options for creating security token
-	// 1. if hash is enabled, need to hash the estbIP (and optionally the filename) to create the token
-	// this way we don't need to store the token anywhere because we can unhash it using the same algorithm later
-	// 2. if hash is not enabled, we will use mac address without colons as the token
-	// 2A if group service is enabled, we will store token info in group service to look up later
-	// 2B if group service is not enabled, we will get the token info from Cassandra (all fields needed are already in penetration table, so just return token)
-	if Ws.SecurityTokenConfig.SecurityTokenHashEnabled {
-		estbIp := deviceInfo[SECURITY_TOKEN_ESTB_IP]
-		if util.IsBlank(estbIp) {
-			log.WithFields(fields).Errorf("EstbIP is missing, not generating security token")
-			return ""
-		}
-		input := estbIp
-		if s.FilenameInTokenEnabled {
-			input = fmt.Sprintf("%s_%s", input, deviceInfo[SECURITY_TOKEN_FW_FILENAME])
-		}
-		token = generateSecurityToken(input, fields)
-		return token
-	}
+	// we will use mac address without colons as the token
+	// 1. if group service is enabled, we will store token info in group service to look up later
+	// 2. if group service is not enabled, we will get the token info from Cassandra (all fields needed are already in penetration table, so just return token)
 	// token will be set to the mac address without colons
 	token = util.AlphaNumericMacAddress(deviceInfo[SECURITY_TOKEN_ESTB_MAC])
 	if util.IsBlank(token) {
@@ -181,16 +122,6 @@ func (s *SecurityTokenPathConfig) getSecurityToken(deviceInfo map[string]string,
 		}
 	}
 	return token
-}
-
-func generateSecurityToken(input string, fields log.Fields) string {
-	log.WithFields(fields).Debug("Generating security token")
-	signingKey := hmac.New(sha1.New, []byte(Ws.SecurityTokenConfig.SecurityTokenKey))
-	signingKey.Write([]byte(input))
-	securityToken := signingKey.Sum(nil)
-	encodedToken := SecurityTokenCustomBase64Encoding.EncodeToString(securityToken)
-	log.WithFields(fields).Debug("Successfully generated security token")
-	return encodedToken
 }
 
 func (s *SecurityTokenPathConfig) addTokenToUrl(deviceInfo map[string]string, urlString string, isFqdn bool, fields log.Fields) string {

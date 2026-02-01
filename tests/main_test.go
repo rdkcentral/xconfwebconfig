@@ -95,9 +95,10 @@ func TestMain(m *testing.M) {
 	os.Setenv("SKY_AWS_ACCESS_KEY", "testSkyAwsAccessKey")
 	os.Setenv("SKY_AWS_SECRET_KEY", "testSkyAwsSecretKey")
 	os.Setenv("X1_SSR_KEYS", "test-key-1;test-key-2;test-key-3")
-	os.Setenv("SECURITY_TOKEN_KEY", "testSecurityTokenKey")
 	os.Setenv("AWS_S3_SSEC_KEY", "testAwsS3SsecKey")
 	os.Setenv("MD5_AWS_S3_SSEC_KEY", "testMd5AwsS3SsecKey")
+	os.Setenv("DATABASE_USER", "cassandra")
+	os.Setenv("DATABASE_PASSWORD", "cassandra")
 
 	var err error
 	sc, err = common.NewServerConfig(testConfigFile)
