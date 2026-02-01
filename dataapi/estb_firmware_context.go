@@ -243,9 +243,11 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	//default flow calling xac/ada keyspace
 	if Xc.EnableXacGroupService {
 		//metrics for IncreaseUnknownIdCounter
-		xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-
 		var macAddress string
+		if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
+			xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+		}
+
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
 			macAddress = contextMap[common.ESTB_MAC]
 			macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC])
@@ -294,11 +296,13 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			}
 		} else {
 			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for Mac=%s", macAddress)
+			xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
 		}
 	}
 
 	if Xc.EnableAccountService && util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 		log.WithFields(fields).Warnf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s' due to Flag Disabled or err ,Err: %v", macAddress, err)
+		xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
 		if partnerId != "" {
 			contextMap[common.PARTNER_ID] = partnerId
