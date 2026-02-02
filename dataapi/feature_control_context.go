@@ -55,7 +55,7 @@ type AccountServiceData struct {
 	PartnerId string
 }
 
-type PrecookData struct {
+type PreprocessedData struct {
 	AccountId                   string
 	PartnerId                   string
 	Model                       string
@@ -612,7 +612,7 @@ func GetTimezoneOffset() string {
 	return fmt.Sprintf("UTC%s", nowInAthens.Format("-07:00"))
 }
 
-func getPrecookRfcData(ws *xhttp.XconfServer, contextMap map[string]string, fields log.Fields) *PrecookData {
+func GetPreprocessedRfcData(ws *xhttp.XconfServer, contextMap map[string]string, fields log.Fields) *PreprocessedData {
 	estbMacAddress, ok := contextMap[common.ESTB_MAC_ADDRESS]
 	if !ok {
 		log.WithFields(common.FilterLogFields(fields)).Debug("No estbMacAddress address provided, not looking up pre-cook data")
@@ -631,7 +631,7 @@ func getPrecookRfcData(ws *xhttp.XconfServer, contextMap map[string]string, fiel
 	precookOfferedFwRfcRulesEngineHash := base58.Encode(xdasData.GetOfferedFwRfcPrimaryHash())
 	precookRfcPostProcessingHash := base58.Encode(xdasData.GetRfcPostProcessingHash())
 	ctxHash := base58.Encode(xdasData.CtxHash)
-	precookData := &PrecookData{
+	precookData := &PreprocessedData{
 		AccountId:                   xdasData.GetAccountId(),
 		PartnerId:                   xdasData.GetPartner(),
 		Model:                       xdasData.GetModel(),
@@ -652,7 +652,7 @@ func getPrecookRfcData(ws *xhttp.XconfServer, contextMap map[string]string, fiel
 	return precookData
 }
 
-func getPrecookRfcPostProcessResponse(postProcessConfigsetHash string, fields log.Fields) *[]rfc.FeatureResponse {
+func GetPreprocessedRfcPostProcessResponse(postProcessConfigsetHash string, fields log.Fields) *[]rfc.FeatureResponse {
 	var postProcessingPrecookResponse []rfc.FeatureResponse
 	tfields := common.FilterLogFields(fields)
 
@@ -667,7 +667,7 @@ func getPrecookRfcPostProcessResponse(postProcessConfigsetHash string, fields lo
 	return &postProcessingPrecookResponse
 }
 
-func getPrecookRfcRulesEngineResponse(rulesEngineConfigsetHash string, fields log.Fields) *[]rfc.FeatureResponse {
+func GetPreprocessedRfcRulesEngineResponse(rulesEngineConfigsetHash string, fields log.Fields) *[]rfc.FeatureResponse {
 	var ruleEnginePrecookResponse []rfc.FeatureResponse
 	tfields := common.FilterLogFields(fields)
 
@@ -737,7 +737,7 @@ func CreatePartnerIdFeature(partnerId string) rfc.Feature {
 	}
 }
 
-func generatePrecookDataChangedMetrics(contextMap map[string]string, precookData *PrecookData, fields log.Fields) {
+func generatePrecookDataChangedMetrics(contextMap map[string]string, precookData *PreprocessedData, fields log.Fields) {
 	tfields := common.FilterLogFields(fields)
 	if contextMap[common.MODEL] != precookData.Model {
 		log.WithFields(tfields).Infof("Model changed from precook %s to %s", precookData.Model, contextMap[common.MODEL])
@@ -763,7 +763,7 @@ func generatePrecookDataChangedMetrics(contextMap map[string]string, precookData
 	}
 }
 
-func generatePrecookDataChangedIn200Metrics(contextMap map[string]string, precookData *PrecookData, fields log.Fields) {
+func generatePrecookDataChangedIn200Metrics(contextMap map[string]string, precookData *PreprocessedData, fields log.Fields) {
 	tfields := common.FilterLogFields(fields)
 	if contextMap[common.MODEL] != precookData.Model {
 		log.WithFields(tfields).Infof("Model changed from precook  %s to %s in 200 response", precookData.Model, contextMap[common.MODEL])
