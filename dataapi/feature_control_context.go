@@ -141,6 +141,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 	}
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
+		xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
 		return nil, nil
 	}
 	if xAccountId != nil {
@@ -353,7 +354,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
-				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
+				xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
 			} else {
 				if xAccountId != nil && xAccountId.GetAccountId() != "" {
 					accountId = xAccountId.GetAccountId()

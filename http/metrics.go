@@ -80,7 +80,8 @@ type AppMetrics struct {
 	accountIdChangedIn200Counter          *prometheus.CounterVec
 	ipAddressNotInSameNetworkCounter      *prometheus.CounterVec
 	ipAddressNotInSameNetworkIn200Counter *prometheus.CounterVec
-	AccountServiceEmptyResponseCounter    *prometheus.CounterVec
+	accountServiceEmptyResponseCounter    *prometheus.CounterVec
+	grpServiceNotFoundResponseCounter     *prometheus.CounterVec
 	grpServiceAccountDataFetchCounter     *prometheus.CounterVec
 	accountServiceFetchedDataCounter      *prometheus.CounterVec
 	unknownIdReceivedCounter              *prometheus.CounterVec
@@ -327,7 +328,7 @@ func NewMetrics() *AppMetrics {
 			},
 			[]string{"app", "code", "model", "connection_type"},
 		),
-		AccountServiceEmptyResponseCounter: prometheus.NewCounterVec(
+		accountServiceEmptyResponseCounter: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "AccountService_empty_response_count",
 				Help: "A counter for empty 200 responses from AccountService",
@@ -355,6 +356,13 @@ func NewMetrics() *AppMetrics {
 			},
 			[]string{"app", "model", "partner"},
 		),
+		grpServiceNotFoundResponseCounter: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "grp_service_not_found_response_count",
+				Help: "A counter for Not Found 404 responses from GrpService",
+			},
+			[]string{"app", "model"},
+		),
 	}
 	prometheus.MustRegister(metrics.inFlight, metrics.counter, metrics.duration,
 		metrics.extAPICounts, metrics.extAPIDuration,
@@ -365,7 +373,7 @@ func NewMetrics() *AppMetrics {
 		metrics.noPrecookDataCounter, metrics.precookExcludeMacListCounter, metrics.precookCtxHashMismatchCounter,
 		metrics.modelChangedCounter, metrics.partnerChangedCounter, metrics.fwVersionChangedCounter, metrics.fwVersionMismatchCounter, metrics.offeredFwVersionMatchedCounter, metrics.experienceChangedCounter, metrics.accountIdChangedCounter, metrics.ipAddressNotInSameNetworkCounter,
 		metrics.modelChangedIn200Counter, metrics.partnerChangedIn200Counter, metrics.fwVersionChangedIn200Counter, metrics.experienceChangedIn200Counter, metrics.accountIdChangedIn200Counter, metrics.ipAddressNotInSameNetworkIn200Counter,
-		metrics.titanEmptyResponseCounter, metrics.modelRequestsCounter, metrics.AccountServiceEmptyResponseCounter, metrics.grpServiceAccountDataFetchCounter, metrics.unknownIdReceivedCounter, metrics.accountServiceFetchedDataCounter,
+		metrics.titanEmptyResponseCounter, metrics.modelRequestsCounter, metrics.accountServiceEmptyResponseCounter, metrics.grpServiceAccountDataFetchCounter, metrics.unknownIdReceivedCounter, metrics.accountServiceFetchedDataCounter, metrics.grpServiceNotFoundResponseCounter,
 	)
 	return metrics
 }
@@ -502,7 +510,7 @@ func IncreaseAccountServiceEmptyResponseCounter(model string) {
 		"app":   AppName(),
 		"model": model,
 	}
-	metrics.AccountServiceEmptyResponseCounter.With(labels).Inc()
+	metrics.accountServiceEmptyResponseCounter.With(labels).Inc()
 }
 
 func IncreaseReturn304FromPrecookCounter(partner, model string) {
@@ -1003,4 +1011,20 @@ func IncreaseAccountFetchCounter(model, partner string) {
 		"partner": partner,
 	}
 	metrics.accountServiceFetchedDataCounter.With(labels).Inc()
+}
+
+func IncreaseGrpServiceNotFoundResponseCounter(model string) {
+	if metrics == nil {
+		return
+	}
+
+	if len(model) == 0 {
+		model = "null"
+	}
+
+	labels := prometheus.Labels{
+		"app":   AppName(),
+		"model": model,
+	}
+	metrics.grpServiceNotFoundResponseCounter.With(labels).Inc()
 }
