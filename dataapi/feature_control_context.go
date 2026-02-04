@@ -343,6 +343,7 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	}
 	tags := AddContextFromTaggingService(ws, contextMap, satToken, configSetHash, true, fields)
 	ftTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, false, fields)
+	CompareTaggingSources(contextMap, tags, ftTags, fields)
 	tags = append(tags, ftTags...)
 	return podData, tags, td
 }
