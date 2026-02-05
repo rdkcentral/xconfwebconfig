@@ -20,6 +20,7 @@ package http
 import (
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"reflect"
 
 	conversion "github.com/rdkcentral/xconfwebconfig/protobuf"
@@ -35,6 +36,8 @@ const (
 	getRfcPrecookUrlTemplate    = "%s/v2/xd/%s"
 	getHashesUrlTemplate        = "%s/v2/ft/%s"
 	getSecurityTokenUrlTemplate = "%s/v2/st/%s"
+	getAccountIdTemplate        = "%s/v2/xac/%s"
+	getAccountProductsTemplate  = "%s/v2/ada/%s"
 )
 
 type GroupServiceConnector interface {
@@ -47,6 +50,8 @@ type GroupServiceConnector interface {
 	CreateListFromGroupServiceProto(cpeGroup *conversion.CpeGroup) []string
 	GetFeatureTagsHashedItems(name string, fields log.Fields) (map[string]string, error)
 	GetSecurityTokenInfo(securityIdentifier string, fields log.Fields) (map[string]string, error)
+	GetAccountIdData(mac string, fields log.Fields) (*conversion.XBOAccount, error)
+	GetAccountProducts(accountId string, fields log.Fields) (map[string]string, error)
 }
 
 type DefaultGroupService struct {
@@ -160,6 +165,37 @@ func (c *DefaultGroupService) GetFeatureTagsHashedItems(name string, fields log.
 func (c *DefaultGroupService) GetSecurityTokenInfo(securityIdentifier string, fields log.Fields) (map[string]string, error) {
 	url := fmt.Sprintf(getSecurityTokenUrlTemplate, c.GroupServiceHost(), securityIdentifier)
 	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, groupServiceName)
+	if err != nil {
+		return nil, err
+	}
+	message := conversion.XdasHashes{}
+	message.ProtoMessage()
+	err = proto.Unmarshal(rbytes, &message)
+	if err != nil {
+		return nil, err
+	}
+	return message.Fields, nil
+}
+
+func (c *DefaultGroupService) GetAccountIdData(mac string, fields log.Fields) (*conversion.XBOAccount, error) {
+	url := fmt.Sprintf(getAccountIdTemplate, c.host, mac)
+	rbytes, err := c.DoWithRetries(http.MethodGet, url, nil, nil, fields, groupServiceName)
+	if err != nil {
+		return nil, err
+	}
+
+	var xboAccount conversion.XBOAccount
+	err = proto.Unmarshal(rbytes, &xboAccount)
+	if err != nil {
+		return nil, err
+	}
+
+	return &xboAccount, nil
+}
+
+func (c *DefaultGroupService) GetAccountProducts(accountId string, fields log.Fields) (map[string]string, error) {
+	url := fmt.Sprintf(getAccountProductsTemplate, c.GroupServiceHost(), accountId)
+	rbytes, err := c.DoWithRetries(http.MethodGet, url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
 	}
