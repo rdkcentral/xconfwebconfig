@@ -51,6 +51,7 @@ type XconfConfigs struct {
 	EnableMacAccountServiceCall  bool
 	AccountServiceMacPrefix      string
 	EnableAccountService         bool
+	EnableXacGroupService        bool
 	EnableTaggingService         bool
 	EnableTaggingServiceRFC      bool
 	IPv4NetworkMaskPrefixLength  int32
@@ -299,6 +300,7 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		EnableDeviceDBLookup:         conf.GetBoolean("xconfwebconfig.xconf.enable_device_db_lookup"),
 		EnableMacAccountServiceCall:  conf.GetBoolean("xconfwebconfig.xconf.enable_mac_accountservice_call"),
 		EnableAccountService:         conf.GetBoolean("xconfwebconfig.xconf.enable_account_service"),
+		EnableXacGroupService:        conf.GetBoolean("xconfwebconfig.xconf.enable_xac_ada_keyspace"),
 		EnableTaggingService:         conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service"),
 		EnableTaggingServiceRFC:      conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service_rfc"),
 		ReturnAccountId:              conf.GetBoolean("xconfwebconfig.xconf.return_account_id"),

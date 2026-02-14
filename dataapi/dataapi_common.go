@@ -161,18 +161,17 @@ func GetPartnerFromAccountServiceByHostMac(ws *xhttp.XconfServer, macAddress str
 	}
 
 	var partnerId string
-	if Xc.EnableAccountService {
-		var accountObject xhttp.AccountServiceDevices
-		var err error
-		if util.IsValidMacAddress(macAddress) {
-			accountObject, err = ws.AccountServiceConnector.GetDevices(common.HOST_MAC_PARAM, macAddress, satToken, fields)
-		}
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Error getting account information")
-		} else {
-			partnerId = strings.ToUpper(accountObject.DeviceData.Partner)
-		}
+	var accountObject xhttp.AccountServiceDevices
+	var err error
+	if util.IsValidMacAddress(macAddress) {
+		accountObject, err = ws.AccountServiceConnector.GetDevices(common.HOST_MAC_PARAM, macAddress, satToken, fields)
 	}
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Error getting account information")
+	} else {
+		partnerId = strings.ToUpper(accountObject.DeviceData.Partner)
+	}
+
 	return partnerId
 }
 
