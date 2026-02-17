@@ -382,6 +382,10 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 						contextMap[common.COUNTRY_CODE] = countryCode
 					}
 
+					if TimeZone, ok := accountProducts["TimeZone"]; ok {
+						contextMap[common.TIME_ZONE] = TimeZone
+					}
+
 					if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
 						var ap map[string]string
 						err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
@@ -503,8 +507,8 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	satToken := localToken.Token
 
 	if Xc.EnableXacGroupService {
-		//when accountId is already present ,getting account products,countrycode,partner directly from Xdas ada keyspace
 		if contextMap[common.ACCOUNT_ID] != "" || !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
+			log.WithFields(fields).Debugf("AddLogUploaderContext AcntId='%s' already present,fetching AccntPrds directly from ada", contextMap[common.ACCOUNT_ID])
 			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(contextMap[common.ACCOUNT_ID], fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", contextMap[common.ACCOUNT_ID])
