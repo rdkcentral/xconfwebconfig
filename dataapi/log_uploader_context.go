@@ -94,6 +94,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 		}
 
 		if contextMap[common.ACCOUNT_ID] != "" || !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
+			log.WithFields(fields).Debugf("AddLogUploaderContext AcntId='%s' already present,fetching AccntPrds directly from ada", contextMap[common.ACCOUNT_ID])
 			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", accountId)
