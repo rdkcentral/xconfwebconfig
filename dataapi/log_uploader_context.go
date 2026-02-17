@@ -120,8 +120,8 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 							contextMap[key] = val
 						}
 
-						if State, ok := accountProducts["State"]; ok {
-							contextMap[common.ACCOUNT_STATE] = State
+						if accountState, ok := accountProducts["State"]; ok {
+							contextMap[common.ACCOUNT_STATE] = accountState
 						}
 						xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 						log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)

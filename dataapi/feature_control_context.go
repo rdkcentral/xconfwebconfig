@@ -176,8 +176,8 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 					contextMap[key] = val
 				}
 
-				if State, ok := accountProducts["State"]; ok {
-					contextMap[common.ACCOUNT_STATE] = State
+				if accountState, ok := accountProducts["State"]; ok {
+					contextMap[common.ACCOUNT_STATE] = accountState
 				}
 			} else {
 				log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
