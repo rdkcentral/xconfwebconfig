@@ -175,6 +175,10 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 				for key, val := range ap {
 					contextMap[key] = val
 				}
+
+				if accountState, ok := accountProducts["State"]; ok {
+					contextMap[common.ACCOUNT_STATE] = accountState
+				}
 			} else {
 				log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
 			}
@@ -385,6 +389,10 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 							for key, val := range ap {
 								contextMap[key] = val
 							}
+
+							if State, ok := accountProducts["State"]; ok {
+								contextMap[common.ACCOUNT_STATE] = State
+							}
 						} else {
 							log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
 						}
@@ -493,6 +501,52 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 		return podData, nil, td
 	}
 	satToken := localToken.Token
+
+	if Xc.EnableXacGroupService {
+		//when accountId is already present ,getting account products,countrycode,partner directly from Xdas ada keyspace
+		if contextMap[common.ACCOUNT_ID] != "" || !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
+			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(contextMap[common.ACCOUNT_ID], fields)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", contextMap[common.ACCOUNT_ID])
+			} else {
+				if partner, ok := accountProducts["Partner"]; ok && partner != "" {
+					contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
+				}
+				td = &AccountServiceData{
+					AccountId: contextMap[common.ACCOUNT_ID],
+					PartnerId: contextMap[common.PARTNER_ID],
+				}
+				contextMap[common.ACCOUNT_HASH] = util.CalculateHash(contextMap[common.ACCOUNT_ID])
+
+				if countryCode, ok := accountProducts["CountryCode"]; ok {
+					contextMap[common.COUNTRY_CODE] = countryCode
+				}
+
+				if TimeZone, ok := accountProducts["TimeZone"]; ok {
+					contextMap[common.TIME_ZONE] = TimeZone
+				}
+
+				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
+					var ap map[string]string
+					err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
+					if err == nil {
+						for key, val := range ap {
+							contextMap[key] = val
+						}
+
+						if State, ok := accountProducts["State"]; ok {
+							contextMap[common.ACCOUNT_STATE] = State
+						}
+					} else {
+						log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
+					}
+				}
+
+				xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+				log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
+			}
+		}
+	}
 
 	// if/else statement to check if we should call DeviceService or AccountService
 	if strings.EqualFold("XPC", contextMap[common.ACCOUNT_MGMT]) && util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {

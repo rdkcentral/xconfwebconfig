@@ -236,6 +236,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	satToken := localToken.Token
 
 	var xAccountId *conversion.XBOAccount
+	var accountId string
 
 	var accountProducts map[string]string
 	var macAddress string
@@ -244,27 +245,30 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	if Xc.EnableXacGroupService {
 		//metrics for IncreaseUnknownIdCounter
 		var macAddress string
-		if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
+		//this is for metrics unknown accntId
+		if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || contextMap[common.ACCOUNT_ID] == "" || util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 			xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-		}
-
-		if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
-			macAddress = contextMap[common.ESTB_MAC]
-			macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC])
-			xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
-		}
-
-		if xAccountId == nil && err != nil {
-			if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-				macAddress = contextMap[common.ECM_MAC_ADDRESS]
-				macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ECM_MAC_ADDRESS])
+			if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
+				macAddress = contextMap[common.ESTB_MAC]
+				macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC])
 				xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+			}
+
+			if xAccountId == nil && err != nil {
+				if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+					macAddress = contextMap[common.ECM_MAC_ADDRESS]
+					macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ECM_MAC_ADDRESS])
+					xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+				}
 			}
 		}
 
-		if err == nil && xAccountId != nil {
-			accountId := xAccountId.GetAccountId()
+		if xAccountId != nil && err == nil {
+			accountId = xAccountId.GetAccountId()
 			contextMap[common.ACCOUNT_ID] = accountId
+		}
+
+		if contextMap[common.ACCOUNT_ID] != "" || !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 			accountProducts, err = ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", accountId)
@@ -286,6 +290,10 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					if err == nil {
 						for key, val := range ap {
 							contextMap[key] = val
+						}
+
+						if accountState, ok := accountProducts["State"]; ok {
+							contextMap[common.ACCOUNT_STATE] = accountState
 						}
 					} else {
 						log.WithFields(fields).Error("Failed to unmarshall AccountProducts")

@@ -57,11 +57,13 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 	} else {
 		fields = log.Fields{}
 	}
-
+	var xAccountId *conversion.XBOAccount
+	var err error
+	var localToken *xhttp.SatToken
 	var macAddress string
 	NormalizeLogUploaderContext(ws, r, contextMap, usePartnerAppType, fields)
 
-	localToken, err := xhttp.GetLocalSatToken(fields)
+	localToken, err = xhttp.GetLocalSatToken(fields)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Error getting sat token from codebig")
 		return nil, err
@@ -69,33 +71,29 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 	satToken := localToken.Token
 
 	if Xc.EnableXacGroupService {
-		if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
+		if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || contextMap[common.ACCOUNT_ID] == "" || util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 			xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-		}
-
-		var xAccountId *conversion.XBOAccount
-		var err error
-		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
-			macAddress = contextMap[common.ESTB_MAC_ADDRESS]
-			macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC_ADDRESS])
-			xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
-		}
-
-		if xAccountId == nil && err != nil {
-			if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-				macAddress = contextMap[common.ECM_MAC_ADDRESS]
-				macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ECM_MAC_ADDRESS])
+			if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
+				macAddress = contextMap[common.ESTB_MAC_ADDRESS]
+				macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC_ADDRESS])
 				xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+			}
+
+			if xAccountId == nil && err != nil {
+				if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+					macAddress = contextMap[common.ECM_MAC_ADDRESS]
+					macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ECM_MAC_ADDRESS])
+					xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+				}
 			}
 		}
 
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
-			xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
+		if xAccountId != nil && err == nil {
+			accountId = xAccountId.GetAccountId()
+			contextMap[common.ACCOUNT_ID] = accountId
 		}
 
-		if xAccountId != nil && xAccountId.GetAccountId() != "" {
-			accountId = xAccountId.GetAccountId()
+		if contextMap[common.ACCOUNT_ID] != "" || !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", accountId)
@@ -110,12 +108,20 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 					contextMap[common.COUNTRY_CODE] = countryCode
 				}
 
+				if TimeZone, ok := accountProducts["TimeZone"]; ok {
+					contextMap[common.TIME_ZONE] = TimeZone
+				}
+
 				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
 					var ap map[string]string
 					err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
 					if err == nil {
 						for key, val := range ap {
 							contextMap[key] = val
+						}
+
+						if accountState, ok := accountProducts["State"]; ok {
+							contextMap[common.ACCOUNT_STATE] = accountState
 						}
 						xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 						log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
@@ -124,6 +130,9 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 					}
 				}
 			}
+		} else {
+			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
+			xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
 		}
 	}
 
