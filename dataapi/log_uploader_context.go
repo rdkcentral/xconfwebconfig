@@ -91,9 +91,10 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 		if xAccountId != nil && err == nil {
 			accountId = xAccountId.GetAccountId()
 			contextMap[common.ACCOUNT_ID] = accountId
+			log.WithFields(fields).Debugf("AddLogUploaderContext Successfully fetched AcntId='%s' from Grp Svc", accountId)
 		}
 
-		if contextMap[common.ACCOUNT_ID] != "" || !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
+		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 			log.WithFields(fields).Debugf("AddLogUploaderContext AcntId='%s' already present,fetching AccntPrds directly from ada", contextMap[common.ACCOUNT_ID])
 			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 			if err != nil {
@@ -125,7 +126,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 							contextMap[common.ACCOUNT_STATE] = accountState
 						}
 						xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-						log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
+						log.WithFields(fields).Debugf("AddLogUploaderContext AcntId='%s' ,AccntPrd='%v' successfully  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 					} else {
 						log.WithFields(fields).Error("Failed to unmarshall AccountProducts")
 					}
