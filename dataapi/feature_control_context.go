@@ -148,6 +148,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 		accountId := xAccountId.GetAccountId()
 		contextMap[common.ACCOUNT_ID] = accountId
 		contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
+		log.WithFields(fields).Debugf("AddContextForPods Successfully fetched AcntId='%s' from Grp Svc", accountId)
 
 		accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 		if err != nil {
@@ -186,7 +187,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 		}
 
 		xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-		log.WithFields(fields).Debugf("AddContextForPods AcntId='%s' ,AccntPrd='%v' retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
+		log.WithFields(fields).Debugf("AddContextForPods AcntId='%s' ,AccntPrd='%v' Successfully retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 		// Create PodData and AccountServiceData with retrieved information
 		podData = &PodData{
 			AccountId: contextMap[common.ACCOUNT_ID],
@@ -363,6 +364,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				if xAccountId != nil && xAccountId.GetAccountId() != "" {
 					accountId = xAccountId.GetAccountId()
 					contextMap[common.ACCOUNT_ID] = accountId
+					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService Successfully fetched AcntId='%s' from Grp Svc", accountId)
 				}
 
 				accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
@@ -403,7 +405,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 					}
 
 					xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v'  retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
+					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v' successfully retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 					return td
 				}
 			}
@@ -507,7 +509,7 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	satToken := localToken.Token
 
 	if Xc.EnableXacGroupService {
-		if contextMap[common.ACCOUNT_ID] != "" || !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
+		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 			log.WithFields(fields).Debugf("AddFeatureControlContext AcntId='%s' already present,fetching AccntPrds directly from ada", contextMap[common.ACCOUNT_ID])
 			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(contextMap[common.ACCOUNT_ID], fields)
 			if err != nil {
