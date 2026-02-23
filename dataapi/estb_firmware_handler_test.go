@@ -273,7 +273,7 @@ func TestGetFirmwareResponse_MissingMAC(t *testing.T) {
 	}
 	req = mux.SetURLVars(req, vars)
 
-	status, response, _, _ := GetFirmwareResponse(recorder, req, xw, map[string]interface{}{})
+	status, response, _, _, _, _ := GetFirmwareResponse(recorder, req, xw, map[string]interface{}{})
 
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Contains(t, string(response), "eStbMac should be specified")
@@ -290,7 +290,7 @@ func TestGetFirmwareResponse_InvalidMAC(t *testing.T) {
 	}
 	req = mux.SetURLVars(req, vars)
 
-	status, response, _, _ := GetFirmwareResponse(recorder, req, xw, map[string]interface{}{})
+	status, response, _, _, _, _ := GetFirmwareResponse(recorder, req, xw, map[string]interface{}{})
 
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Contains(t, string(response), "invalid mac address")
@@ -313,7 +313,7 @@ func TestGetFirmwareResponse_ForbiddenRequest(t *testing.T) {
 	}
 	req = mux.SetURLVars(req, vars)
 
-	status, response, _, _ := GetFirmwareResponse(recorder, req, xw, map[string]interface{}{})
+	status, response, _, _, _, _ := GetFirmwareResponse(recorder, req, xw, map[string]interface{}{})
 
 	assert.Equal(t, http.StatusForbidden, status)
 	assert.Equal(t, "FORBIDDEN", string(response))
