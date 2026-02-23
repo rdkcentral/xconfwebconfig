@@ -266,9 +266,10 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 		if xAccountId != nil && err == nil {
 			accountId = xAccountId.GetAccountId()
 			contextMap[common.ACCOUNT_ID] = accountId
+			log.WithFields(fields).Debugf("AddEstbFirmwareContext Successfully fetched AcntId='%s' from Grp Svc", accountId)
 		}
 
-		if contextMap[common.ACCOUNT_ID] != "" || !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
+		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 			log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' already present,fetching AccntPrds directly from ada", contextMap[common.ACCOUNT_ID])
 			accountProducts, err = ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 			if err != nil {
@@ -301,7 +302,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					}
 				}
 				xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-				log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' ,AccntPrd='%v' retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
+				log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' ,AccntPrd='%v' successfully retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
 			}
 		} else {
 			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for Mac=%s", macAddress)
