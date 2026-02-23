@@ -18,12 +18,18 @@
 package dataapi
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
+	conversion "github.com/rdkcentral/xconfwebconfig/protobuf"
 	"github.com/rdkcentral/xconfwebconfig/util"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/proto"
 )
 
 // Test NewContextDataFromContextMap
@@ -671,4 +677,481 @@ func TestPrecookData_Structure(t *testing.T) {
 	assert.Equal(t, "MODEL123", precookData.Model)
 	assert.Equal(t, "stb", precookData.ApplicationType)
 	assert.Equal(t, "1.0.0", precookData.FwVersion)
+}
+
+// TestAddContextForPods_EnableXacGroupService_Scenario1_UnknownAccountId_Success tests scenario 1:
+// Fetch accountId when it is "unknown", if accountId is successfully fetched, fetch account products
+func TestAddContextForPods_EnableXacGroupService_Scenario1_UnknownAccountId_Success(t *testing.T) {
+	server, _ := GetTestXconfServer(testConfig)
+
+	// Enable XAC Group Service
+	Xc = &XconfConfigs{
+		EnableXacGroupService: true,
+	}
+
+	// Setup test data
+	testAccountId := "test-account-123"
+	testMac := "AABBCCDDEEFF"
+	contextMap := map[string]string{
+		common.ESTB_MAC_ADDRESS: "AA:BB:CC:DD:EE:FF",
+		common.ACCOUNT_ID:       "unknown",
+		common.MODEL:            "TEST-MODEL",
+		common.PARTNER_ID:       "",
+	}
+
+	// Create XBOAccount protobuf for xac keyspace response
+	xboAccount := &conversion.XBOAccount{
+		AccountId: testAccountId,
+	}
+
+	// Create account products for ada keyspace response
+	accountProductsMap := map[string]string{
+		"Partner":         "comcast",
+		"TimeZone":        "America/New_York",
+		"CountryCode":     "US",
+		"State":           "active",
+		"AccountProducts": `{"product1":"value1","product2":"value2"}`,
+	}
+	accountProducts := &conversion.XdasHashes{
+		Fields: accountProductsMap,
+	}
+
+	// Setup mock server for both xac and ada keyspaces
+	xacPath := fmt.Sprintf("/v2/xac/%s", testMac)
+	adaPath := fmt.Sprintf("/v2/ada/%s", testAccountId)
+	mockServer := SetupGroupServiceMockServerForAccountIdAndProducts(t, *server, xacPath, adaPath, xboAccount, accountProducts)
+	defer mockServer.Close()
+
+	// Setup SAT service mock
+	satMockServer := SetupSatServiceMockServerOkResponse(t, *server)
+	defer satMockServer.Close()
+
+	// Execute test
+	podData, accountServiceData := AddContextForPods(server, contextMap, "test-token")
+
+	// Assertions
+	assert.NotNil(t, podData, "PodData should not be nil")
+	assert.NotNil(t, accountServiceData, "AccountServiceData should not be nil")
+	assert.Equal(t, testAccountId, podData.AccountId)
+	assert.Equal(t, "COMCAST", podData.PartnerId)
+	assert.Equal(t, "America/New_York", podData.TimeZone)
+	assert.Equal(t, testAccountId, accountServiceData.AccountId)
+	assert.Equal(t, "COMCAST", accountServiceData.PartnerId)
+	assert.Equal(t, "America/New_York", accountServiceData.TimeZone)
+	assert.Equal(t, testAccountId, contextMap[common.ACCOUNT_ID])
+	assert.Equal(t, "COMCAST", contextMap[common.PARTNER_ID])
+	assert.Equal(t, "America/New_York", contextMap[common.TIME_ZONE])
+	assert.Equal(t, "US", contextMap[common.COUNTRY_CODE])
+	assert.Equal(t, "active", contextMap[common.ACCOUNT_STATE])
+	assert.Equal(t, "value1", contextMap["product1"])
+	assert.Equal(t, "value2", contextMap["product2"])
+}
+
+// TestAddContextForPods_EnableXacGroupService_Scenario1_UnknownAccountId_XacFailure tests scenario 1 negative case:
+// Fetch accountId when it is "unknown", but xac keyspace call fails
+func TestAddContextForPods_EnableXacGroupService_Scenario1_UnknownAccountId_XacFailure(t *testing.T) {
+	server, _ := GetTestXconfServer(testConfig)
+
+	// Enable XAC Group Service
+	Xc = &XconfConfigs{
+		EnableXacGroupService: true,
+	}
+
+	// Setup test data
+	testMac := "AABBCCDDEEFF"
+	contextMap := map[string]string{
+		common.ESTB_MAC_ADDRESS: "AA:BB:CC:DD:EE:FF",
+		common.ACCOUNT_ID:       "unknown",
+		common.MODEL:            "TEST-MODEL",
+	}
+
+	// Setup mock server with nil xboAccount (simulating not found)
+	xacPath := fmt.Sprintf("/v2/xac/%s", testMac)
+	adaPath := "/v2/ada/"
+	mockServer := SetupGroupServiceMockServerForAccountIdAndProducts(t, *server, xacPath, adaPath, nil, nil)
+	defer mockServer.Close()
+
+	// Setup SAT service mock
+	satMockServer := SetupSatServiceMockServerOkResponse(t, *server)
+	defer satMockServer.Close()
+
+	// Execute test
+	podData, accountServiceData := AddContextForPods(server, contextMap, "test-token")
+
+	// Assertions - should return nil when accountId fetch fails
+	assert.Nil(t, podData, "PodData should be nil when xac fetch fails")
+	assert.Nil(t, accountServiceData, "AccountServiceData should be nil when xac fetch fails")
+}
+
+// TestAddContextForPods_EnableXacGroupService_Scenario1_UnknownAccountId_AdaFailure tests scenario 1 negative case:
+// Fetch accountId successfully but ada keyspace (account products) call fails
+func TestAddContextForPods_EnableXacGroupService_Scenario1_UnknownAccountId_AdaFailure(t *testing.T) {
+	server, _ := GetTestXconfServer(testConfig)
+
+	// Enable XAC Group Service
+	Xc = &XconfConfigs{
+		EnableXacGroupService: true,
+	}
+
+	// Setup test data
+	testAccountId := "test-account-123"
+	testMac := "AABBCCDDEEFF"
+	contextMap := map[string]string{
+		common.ESTB_MAC_ADDRESS: "AA:BB:CC:DD:EE:FF",
+		common.ACCOUNT_ID:       "unknown",
+		common.MODEL:            "TEST-MODEL",
+	}
+
+	// Create XBOAccount protobuf for xac keyspace response
+	xboAccount := &conversion.XBOAccount{
+		AccountId: testAccountId,
+	}
+
+	// Setup mock server with xac success but ada failure
+	xacPath := fmt.Sprintf("/v2/xac/%s", testMac)
+	adaPath := fmt.Sprintf("/v2/ada/%s", testAccountId)
+	mockServer := SetupGroupServiceMockServerForAccountIdAndProducts(t, *server, xacPath, adaPath, xboAccount, nil)
+	defer mockServer.Close()
+
+	// Setup SAT service mock
+	satMockServer := SetupSatServiceMockServerOkResponse(t, *server)
+	defer satMockServer.Close()
+
+	// Execute test
+	podData, accountServiceData := AddContextForPods(server, contextMap, "test-token")
+
+	// Assertions - should return nil when ada fetch fails even if xac succeeded
+	assert.Nil(t, podData, "PodData should be nil when ada fetch fails")
+	assert.Nil(t, accountServiceData, "AccountServiceData should be nil when ada fetch fails")
+}
+
+// TestAddContextForPods_EnableXacGroupService_Scenario1_WithEcmMac tests scenario 1:
+// Fetch accountId when ESTB MAC fails, fallback to ECM MAC
+func TestAddContextForPods_EnableXacGroupService_Scenario1_WithEcmMac(t *testing.T) {
+	server, _ := GetTestXconfServer(testConfig)
+
+	// Enable XAC Group Service
+	Xc = &XconfConfigs{
+		EnableXacGroupService: true,
+	}
+
+	// Setup test data with both ESTB and ECM MAC
+	testAccountId := "test-account-456"
+	testEstbMac := "AABBCCDDEEFF"
+	testEcmMac := "112233445566"
+	contextMap := map[string]string{
+		common.ESTB_MAC_ADDRESS: "AA:BB:CC:DD:EE:FF",
+		common.ECM_MAC_ADDRESS:  "11:22:33:44:55:66",
+		common.ACCOUNT_ID:       "unknown",
+		common.MODEL:            "TEST-MODEL",
+	}
+
+	// Create XBOAccount protobuf for xac keyspace response
+	xboAccount := &conversion.XBOAccount{
+		AccountId: testAccountId,
+	}
+
+	// Create account products for ada keyspace response
+	accountProductsMap := map[string]string{
+		"Partner":  "sky",
+		"TimeZone": "Europe/London",
+	}
+	accountProducts := &conversion.XdasHashes{
+		Fields: accountProductsMap,
+	}
+
+	// Setup mock server to fail on ESTB MAC but succeed on ECM MAC
+	// The mock needs to handle both paths
+	xacPathEstb := fmt.Sprintf("/v2/xac/%s", testEstbMac)
+	xacPathEcm := fmt.Sprintf("/v2/xac/%s", testEcmMac)
+	adaPath := fmt.Sprintf("/v2/ada/%s", testAccountId)
+
+	mockedXacResponse, _ := proto.Marshal(xboAccount)
+	mockedAdaResponse, _ := proto.Marshal(accountProducts)
+
+	groupServiceMockServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.RequestURI, xacPathEstb) {
+				// Fail on ESTB MAC
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte("AccountId not found for ESTB MAC"))
+			} else if strings.Contains(r.RequestURI, xacPathEcm) {
+				// Succeed on ECM MAC
+				w.WriteHeader(http.StatusOK)
+				w.Write(mockedXacResponse)
+			} else if strings.Contains(r.RequestURI, adaPath) {
+				w.WriteHeader(http.StatusOK)
+				w.Write(mockedAdaResponse)
+			} else {
+				assert.Fail(t, "Unexpected request URI: "+r.RequestURI)
+			}
+		}))
+	defer groupServiceMockServer.Close()
+	server.SetGroupServiceHost(groupServiceMockServer.URL)
+
+	// Setup SAT service mock
+	satMockServer := SetupSatServiceMockServerOkResponse(t, *server)
+	defer satMockServer.Close()
+
+	// Execute test
+	podData, accountServiceData := AddContextForPods(server, contextMap, "test-token")
+
+	// Assertions
+	assert.NotNil(t, podData, "PodData should not be nil")
+	assert.NotNil(t, accountServiceData, "AccountServiceData should not be nil")
+	assert.Equal(t, testAccountId, podData.AccountId)
+	assert.Equal(t, "SKY", podData.PartnerId)
+	assert.Equal(t, "Europe/London", podData.TimeZone)
+	assert.Equal(t, testAccountId, contextMap[common.ACCOUNT_ID])
+}
+
+// TestAddFeatureControlContextFromAccountService_EnableXacGroupService_FetchAccountIdAndProducts tests:
+// AddFeatureControlContextFromAccountService fetches both accountId and products when MAC is valid
+func TestAddFeatureControlContextFromAccountService_EnableXacGroupService_FetchAccountIdAndProducts(t *testing.T) {
+	server, _ := GetTestXconfServer(testConfig)
+
+	// Enable XAC Group Service
+	Xc = &XconfConfigs{
+		EnableXacGroupService: true,
+	}
+
+	// Setup test data
+	testAccountId := "test-account-888"
+	testMac := "AABBCCDDEEFF"
+	contextMap := map[string]string{
+		common.ESTB_MAC_ADDRESS: "AA:BB:CC:DD:EE:FF",
+		common.MODEL:            "TEST-MODEL",
+	}
+
+	// Create XBOAccount protobuf for xac keyspace response
+	xboAccount := &conversion.XBOAccount{
+		AccountId: testAccountId,
+	}
+
+	// Create account products for ada keyspace response
+	accountProductsMap := map[string]string{
+		"Partner":     "rogers",
+		"TimeZone":    "America/Toronto",
+		"CountryCode": "CA",
+	}
+	accountProducts := &conversion.XdasHashes{
+		Fields: accountProductsMap,
+	}
+
+	// Setup mock server for both xac and ada keyspaces
+	xacPath := fmt.Sprintf("/v2/xac/%s", testMac)
+	adaPath := fmt.Sprintf("/v2/ada/%s", testAccountId)
+	mockServer := SetupGroupServiceMockServerForAccountIdAndProducts(t, *server, xacPath, adaPath, xboAccount, accountProducts)
+	defer mockServer.Close()
+
+	// Setup SAT service mock
+	satMockServer := SetupSatServiceMockServerOkResponse(t, *server)
+	defer satMockServer.Close()
+
+	// Execute test
+	accountServiceData := AddFeatureControlContextFromAccountService(server, contextMap, "test-token")
+
+	// Assertions
+	assert.NotNil(t, accountServiceData, "AccountServiceData should not be nil")
+	assert.Equal(t, testAccountId, accountServiceData.AccountId)
+	assert.Equal(t, "ROGERS", accountServiceData.PartnerId)
+	assert.Equal(t, "ROGERS", contextMap[common.PARTNER_ID])
+	assert.Equal(t, "CA", contextMap[common.COUNTRY_CODE])
+}
+
+// TestAddFeatureControlContextFromAccountService_EnableXacGroupService_AdaFailure tests negative case:
+// AccountId is fetched successfully but ada keyspace call fails
+func TestAddFeatureControlContextFromAccountService_EnableXacGroupService_AdaFailure(t *testing.T) {
+	server, _ := GetTestXconfServer(testConfig)
+
+	// Enable XAC Group Service
+	Xc = &XconfConfigs{
+		EnableXacGroupService: true,
+	}
+
+	// Setup test data
+	testAccountId := "test-account-fail"
+	testMac := "AABBCCDDEEFF"
+	contextMap := map[string]string{
+		common.ESTB_MAC_ADDRESS: "AA:BB:CC:DD:EE:FF",
+		common.MODEL:            "TEST-MODEL",
+	}
+
+	// Create XBOAccount protobuf for xac keyspace response
+	xboAccount := &conversion.XBOAccount{
+		AccountId: testAccountId,
+	}
+
+	// Setup mock server with xac success but ada failure
+	xacPath := fmt.Sprintf("/v2/xac/%s", testMac)
+	adaPath := fmt.Sprintf("/v2/ada/%s", testAccountId)
+	mockServer := SetupGroupServiceMockServerForAccountIdAndProducts(t, *server, xacPath, adaPath, xboAccount, nil)
+	defer mockServer.Close()
+
+	// Setup SAT service mock
+	satMockServer := SetupSatServiceMockServerOkResponse(t, *server)
+	defer satMockServer.Close()
+
+	// Execute test
+	accountServiceData := AddFeatureControlContextFromAccountService(server, contextMap, "test-token")
+
+	// Assertions - should return nil when ada fetch fails
+	assert.Nil(t, accountServiceData, "AccountServiceData should be nil when ada fetch fails")
+}
+
+// TestAddFeatureControlContext_EnableXacGroupService_Scenario2_AccountIdInQueryParam_Success tests scenario 2 in AddFeatureControlContext:
+// Fetch account products directly when accountId is present in query params
+func TestAddFeatureControlContext_EnableXacGroupService_Scenario2_AccountIdInQueryParam_Success(t *testing.T) {
+	server, _ := GetTestXconfServer(testConfig)
+
+	// Enable XAC Group Service
+	Xc = &XconfConfigs{
+		EnableXacGroupService: true,
+	}
+
+	// Setup test data with accountId already present in query param
+	testAccountId := "query-param-account-999"
+	contextMap := map[string]string{
+		common.ESTB_MAC_ADDRESS: "AA:BB:CC:DD:EE:FF",
+		common.ACCOUNT_ID:       testAccountId, // Present in query param
+		common.MODEL:            "TEST-MODEL",
+		common.PARTNER_ID:       "initial-partner",
+	}
+
+	// Create account products for ada keyspace response
+	accountProductsMap := map[string]string{
+		"Partner":         "videotron",
+		"TimeZone":        "America/Montreal",
+		"CountryCode":     "CA",
+		"State":           "active",
+		"AccountProducts": `{"service":"internet","speed":"100mbps"}`,
+	}
+	accountProducts := &conversion.XdasHashes{
+		Fields: accountProductsMap,
+	}
+
+	// Setup mock server for ada keyspace only
+	adaPath := fmt.Sprintf("/v2/ada/%s", testAccountId)
+	mockServer := SetupGroupServiceMockServerForAccountProductsOnly(t, *server, adaPath, accountProducts)
+	defer mockServer.Close()
+
+	// Setup SAT service mock
+	satMockServer := SetupSatServiceMockServerOkResponse(t, *server)
+	defer satMockServer.Close()
+
+	// Create HTTP request
+	req, _ := http.NewRequest("GET", "/featureControl", nil)
+
+	// Execute test
+	podData, tags, accountServiceData := AddFeatureControlContext(server, req, contextMap, "test-hash")
+
+	// Assertions
+	assert.Nil(t, podData, "PodData should be nil when accountId is already present")
+	assert.NotNil(t, accountServiceData, "AccountServiceData should not be nil")
+	assert.Equal(t, testAccountId, accountServiceData.AccountId)
+	assert.Equal(t, "VIDEOTRON", accountServiceData.PartnerId)
+	assert.Equal(t, "VIDEOTRON", contextMap[common.PARTNER_ID])
+	assert.Equal(t, "America/Montreal", contextMap[common.TIME_ZONE])
+	assert.Equal(t, "CA", contextMap[common.COUNTRY_CODE])
+	assert.Equal(t, "active", contextMap[common.ACCOUNT_STATE])
+	assert.Equal(t, "internet", contextMap["service"])
+	assert.Equal(t, "100mbps", contextMap["speed"])
+	// Tags may be nil or empty array since tagging service is not mocked
+	_ = tags
+}
+
+// TestAddFeatureControlContext_EnableXacGroupService_Scenario1_UnknownAccountId_FetchAndProducts tests scenario 1 in AddFeatureControlContext:
+// When accountId is "unknown", it should fetch from xac and then ada
+func TestAddFeatureControlContext_EnableXacGroupService_Scenario1_UnknownAccountId_FetchAndProducts(t *testing.T) {
+	server, _ := GetTestXconfServer(testConfig)
+
+	// Enable XAC Group Service
+	Xc = &XconfConfigs{
+		EnableXacGroupService: true,
+	}
+
+	// Setup test data with unknown accountId
+	testAccountId := "fetched-account-111"
+	testMac := "AABBCCDDEEFF"
+	contextMap := map[string]string{
+		common.ESTB_MAC_ADDRESS: "AA:BB:CC:DD:EE:FF",
+		common.ACCOUNT_ID:       "unknown", // Unknown, should trigger fetch
+		common.MODEL:            "TEST-MODEL",
+		common.ACCOUNT_MGMT:     "xpc",
+	}
+
+	// Create XBOAccount protobuf for xac keyspace response
+	xboAccount := &conversion.XBOAccount{
+		AccountId: testAccountId,
+	}
+
+	// Create account products for ada keyspace response
+	accountProductsMap := map[string]string{
+		"Partner":     "shaw",
+		"TimeZone":    "America/Vancouver",
+		"CountryCode": "CA",
+	}
+	accountProducts := &conversion.XdasHashes{
+		Fields: accountProductsMap,
+	}
+
+	// Setup mock server for both xac and ada keyspaces
+	xacPath := fmt.Sprintf("/v2/xac/%s", testMac)
+	adaPath := fmt.Sprintf("/v2/ada/%s", testAccountId)
+	mockServer := SetupGroupServiceMockServerForAccountIdAndProducts(t, *server, xacPath, adaPath, xboAccount, accountProducts)
+	defer mockServer.Close()
+
+	// Setup SAT service mock
+	satMockServer := SetupSatServiceMockServerOkResponse(t, *server)
+	defer satMockServer.Close()
+
+	// Create HTTP request
+	req, _ := http.NewRequest("GET", "/featureControl", nil)
+
+	// Execute test
+	podData, tags, accountServiceData := AddFeatureControlContext(server, req, contextMap, "test-hash")
+
+	// Assertions
+	assert.NotNil(t, podData, "PodData should not be nil when unknown accountId is fetched")
+	assert.NotNil(t, accountServiceData, "AccountServiceData should not be nil")
+	assert.Equal(t, testAccountId, podData.AccountId)
+	assert.Equal(t, "SHAW", podData.PartnerId)
+	assert.Equal(t, testAccountId, contextMap[common.ACCOUNT_ID])
+	assert.Equal(t, "SHAW", contextMap[common.PARTNER_ID])
+	assert.Equal(t, "America/Vancouver", contextMap[common.TIME_ZONE])
+	// Tags may be nil or empty array since tagging service is not mocked
+	_ = tags
+}
+
+// TestAddFeatureControlContext_EnableXacGroupService_Disabled tests when EnableXacGroupService is false
+func TestAddFeatureControlContext_EnableXacGroupService_Disabled(t *testing.T) {
+	server, _ := GetTestXconfServer(testConfig)
+
+	// Disable XAC Group Service
+	Xc = &XconfConfigs{
+		EnableXacGroupService: false,
+	}
+
+	// Setup test data
+	contextMap := map[string]string{
+		common.ESTB_MAC_ADDRESS: "AA:BB:CC:DD:EE:FF",
+		common.ACCOUNT_ID:       "test-account",
+		common.MODEL:            "TEST-MODEL",
+	}
+
+	// Setup SAT service mock
+	satMockServer := SetupSatServiceMockServerOkResponse(t, *server)
+	defer satMockServer.Close()
+
+	// Create HTTP request
+	req, _ := http.NewRequest("GET", "/featureControl", nil)
+
+	// Execute test
+	_, tags, _ := AddFeatureControlContext(server, req, contextMap, "test-hash")
+
+	// Assertions - when disabled, should not fetch from group service
+	// The behavior depends on other flags, but group service should not be called
+	// Tags may be nil or empty array since tagging service is not mocked
+	_ = tags
+	// podData and accountServiceData may be nil depending on other configurations
 }

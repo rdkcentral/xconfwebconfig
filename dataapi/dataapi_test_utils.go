@@ -444,3 +444,73 @@ func SetupGroupServiceHashesMockServerOkResponse(t *testing.T, server xwhttp.Xco
 	assert.Equal(t, groupServiceMockServer.URL, targetGroupServiceHost)
 	return groupServiceMockServer
 }
+
+// SetupGroupServiceMockServerForAccountIdAndProducts sets up a mock server for xac (accountId) and ada (account products) keyspaces
+func SetupGroupServiceMockServerForAccountIdAndProducts(t *testing.T, server xwhttp.XconfServer, xacPath string, adaPath string, xboAccount *conversion.XBOAccount, accountProducts *conversion.XdasHashes) *httptest.Server {
+	var mockedXacResponse []byte
+	var mockedAdaResponse []byte
+
+	if xboAccount != nil {
+		mockedXacResponse, _ = proto.Marshal(xboAccount)
+	}
+	if accountProducts != nil {
+		mockedAdaResponse, _ = proto.Marshal(accountProducts)
+	}
+
+	groupServiceMockServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.RequestURI, xacPath) {
+				if xboAccount == nil {
+					w.WriteHeader(http.StatusNotFound)
+					w.Write([]byte("AccountId not found"))
+				} else {
+					w.WriteHeader(http.StatusOK)
+					w.Write(mockedXacResponse)
+				}
+			} else if strings.Contains(r.RequestURI, adaPath) {
+				if accountProducts == nil {
+					w.WriteHeader(http.StatusNotFound)
+					w.Write([]byte("Account products not found"))
+				} else {
+					w.WriteHeader(http.StatusOK)
+					w.Write(mockedAdaResponse)
+				}
+			} else {
+				// fail because request was not matched
+				assert.Equal(t, true, false)
+			}
+		}))
+	server.SetGroupServiceHost(groupServiceMockServer.URL)
+	targetGroupServiceHost := server.GroupServiceHost()
+	assert.Equal(t, groupServiceMockServer.URL, targetGroupServiceHost)
+	return groupServiceMockServer
+}
+
+// SetupGroupServiceMockServerForAccountProductsOnly sets up a mock server for ada (account products) keyspace only
+func SetupGroupServiceMockServerForAccountProductsOnly(t *testing.T, server xwhttp.XconfServer, adaPath string, accountProducts *conversion.XdasHashes) *httptest.Server {
+	var mockedAdaResponse []byte
+
+	if accountProducts != nil {
+		mockedAdaResponse, _ = proto.Marshal(accountProducts)
+	}
+
+	groupServiceMockServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.RequestURI, adaPath) {
+				if accountProducts == nil {
+					w.WriteHeader(http.StatusNotFound)
+					w.Write([]byte("Account products not found"))
+				} else {
+					w.WriteHeader(http.StatusOK)
+					w.Write(mockedAdaResponse)
+				}
+			} else {
+				// fail because request was not matched
+				assert.Equal(t, true, false)
+			}
+		}))
+	server.SetGroupServiceHost(groupServiceMockServer.URL)
+	targetGroupServiceHost := server.GroupServiceHost()
+	assert.Equal(t, groupServiceMockServer.URL, targetGroupServiceHost)
+	return groupServiceMockServer
+}
