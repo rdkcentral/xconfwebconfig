@@ -111,6 +111,8 @@ const (
 	APPLICATION_TYPE           = "applicationType"
 	ACCOUNT_ID                 = "accountId"
 	ACCOUNT_HASH               = "accountHash"
+	ACCOUNT_PRODUCTS           = "accountProducts"
+	ACCOUNT_STATE              = "accountState"
 	CONFIG_SET_HASH            = "configSetHash"
 	SYNDICATION_PARTNER        = "SyndicationPartner"
 	MAC                        = "mac"
