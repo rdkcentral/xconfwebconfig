@@ -86,9 +86,45 @@ func GetEstbFirmwareSwuHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.Error(w, http.StatusInternalServerError, common.NotOK)
 		return
 	}
-	status, response, firmwareConfigFacade, _ := GetFirmwareResponse(w, r, xw, fields)
+	status, response, evaluationResult, convertedContext, explanation, contextMap := GetFirmwareResponse(w, r, xw, fields)
+	if status == 404 {
+		if Xc.EnableFwDownloadLogs {
+			LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
+		}
+	}
 	if status == 200 {
-		firmwareConfigResponse := sharedef.CreateFirmwareConfigFacadeResponse(*firmwareConfigFacade)
+
+		// only invoke security manager code if flag is enabled
+		// also check if SecurityTokenOnlyForNewOfferedFw is enabled, make sure a new fw is offered
+		if Xc.SecurityTokenManagerEnabled && (!Ws.SecurityTokenConfig.SecurityTokenOnlyForNewOfferedFwEnabled || evaluationResult.FirmwareConfig.GetFirmwareVersion() != contextMap[common.FIRMWARE_VERSION]) {
+			filename := evaluationResult.FirmwareConfig.GetFirmwareFilename()
+			if additionalFwVerInfo, ok := evaluationResult.FirmwareConfig.Properties[common.ADDITIONAL_FW_VER_INFO]; ok {
+				filename = fmt.Sprintf("%s,%s", filename, additionalFwVerInfo)
+			}
+
+			deviceInfo := map[string]string{
+				xhttp.SECURITY_TOKEN_ESTB_MAC:        contextMap[common.ESTB_MAC],
+				xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
+				xhttp.SECURITY_TOKEN_ESTB_IP:         contextMap[common.IP_ADDRESS],
+				xhttp.SECURITY_TOKEN_FW_FILENAME:     filename,
+				xhttp.SECURITY_TOKEN_FW_VERSION:      evaluationResult.FirmwareConfig.GetFirmwareVersion(),
+			}
+			if !util.IsBlank(contextMap[common.PARTNER_ID]) {
+				deviceInfo[xhttp.SECURITY_TOKEN_PARTNER] = contextMap[common.PARTNER_ID]
+			}
+			if !util.IsBlank(contextMap[common.MODEL]) {
+				deviceInfo[xhttp.SECURITY_TOKEN_MODEL] = contextMap[common.MODEL]
+			}
+
+			locationWithToken := Ws.FirmwareSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, evaluationResult.FirmwareConfig.GetFirmwareLocation(), fields)
+			evaluationResult.FirmwareConfig.SetFirmwareLocation(locationWithToken)
+		}
+
+		if Xc.EnableFwDownloadLogs {
+			LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
+		}
+
+		firmwareConfigResponse := sharedef.CreateFirmwareConfigFacadeResponse(*evaluationResult.FirmwareConfig)
 		response, _ := util.JSONMarshal(firmwareConfigResponse)
 		xhttp.WriteXconfResponse(w, 200, response)
 	} else {
@@ -96,7 +132,7 @@ func GetEstbFirmwareSwuHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResponseWriter, fields log.Fields) (int, []byte, *sharedef.FirmwareConfigFacade, map[string]string) {
+func GetFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResponseWriter, fields log.Fields) (int, []byte, *dataef.EvaluationResult, *sharedef.ConvertedContext, string, map[string]string) {
 	queryParams := r.URL.Query()
 	clientProtocolHeader := GetClientProtocolHeaderValue(r)
 
@@ -124,14 +160,14 @@ func GetFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResp
 	AddClientCertDurationToContext(contextMap, clientCertExpiry)
 	GetFirstElementsInContextMap(contextMap)
 	if contextMap[common.ESTB_MAC] == "" {
-		return http.StatusBadRequest, []byte("\"eStbMac should be specified\""), nil, nil
+		return http.StatusBadRequest, []byte("\"eStbMac should be specified\""), nil, nil, "", contextMap
 	}
 	if !IsAllowedRequest(contextMap, clientProtocolHeader) {
-		return http.StatusForbidden, []byte("FORBIDDEN"), nil, nil
+		return http.StatusForbidden, []byte("FORBIDDEN"), nil, nil, "", contextMap
 	}
 	_, errmac := util.MACAddressValidator(contextMap[common.ESTB_MAC])
 	if errmac != nil {
-		return http.StatusBadRequest, []byte(fmt.Sprintf("\"<h2>400 Bad Request</h2><div>invalid mac address: %s</div>\"", contextMap[common.ESTB_MAC])), nil, nil
+		return http.StatusBadRequest, []byte(fmt.Sprintf("\"<h2>400 Bad Request</h2><div>invalid mac address: %s</div>\"", contextMap[common.ESTB_MAC])), nil, nil, "", contextMap
 	}
 
 	log.Debugf("GetEstbFirmwareSwuHandler call AddEstbFirmwareContext start ... queryParams %v", queryParams)
@@ -142,42 +178,9 @@ func GetFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResp
 	evaluationResult, _ := estbFirmwareRuleBase.Eval(contextMap, convertedContext, contextMap[common.APPLICATION_TYPE], fields)
 	explanation := GetExplanation(contextMap, evaluationResult)
 	if evaluationResult == nil || evaluationResult.Blocked || evaluationResult.FirmwareConfig == nil || evaluationResult.FirmwareConfig.Properties == nil {
-		if Xc.EnableFwDownloadLogs {
-			LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
-		}
-		return http.StatusNotFound, []byte(fmt.Sprintf("\"<h2>404 NOT FOUND</h2><div>%s<div>\"", explanation)), nil, nil
+		return http.StatusNotFound, []byte(fmt.Sprintf("\"<h2>404 NOT FOUND</h2><div>%s<div>\"", explanation)), evaluationResult, convertedContext, explanation, contextMap
 	}
-
-	// only invoke security manager code if flag is enabled
-	// also check if SecurityTokenOnlyForNewOfferedFw is enabled, make sure a new fw is offered
-	if Xc.SecurityTokenManagerEnabled && (!Ws.SecurityTokenConfig.SecurityTokenOnlyForNewOfferedFwEnabled || evaluationResult.FirmwareConfig.GetFirmwareVersion() != contextMap[common.FIRMWARE_VERSION]) {
-
-		filename := evaluationResult.FirmwareConfig.GetFirmwareFilename()
-		if additionalFwVerInfo, ok := evaluationResult.FirmwareConfig.Properties[common.ADDITIONAL_FW_VER_INFO]; ok {
-			filename = fmt.Sprintf("%s,%s", filename, additionalFwVerInfo)
-		}
-
-		deviceInfo := map[string]string{
-			xhttp.SECURITY_TOKEN_ESTB_MAC:        contextMap[common.ESTB_MAC],
-			xhttp.SECURITY_TOKEN_CLIENT_PROTOCOL: contextMap[common.CLIENT_PROTOCOL],
-			xhttp.SECURITY_TOKEN_ESTB_IP:         contextMap[common.IP_ADDRESS],
-			xhttp.SECURITY_TOKEN_FW_FILENAME:     filename,
-			xhttp.SECURITY_TOKEN_FW_VERSION:      evaluationResult.FirmwareConfig.GetFirmwareVersion(),
-		}
-		if !util.IsBlank(contextMap[common.PARTNER_ID]) {
-			deviceInfo[xhttp.SECURITY_TOKEN_PARTNER] = contextMap[common.PARTNER_ID]
-		}
-		if !util.IsBlank(contextMap[common.MODEL]) {
-			deviceInfo[xhttp.SECURITY_TOKEN_MODEL] = contextMap[common.MODEL]
-		}
-
-		locationWithToken := Ws.FirmwareSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, evaluationResult.FirmwareConfig.GetFirmwareLocation(), fields)
-		evaluationResult.FirmwareConfig.SetFirmwareLocation(locationWithToken)
-	}
-	if Xc.EnableFwDownloadLogs {
-		LogResponse(contextMap, convertedContext, explanation, evaluationResult, fields)
-	}
-	return http.StatusOK, []byte(""), evaluationResult.FirmwareConfig, contextMap
+	return http.StatusOK, []byte(""), evaluationResult, convertedContext, explanation, contextMap
 }
 
 func GetCheckMinFirmwareHandler(w http.ResponseWriter, r *http.Request) {
