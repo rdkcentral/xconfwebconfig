@@ -221,7 +221,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 	}
 
 	if podData == nil {
-		log.WithFields(fields).Warn("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service")
+		log.WithFields(fields).Debug("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service")
 		if Xc.EnableMacAccountServiceCall && strings.HasPrefix(strings.ToUpper(contextMap[common.SERIAL_NUM]), Xc.AccountServiceMacPrefix) {
 			AccountServiceDeviceObject, err := ws.AccountServiceConnector.GetDevices(common.SERIAL_NUMBER_PARAM, contextMap[common.SERIAL_NUM], satToken, fields)
 			if err != nil {
@@ -414,7 +414,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 
 	if Xc.EnableAccountService {
 		if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || util.IsUnknownValue(contextMap[common.PARTNER_ID]) || util.IsUnknownValue(contextMap[common.ACCOUNT_HASH]) {
-			log.WithFields(fields).Warn("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service due to Flag Disabled or err")
+			log.WithFields(fields).Debug("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service due to Flag Disabled or err")
 			var accountServiceObject xhttp.AccountServiceDevices
 			if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
 				accountServiceObject, err = ws.AccountServiceConnector.GetDevices(common.HOST_MAC_PARAM, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
