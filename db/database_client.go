@@ -129,6 +129,7 @@ type DatabaseClient interface {
 	GetRfcPenetrationMetrics(string) (*RfcPenetrationMetrics, error)
 	UpdateFwPenetrationMetrics(map[string]string) error
 	GetEstbIp(string) (string, error)
+	GetSecurityTokenFields(string) (*SecurityTokenDeviceInfo, error)
 
 	SetRecookingStatus(module string, partitionId string, state int) error
 	GetRecookingStatus(module string, partitionId string) (int, time.Time, error)
