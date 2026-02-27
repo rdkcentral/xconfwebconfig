@@ -139,7 +139,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 	}
 
 	if Xc.EnableAccountService && util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
-		log.WithFields(fields).Warnf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s' due to Flag Disabled or err", macAddress)
+		log.WithFields(fields).Debugf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service for MAC='%s' due to Flag Disabled or err", contextMap[common.ESTB_MAC_ADDRESS])
 		xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		if util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 			partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
