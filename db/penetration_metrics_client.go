@@ -60,6 +60,15 @@ type FwPenetrationMetrics struct {
 	RecoveryCertExpiry      string
 }
 
+type SecurityTokenDeviceInfo struct {
+	Partner                 string
+	Model                   string
+	FwFilename              string
+	FwVersion               string
+	FwAdditionalVersionInfo string
+	FwTs                    int64
+}
+
 type RfcPenetrationMetrics struct {
 	EstbMac              string
 	EcmMac               string
@@ -263,6 +272,52 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		return err
 	}
 	return nil
+}
+
+func (c *CassandraClient) GetSecurityTokenFields(estbMac string) (*SecurityTokenDeviceInfo, error) {
+	securityTokenDeviceInfo := &SecurityTokenDeviceInfo{}
+	dict := util.Dict{}
+
+	columns := []string{
+		PartnerColumnValue,
+		ModelColumnValue,
+		FwFilenameColumnValue,
+		FwVersionColumnValue,
+		FwAdditionalVersionInfoColumnValue,
+		FwTsColumnValue,
+	}
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+	stmt := fmt.Sprintf(`SELECT %s FROM "%s" WHERE %s=?`, GetColumnsStr(columns), PenetrationMetricsTable, EstbMacColumnValue)
+	qry := c.Query(stmt, estbMac)
+	err := qry.MapScan(dict)
+
+	if err != nil {
+		return securityTokenDeviceInfo, err
+	}
+
+	// Extract values from dict into struct
+	if v, ok := dict[PartnerColumnValue].(string); ok {
+		securityTokenDeviceInfo.Partner = v
+	}
+	if v, ok := dict[ModelColumnValue].(string); ok {
+		securityTokenDeviceInfo.Model = v
+	}
+	if v, ok := dict[FwFilenameColumnValue].(string); ok {
+		securityTokenDeviceInfo.FwFilename = v
+	}
+	if v, ok := dict[FwVersionColumnValue].(string); ok {
+		securityTokenDeviceInfo.FwVersion = v
+	}
+	if v, ok := dict[FwAdditionalVersionInfoColumnValue].(string); ok {
+		securityTokenDeviceInfo.FwAdditionalVersionInfo = v
+	}
+	if v, ok := dict[FwTsColumnValue].(int64); ok {
+		securityTokenDeviceInfo.FwTs = v
+	}
+
+	return securityTokenDeviceInfo, nil
 }
 
 func (c *CassandraClient) GetFwPenetrationMetrics(estbMac string) (*FwPenetrationMetrics, error) {

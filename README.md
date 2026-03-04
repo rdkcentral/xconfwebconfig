@@ -57,7 +57,6 @@ make
 ```shell
 export SAT_CLIENT_ID='xxxxxx'
 export SAT_CLIENT_SECRET='yyyyyy'
-export SECURITY_TOKEN_KEY='zzzzzz'
 mkdir -p /app/logs/xconfwebconfig
 cd .../xconfwebconfig
 bin/xconfwebconfig-linux-amd64 -f config/sample_xconfwebconfig.conf

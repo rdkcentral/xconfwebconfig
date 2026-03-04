@@ -66,7 +66,6 @@ func createSecurityPathConfig(path string, enabled bool) *xwhttp.SecurityTokenPa
 func createSecurityTokenConfig(securityKey string, groupServiceEnabled bool) *xwhttp.SecurityTokenConfig {
 	return &xwhttp.SecurityTokenConfig{
 		SkipSecurityTokenClientProtocolSet: util.NewSet(),
-		SecurityTokenKey:                   securityKey,
 		SecurityTokenGroupServiceEnabled:   groupServiceEnabled,
 	}
 }
