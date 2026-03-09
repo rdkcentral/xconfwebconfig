@@ -1,0 +1,257 @@
+@startuml
+namespace dataapi {
+    class "AccountServiceData" << (S,Aquamarine) >> {
+        + AccountId string
+        + TimeZone string
+        + PartnerId string
+
+    }
+    class "AuxiliaryFirmware" << (S,Aquamarine) >> {
+        + Prefix string
+        + Extension string
+
+    }
+    class "ContextData" << (S,Aquamarine) >> {
+        + Mac string
+        + Model string
+        + Partner string
+        + SerialNum string
+        + Experience string
+        + AccountId string
+        + Tags []string
+
+    }
+    class "PodData" << (S,Aquamarine) >> {
+        + AccountId string
+        + TimeZone string
+        + PartnerId string
+
+    }
+    class "PreprocessedData" << (S,Aquamarine) >> {
+        + AccountId string
+        + PartnerId string
+        + Model string
+        + ApplicationType string
+        + Env string
+        + FwVersion string
+        + EstbIp string
+        + Experience string
+        + RfcHash string
+        + RfcRulesEngineHash string
+        + RfcPostProcessingHash string
+        + CtxHash string
+        + OfferedFwVersion string
+        + OfferedFwRfcHash string
+        + OfferedFwRfcRulesEngineHash string
+
+    }
+    class "TelemetryEvaluationResult" << (S,Aquamarine) >> {
+        + RulesMatched bool
+        + ProfilesData []util.Dict
+
+    }
+    class "XconfConfigs" << (S,Aquamarine) >> {
+        + DeriveAppTypeFromPartnerId bool
+        + PartnerApplicationTypes []string
+        + EnableDeviceService bool
+        + EnableDeviceDBLookup bool
+        + EnableMacAccountServiceCall bool
+        + AccountServiceMacPrefix string
+        + EnableAccountService bool
+        + EnableXacGroupService bool
+        + EnableTaggingService bool
+        + EnableTaggingServiceRFC bool
+        + IPv4NetworkMaskPrefixLength int32
+        + IPv6NetworkMaskPrefixLength int32
+        + EnableFwDownloadLogs bool
+        + EnableRfcPrecook bool
+        + EnableRfcPrecookForOfferedFw bool
+        + EnableRfcPrecook304 bool
+        + RfcPrecookStartTime string
+        + RfcPrecookEndTime string
+        + RfcPrecookTimeZone *time.Location
+        + RfcPrecookTimeFormat string
+        + EnableGroupService bool
+        + EnableFtGroups bool
+        + EnableFtMacTags bool
+        + EnableFtAccountTags bool
+        + EnableFtPartnerTags bool
+        + GroupServiceModelSet util.Set
+        + MacTagsModelSet util.Set
+        + AccountTagsModelSet util.Set
+        + PartnerTagsModelSet util.Set
+        + MacTagsPrefixList []string
+        + AccountTagsPrefixList []string
+        + PartnerTagsPrefixList []string
+        + ReturnAccountId bool
+        + ReturnAccountHash bool
+        + EstbRecoveryFirmwareVersions string
+        + DiagnosticAPIsEnabled bool
+        + Account_mgmt string
+        + GroupServiceCacheEnabled bool
+        + RfcReturnCountryCode bool
+        + RfcCountryCodeModelsSet util.Set
+        + RfcCountryCodePartnersSet util.Set
+        + AuxiliaryFirmwareList []AuxiliaryFirmware
+        + PartnerIdValidationEnabled bool
+        + ValidPartnerIdRegex *regexp.Regexp
+        + SecurityTokenManagerEnabled bool
+        + EnableTaggingComparison bool
+
+    }
+}
+namespace logupload {
+    class "LogUploadRuleBase" << (S,Aquamarine) >> {
+        + RuleProcessorFactory rulesengine.RuleProcessorFactory
+
+        - getSortedDcmRules() []*logupload.DCMGenericRule
+
+        + Eval(context <font color=blue>map</font>[string]string, fields logrus.Fields) *logupload.Settings
+        + GetSettings(id string) *logupload.Settings
+
+    }
+}
+namespace settings {
+}
+namespace telemetry {
+    class "TelemetryProfileService" << (S,Aquamarine) >> {
+        + CacheUpdateWindowSize int64
+
+        + ConvertToDescriptor(rule logupload.TelemetryRule) *logupload.PermanentTelemetryRuleDescriptor
+        + ConvertToProfileDescriptor(profile logupload.TelemetryProfile) *logupload.TelemetryProfileDescriptor
+        + ExpireTemporaryTelemetryRules() 
+        + CreateRuleForAttribute(contextAttribute string, expectedValue string) *logupload.TimestampedRule
+        + CreateTelemetryProfile(contextAttribute string, expectedValue string, telemetry logupload.TelemetryProfile) *logupload.TimestampedRule
+        + DropTelemetryFor(contextAttribute string, expectedValue string) *[]logupload.TelemetryProfile
+        + GetTemporaryProfileForContext(context <font color=blue>map</font>[string]string) *logupload.TelemetryProfile
+        + GetTelemetryRuleForContext(context <font color=blue>map</font>[string]string) *logupload.TelemetryRule
+        + ProcessEntityRules(telemetryRuleList []*logupload.TelemetryRule, context <font color=blue>map</font>[string]string) []*logupload.TelemetryRule
+        + GetMaxRule(tRules []*logupload.TelemetryRule) *logupload.TelemetryRule
+        + GetPermanentProfileByTelemetryRule(telemetryRule *logupload.TelemetryRule) *logupload.PermanentTelemetryProfile
+        + GetPermanentProfileForContext(context <font color=blue>map</font>[string]string) *logupload.PermanentTelemetryProfile
+        + GetTelemetryForContext(context <font color=blue>map</font>[string]string) *logupload.TelemetryProfile
+        + GetAvailableDescriptors(applicationType string) []*logupload.PermanentTelemetryRuleDescriptor
+        + GetAvailableProfileDescriptors(applicationType string) []*logupload.TelemetryProfileDescriptor
+        + ProcessTelemetryTwoRules(context <font color=blue>map</font>[string]string) []*logupload.TelemetryTwoRule
+        + ProcessTelemetryTwoRulesForAS(context <font color=blue>map</font>[string]string) []*logupload.TelemetryTwoRule
+        + GetTelemetryTwoProfileByTelemetryRules(telemetryTwoRules []*logupload.TelemetryTwoRule, fields logrus.Fields) []*logupload.TelemetryTwoProfile
+
+    }
+}
+namespace estbfirmware {
+    class "EnvModelRuleService" << (S,Aquamarine) >> {
+        + GetByApplicationType(applicationType string) []*estbfirmware.EnvModelBean
+
+    }
+    class "EstbFirmwareRuleBase" << (S,Aquamarine) >> {
+        - ruleProcessorFactory *rulesengine.RuleProcessorFactory
+        - driAlwaysReply bool
+        - driStateIdentifiers string
+
+        - getFirmwareTemplate(ruleType string, clone bool) *firmware.FirmwareRuleTemplate
+        - isPercentFilter(firmwareRule *firmware.FirmwareRule) bool
+        - getRoundRobinIdByApplication(applicationType string) string
+        - firmwareVersionIsMatched(firmwareVersion string, action *firmware.ApplicableAction) bool
+        - firmwareVersionRegExIsMatched(firmwareVersion string, action *firmware.ApplicableAction) bool
+
+        + SetruleProcessorFactory(ruleProcessorFactory *rulesengine.RuleProcessorFactory) 
+        + SetdriAlwaysReply(driAlwaysReply bool) 
+        + SetdriStateIdentifiers(driStateIdentifiers string) 
+        + Eval(ctx <font color=blue>map</font>[string]string, convertedContext *estbfirmware.ConvertedContext, applicationType string, fields logrus.Fields) (*EvaluationResult, error)
+        + FindMatchedRule(rules <font color=blue>map</font>[string][]*firmware.FirmwareRule, templateType firmware.ApplicableActionType, contextMap <font color=blue>map</font>[string]string, bypassFilters <font color=blue>map</font>[string]<font color=blue>struct</font>{}, fields logrus.Fields) *firmware.FirmwareRule
+        + FindMatchedRules(rules <font color=blue>map</font>[string][]*firmware.FirmwareRule, templateType firmware.ApplicableActionType, contextMap <font color=blue>map</font>[string]string, bypassFilters <font color=blue>map</font>[string]<font color=blue>struct</font>{}, isSingle bool, reverse bool, fields logrus.Fields) []*firmware.FirmwareRule
+        + GetSortedTemplate(actionType firmware.ApplicableActionType, reverse bool, fields logrus.Fields) []*firmware.FirmwareRuleTemplate
+        + GetBoundConfigId(ctx <font color=blue>map</font>[string]string, convertedContext *estbfirmware.ConvertedContext, firmwareRule *firmware.FirmwareRule, appliedVersionInfo <font color=blue>map</font>[string]string) string
+        + IsInWhitelist(convertedContext *estbfirmware.ConvertedContext, whitelist string) bool
+        + ExtractAnyPresentConfig(ruleAction *firmware.ApplicableAction) string
+        + ExtractConfigFromAction(context *estbfirmware.ConvertedContext, ruleAction *firmware.ApplicableAction, appliedVersionInfo <font color=blue>map</font>[string]string) string
+        + GetSource(context *estbfirmware.ConvertedContext, ruleAction *firmware.ApplicableAction) <font color=blue>interface</font>{}
+        + ApplyMatchedFilters(rules <font color=blue>map</font>[string][]*firmware.FirmwareRule, templateType firmware.ApplicableActionType, context <font color=blue>map</font>[string]string, bypassFilters <font color=blue>map</font>[string]<font color=blue>struct</font>{}, evaluationResult *EvaluationResult) <font color=blue>map</font>[string]<font color=blue>interface</font>{}
+        + ApplyDefinePropertiesFilter(template *firmware.FirmwareRuleTemplate, firmwareRule *firmware.FirmwareRule, action *firmware.ApplicableAction, properties <font color=blue>map</font>[string]<font color=blue>interface</font>{}, evaluationResult *EvaluationResult) 
+        + MatchFirmwareVersionRegEx(regExs []string, firmwareVersion string) bool
+        + ConvertProperties(template *firmware.FirmwareRuleTemplate, properties <font color=blue>map</font>[string]string) <font color=blue>map</font>[string]<font color=blue>interface</font>{}
+        + ConvertBasedOnValidationType(validationTypes []firmware.ValidationType, value string) (<font color=blue>interface</font>{}, error)
+        + DoFilters(ctx <font color=blue>map</font>[string]string, convertedContext *estbfirmware.ConvertedContext, applicationType string, rules <font color=blue>map</font>[string][]*firmware.FirmwareRule, evaluationResult *EvaluationResult, fields logrus.Fields) bool
+        + CheckForDRIState(ctx <font color=blue>map</font>[string]string, config *estbfirmware.FirmwareConfigFacade, blocked bool) bool
+        + FilterByAppType(rules []*firmware.FirmwareRule, applicationType string) <font color=blue>map</font>[string][]*firmware.FirmwareRule
+        + HasMinimumFirmware(ctx <font color=blue>map</font>[string]string) bool
+        + GetBseConfiguration(address *shared.IpAddress) (*estbfirmware.BseConfiguration, error)
+        + SetupLocations(firmwareRule *firmware.FirmwareRule, config *estbfirmware.BseConfiguration) 
+        + IsIpAddressInRange(rule rulesengine.Rule, address *shared.IpAddress) bool
+        + GetAppliedActivationVersionType(ctx <font color=blue>map</font>[string]string, applicationType string) *RunningVersionInfo
+        + FindMatchedRuleByRules(firmwareRules <font color=blue>map</font>[string][]*firmware.FirmwareRule, actionType firmware.ApplicableActionType, template string, contextMap <font color=blue>map</font>[string]string, bypassFilters <font color=blue>map</font>[string]<font color=blue>struct</font>{}) *firmware.FirmwareRule
+        + FilterByTemplate(firmwareRules []*firmware.FirmwareRule, templateName string) []*firmware.FirmwareRule
+
+    }
+    class "EvaluationResult" << (S,Aquamarine) >> {
+        + MatchedRule *firmware.FirmwareRule
+        + AppliedFilters []<font color=blue>interface</font>{}
+        + FirmwareConfig *estbfirmware.FirmwareConfigFacade
+        + Description string
+        + Blocked bool
+        + AppliedVersionInfo <font color=blue>map</font>[string]string
+
+        + AddAppliedFilters(filter <font color=blue>interface</font>{}) 
+
+    }
+    class "FirmwareRuleOfTemplate" << (S,Aquamarine) >> {
+        - templaleName string
+
+        - isFirmwareRuleOfTemplate(rule *firmware.FirmwareRule) bool
+
+    }
+    class "IpFilterService" << (S,Aquamarine) >> {
+        - getOneIpFilterFromDB(id string) *estbfirmware.IpFilter
+        - getIpFilterByName(name string, applicationType string) *estbfirmware.IpFilter
+        - getByApplicationType(applicationType string) []*estbfirmware.IpFilter
+        - save(filter *estbfirmware.IpFilter, applicationType string) 
+        - delete(id string) 
+
+    }
+    class "IpRuleService" << (S,Aquamarine) >> {
+        - getOne(id string) *estbfirmware.IpRuleBean
+
+        + GetByApplicationType(applicationType string) []*estbfirmware.IpRuleBean
+        + ConvertToIpRuleOrReturnNull(firmwareRule *firmware.FirmwareRule) *estbfirmware.IpRuleBean
+        + Save(bean *estbfirmware.IpRuleBean, applicationType string) error
+        + Delete(id string) 
+
+    }
+    class "MacRuleService" << (S,Aquamarine) >> {
+        + GetFirmwareMacRules(applicationType string) []*firmware.FirmwareRule
+        + GetByApplicationType(applicationType string) []*estbfirmware.MacRuleBean
+        + SearchMacRules(macPart string, applicationType string) []*estbfirmware.MacRuleBean
+        + GetRulesWithMacCondition(applicationType string) []*estbfirmware.MacRuleBean
+
+    }
+    class "PercentFilterService" << (S,Aquamarine) >> {
+        + Save(filter *estbfirmware.PercentFilterValue, applicationType string) 
+
+    }
+    class "RunningVersionInfo" << (S,Aquamarine) >> {
+        + HasActivationMinFW bool
+        + HasMinimumFW bool
+
+    }
+    class "estbfirmware.DefaultValue" << (T, #FF7700) >>  {
+    }
+}
+namespace featurecontrol {
+    class "FeatureControlRuleBase" << (S,Aquamarine) >> {
+        + FeatureDAO db.CachedSimpleDao
+        + RuleProcessorFactory rulesengine.RuleProcessorFactory
+
+        + Eval(context <font color=blue>map</font>[string]string, applicationType string, fields logrus.Fields) (*rfc.FeatureControl, []*rfc.FeatureRule)
+        + AddFeaturesToResult(featureMap <font color=blue>map</font>[string]*rfc.Feature, featureIds []string) 
+        + ProcessFeatureRules(context <font color=blue>map</font>[string]string, applicationType string) []*rfc.FeatureRule
+        + CalculateHash(features []rfc.FeatureResponse) string
+        + LogFeatureInfo(context <font color=blue>map</font>[string]string, appliedRules []*rfc.FeatureRule, features []rfc.FeatureResponse, isLiveCalculated bool, fields logrus.Fields) 
+        + NormalizeContext(context <font color=blue>map</font>[string]string) <font color=blue>map</font>[string]string
+
+    }
+}
+"__builtin__.string" #.. "estbfirmware.DefaultValue"
+
+
+
+@enduml
