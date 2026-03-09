@@ -313,8 +313,11 @@ func (c *CassandraClient) GetSecurityTokenFields(estbMac string) (*SecurityToken
 	if v, ok := dict[FwAdditionalVersionInfoColumnValue].(string); ok {
 		securityTokenDeviceInfo.FwAdditionalVersionInfo = v
 	}
-	if v, ok := dict[FwTsColumnValue].(int64); ok {
-		securityTokenDeviceInfo.FwTs = v
+	if v, ok := dict[FwTsColumnValue].(time.Time); ok {
+		securityTokenDeviceInfo.FwTs = v.Unix()
+	} else if itfvalue, ok := dict[FwTsColumnValue].(int64); ok {
+		// fallback for existing int64 values
+		securityTokenDeviceInfo.FwTs = itfvalue
 	}
 
 	return securityTokenDeviceInfo, nil
