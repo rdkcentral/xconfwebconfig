@@ -51,3 +51,55 @@ func TestFreeArgs(t *testing.T) {
 		}
 	}
 }
+
+func TestFreeArg_SetType(t *testing.T) {
+	freeArg := NewFreeArg(StandardFreeArgTypeString, "testArg")
+	
+	freeArg.SetType(StandardFreeArgTypeLong)
+	
+	assert.Equal(t, StandardFreeArgTypeLong, freeArg.GetType(), "SetType should update the type")
+}
+
+func TestFreeArg_SetName(t *testing.T) {
+	freeArg := NewFreeArg(StandardFreeArgTypeString, "originalName")
+	
+	freeArg.SetName("newName")
+	
+	assert.Equal(t, "newName", freeArg.GetName(), "SetName should update the name")
+}
+
+func TestFreeArg_String(t *testing.T) {
+	testCases := []struct {
+		name     string
+		freeArg  *FreeArg
+		expected string
+	}{
+		{
+			name:     "STRING type",
+			freeArg:  NewFreeArg(StandardFreeArgTypeString, "model"),
+			expected: "'model'",
+		},
+		{
+			name:     "LONG type",
+			freeArg:  NewFreeArg(StandardFreeArgTypeLong, "version"),
+			expected: "'version(LONG)'",
+		},
+		{
+			name:     "VOID type",
+			freeArg:  NewFreeArg(StandardFreeArgTypeVoid, "void"),
+			expected: "'void(VOID)'",
+		},
+		{
+			name:     "TIME type",
+			freeArg:  NewFreeArg(AuxFreeArgTypeTime, "timeValue"),
+			expected: "'timeValue(TIME)'",
+		},
+	}
+	
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.freeArg.String()
+			assert.Equal(t, tc.expected, result, "String representation should match expected")
+		})
+	}
+}

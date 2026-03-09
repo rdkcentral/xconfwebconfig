@@ -40,6 +40,11 @@ var (
 	noServerErr    = fmt.Errorf("server is not init")
 )
 
+/*
+Code is:
+Copyright (c) 2023 The Gorilla Authors. All rights reserved.
+Licensed under the BSD-3 License
+*/
 func Walk(r *mux.Router) {
 	err := r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		pathTemplate, err := route.GetPathTemplate()
@@ -80,7 +85,7 @@ func TestMain(m *testing.M) {
 	}
 	fmt.Printf("testConfigFile=%v\n", testConfigFile)
 
-	os.Setenv("XPC_KEY", "/d6BEl0H34rVtiMwGvughqQMHhSCIGsTuTncw8+q1bo=")
+	os.Setenv("XPC_KEY", "testXpcKey")
 	os.Setenv("SAT_CLIENT_ID", "foo")
 	os.Setenv("SAT_CLIENT_SECRET", "bar")
 	os.Setenv("AWS_ACCESS_KEY", "testAwsAccessKey")

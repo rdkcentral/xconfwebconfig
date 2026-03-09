@@ -147,3 +147,164 @@ func TestGetCurrentId(t *testing.T) {
 	assert.Equal(t, id, "")
 	assert.Equal(t, err != nil, true)
 }
+
+func TestRuleInfo_Creation(t *testing.T) {
+	ruleInfo := &RuleInfo{
+		ID:       "rule-123",
+		Type:     "IP_RULE",
+		Name:     "Test Rule",
+		NoOp:     false,
+		Blocking: true,
+	}
+	
+	assert.Equal(t, "rule-123", ruleInfo.ID)
+	assert.Equal(t, "IP_RULE", ruleInfo.Type)
+	assert.Equal(t, "Test Rule", ruleInfo.Name)
+	assert.Assert(t, !ruleInfo.NoOp)
+	assert.Assert(t, ruleInfo.Blocking)
+}
+
+func TestRuleInfo_Empty(t *testing.T) {
+	ruleInfo := &RuleInfo{}
+	
+	assert.Equal(t, "", ruleInfo.ID)
+	assert.Equal(t, "", ruleInfo.Type)
+	assert.Equal(t, "", ruleInfo.Name)
+	assert.Assert(t, !ruleInfo.NoOp)
+	assert.Assert(t, !ruleInfo.Blocking)
+}
+
+func TestConfigChangeLog_Creation(t *testing.T) {
+	contextMap := map[string]string{
+		"eStbMac": "AA:BB:CC:DD:EE:FF",
+		"model":   "MODEL-X",
+	}
+	convertedContext := GetContextConverted(contextMap)
+	
+	ruleInfo := &RuleInfo{
+		ID:   "rule-1",
+		Name: "Test Rule",
+		Type: "MAC_RULE",
+	}
+	
+	filters := []*RuleInfo{
+		{ID: "filter-1", Name: "Filter 1"},
+		{ID: "filter-2", Name: "Filter 2"},
+	}
+	
+	log := &ConfigChangeLog{
+		ID:           "log-123",
+		Updated:      123456789,
+		Input:        convertedContext,
+		Rule:         ruleInfo,
+		Filters:      filters,
+		Explanation:  "Test explanation",
+		HasMinimumFirmware: true,
+	}
+	
+	assert.Equal(t, "log-123", log.ID)
+	assert.Equal(t, int64(123456789), log.Updated)
+	assert.Assert(t, log.Input != nil)
+	assert.Assert(t, log.Rule != nil)
+	assert.Equal(t, 2, len(log.Filters))
+	assert.Equal(t, "Test explanation", log.Explanation)
+	assert.Assert(t, log.HasMinimumFirmware)
+}
+
+func TestConfigChangeLog_WithFirmwareConfig(t *testing.T) {
+	facade := &FirmwareConfigFacade{
+		Properties: map[string]interface{}{
+			"firmwareVersion": "1.0.0",
+		},
+	}
+	
+	log := &ConfigChangeLog{
+		ID:             "log-456",
+		FirmwareConfig: facade,
+	}
+	
+	assert.Assert(t, log.FirmwareConfig != nil)
+	assert.Equal(t, 1, len(log.FirmwareConfig.Properties))
+}
+
+func TestNewRuleInfo_WithBlockingFilter(t *testing.T) {
+	applicableAction := &firmware.ApplicableAction{
+		ActionType: firmware.BLOCKING_FILTER,
+	}
+	firmwareRule := &firmware.FirmwareRule{
+		ID:               "blocking-rule",
+		Type:             "IP_RULE",
+		Name:             "Blocking Rule",
+		ApplicableAction: applicableAction,
+	}
+	
+	ruleInfo := NewRuleInfo(firmwareRule)
+	
+	assert.Equal(t, "blocking-rule", ruleInfo.ID)
+	assert.Equal(t, "IP_RULE", ruleInfo.Type)
+	assert.Equal(t, "Blocking Rule", ruleInfo.Name)
+	assert.Assert(t, ruleInfo.Blocking)
+}
+
+func TestNewRuleInfo_WithoutBlockingFilter(t *testing.T) {
+	applicableAction := &firmware.ApplicableAction{
+		ActionType: "RULE",
+	}
+	firmwareRule := &firmware.FirmwareRule{
+		ID:               "non-blocking-rule",
+		Type:             "MAC_RULE",
+		Name:             "Non-Blocking Rule",
+		ApplicableAction: applicableAction,
+	}
+	
+	ruleInfo := NewRuleInfo(firmwareRule)
+	
+	assert.Equal(t, "non-blocking-rule", ruleInfo.ID)
+	assert.Equal(t, "MAC_RULE", ruleInfo.Type)
+	assert.Equal(t, "Non-Blocking Rule", ruleInfo.Name)
+	assert.Assert(t, !ruleInfo.Blocking)
+}
+
+func TestNewRuleInfo_PercentageBean(t *testing.T) {
+	bean := &PercentageBean{
+		ID:   "bean-123",
+		Name: "Test Percentage Bean",
+	}
+	
+	ruleInfo := NewRuleInfo(bean)
+	
+	assert.Equal(t, "", ruleInfo.ID)
+	assert.Equal(t, "PercentageBean", ruleInfo.Type)
+	assert.Equal(t, "Test Percentage Bean", ruleInfo.Name)
+	assert.Assert(t, !ruleInfo.NoOp)
+	assert.Assert(t, !ruleInfo.Blocking)
+}
+
+func TestNewRuleInfo_SingletonFilterValue(t *testing.T) {
+	sfv := &SingletonFilterValue{
+		ID: "PERCENT_FILTER_VALUE",
+	}
+	
+	ruleInfo := NewRuleInfo(sfv)
+	
+	assert.Equal(t, "SINGLETON_PERCENT_FILTER", ruleInfo.ID)
+	assert.Equal(t, "SingletonFilter", ruleInfo.Type)
+	assert.Equal(t, "PERCENT_FILTER_VALUE", ruleInfo.Name)
+	assert.Assert(t, ruleInfo.NoOp)
+	assert.Assert(t, !ruleInfo.Blocking)
+}
+
+func TestNewRuleInfo_RuleAction(t *testing.T) {
+	ruleAction := &firmware.RuleAction{
+		ConfigId: "config-123",
+	}
+	
+	ruleInfo := NewRuleInfo(ruleAction)
+	
+	assert.Equal(t, "DistributionPercentInRuleAction", ruleInfo.ID)
+	assert.Equal(t, "DistributionPercentInRuleAction", ruleInfo.Type)
+	assert.Equal(t, "DistributionPercentInRuleAction", ruleInfo.Name)
+	assert.Assert(t, !ruleInfo.NoOp)
+	assert.Assert(t, !ruleInfo.Blocking)
+}
+
