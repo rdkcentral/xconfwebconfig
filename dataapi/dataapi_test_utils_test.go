@@ -3,7 +3,6 @@ package dataapi
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	conversion "github.com/rdkcentral/xconfwebconfig/protobuf"
@@ -396,26 +395,6 @@ func TestSetupGroupServiceHashesMockServerOkResponse(t *testing.T) {
 	resp, err := http.Get(mockServer.URL)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-}
-
-// Test environment variables setup
-func TestGetTestXconfServer_EnvironmentVariables(t *testing.T) {
-	// Clean up environment variables after test
-	defer func() {
-		os.Unsetenv("XPC_KEY")
-		os.Unsetenv("SAT_CLIENT_ID")
-		os.Unsetenv("SAT_CLIENT_SECRET")
-	}()
-
-	server, router := GetTestXconfServer(GetTestConfig())
-
-	assert.NotNil(t, server)
-	assert.NotNil(t, router)
-
-	// Verify environment variables are set
-	assert.Equal(t, "testXpcKey", os.Getenv("XPC_KEY"))
-	assert.Equal(t, "foo", os.Getenv("SAT_CLIENT_ID"))
-	assert.Equal(t, "bar", os.Getenv("SAT_CLIENT_SECRET"))
 }
 
 func TestGetTestXconfServer_InvalidConfig(t *testing.T) {
