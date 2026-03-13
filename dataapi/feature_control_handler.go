@@ -247,6 +247,8 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			featureControl.FeatureResponses = append(featureControl.FeatureResponses, extraFeatureResponses...)
 			if bbytes, err := json.Marshal(extraFeatureResponses); err == nil {
 				rfcPostProc = string(bbytes)
+			} else {
+				log.WithFields(common.FilterLogFields(fields)).Errorf("GetFeatureControlSettingsHandler failed to marshal post-processing response: %v", err)
 			}
 		}
 	}
@@ -292,7 +294,10 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	featureControlMap := &map[string]rfc.FeatureControl{
 		"featureControl": *featureControl,
 	}
-	response, _ := util.XConfJSONMarshal(featureControlMap, true)
+	response, err := util.XConfJSONMarshal(featureControlMap, true)
+	if err != nil {
+		log.WithFields(common.FilterLogFields(fields)).Errorf("GetFeatureControlSettingsHandler failed to marshal feature control response: %v", err)
+	}
 	xhttp.WriteXconfResponseWithHeaders(w, headers, http.StatusOK, []byte(response))
 }
 
