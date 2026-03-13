@@ -33,6 +33,7 @@ import (
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rdkcentral/xconfwebconfig/shared"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -107,6 +108,11 @@ func main() {
 
 	// setup xconf APIs and tables
 	dataapi.XconfSetup(server, router)
+
+	// Bootstrap static application types
+	if err := shared.InitializeStaticApplicationTypes(); err != nil {
+		log.Warnf("Failed to initialize static application types: %v", err)
+	}
 
 	router.HandleFunc("/debug/pprof/", pprof.Index)
 	router.HandleFunc("/debug/pprof/profile", pprof.Profile)

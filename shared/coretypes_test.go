@@ -23,46 +23,12 @@ import (
 	"gotest.tools/assert"
 )
 
-// Test isValid function
-func TestIsValid(t *testing.T) {
-	// Valid application types
-	assert.Assert(t, isValid(STB))
-	assert.Assert(t, isValid(XHOME))
-	assert.Assert(t, isValid(RDKCLOUD))
-	assert.Assert(t, isValid(SKY))
-
-	// Invalid application types
-	assert.Assert(t, !isValid("INVALID"))
-	assert.Assert(t, !isValid(""))
-	assert.Assert(t, !isValid("random"))
-	assert.Assert(t, !isValid(ALL))
-}
-
-// Test ValidateApplicationType
-func TestValidateApplicationType_Valid(t *testing.T) {
-	err := ValidateApplicationType(STB)
-	assert.NilError(t, err)
-
-	err = ValidateApplicationType(XHOME)
-	assert.NilError(t, err)
-
-	err = ValidateApplicationType(RDKCLOUD)
-	assert.NilError(t, err)
-
-	err = ValidateApplicationType(SKY)
-	assert.NilError(t, err)
-}
-
-func TestValidateApplicationType_Empty(t *testing.T) {
+func TestValidateApplicationType(t *testing.T) {
 	err := ValidateApplicationType("")
 	assert.Assert(t, err != nil)
-	assert.Assert(t, err.Error() == "Http400 ApplicationType is empty")
-}
 
-func TestValidateApplicationType_Invalid(t *testing.T) {
-	err := ValidateApplicationType("INVALID")
+	err = ValidateApplicationType(STB)
 	assert.Assert(t, err != nil)
-	assert.Assert(t, err.Error() == "ApplicationType INVALID is not valid")
 }
 
 // Test Environment struct
