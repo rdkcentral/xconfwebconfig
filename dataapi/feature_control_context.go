@@ -426,6 +426,8 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 			}
 			if accountServiceObject.IsEmpty() {
 				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
+			} else {
+				xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			}
 
 			if err != nil {
@@ -440,7 +442,6 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				if util.IsUnknownValue(contextMap[common.ACCOUNT_HASH]) && accountServiceObject.DeviceData.ServiceAccountUri != "" {
 					contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountServiceObject.DeviceData.ServiceAccountUri)
 				}
-				xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			}
 
 			if Xc.RfcReturnCountryCode {
