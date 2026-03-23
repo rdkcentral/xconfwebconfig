@@ -446,11 +446,7 @@ func (s *XconfServer) LogRequestEnds(xw *XResponseWriter, r *http.Request) {
 
 	tfields := common.FilterLogFields(fields)
 
-	if statusCode >= http.StatusInternalServerError {
-		log.WithFields(tfields).Error("request ends")
-	} else {
-		log.WithFields(tfields).Info("request ends")
-	}
+	log.WithFields(tfields).Info("request ends")
 
 	if s.metricsEnabled && s.AppMetrics != nil {
 		s.AppMetrics.UpdateAPIMetrics(r, xw.Status(), xw.StartTime())
