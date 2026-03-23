@@ -129,9 +129,6 @@ func Error(w http.ResponseWriter, status int, err error) {
 		addMoracideTagsAsResponseHeaders(w)
 		w.WriteHeader(status)
 	default:
-		if status >= http.StatusInternalServerError {
-			LogError(w, err)
-		}
 		WriteErrorResponse(w, status, err)
 	}
 }
