@@ -20,8 +20,11 @@ package http
 import (
 	"io/ioutil"
 	"net/http"
-        "net/http/httptest"
-        "strings"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"gotest.tools/assert"
 )
 
 func TestSimpleHandler(t *testing.T) {

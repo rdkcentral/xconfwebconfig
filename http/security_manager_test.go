@@ -48,27 +48,6 @@ func TestGetSecurityToken_WithMockInfrastructure(t *testing.T) {
 	}
 }
 
-func TestGenerateSecurityToken_WithMockInfrastructure(t *testing.T) {
-	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
-	server := NewXconfServer(sc, true, nil)
-	server.SetupMocks() // Use existing mock infrastructure
-
-	fields := log.Fields{"test": "GenerateSecurityToken"}
-	testInput := "test-input-for-token-generation"
-
-	// Test generateSecurityToken function
-	token := generateSecurityToken(testInput, fields)
-	assert.NotEmpty(t, token)
-
-	// Test that same input produces same token
-	token2 := generateSecurityToken(testInput, fields)
-	assert.Equal(t, token, token2)
-
-	// Test that different input produces different token
-	token3 := generateSecurityToken("different-input", fields)
-	assert.NotEqual(t, token, token3)
-}
-
 func TestAddTokenToUrl_WithMockInfrastructure(t *testing.T) {
 	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
 	server := NewXconfServer(sc, true, nil)

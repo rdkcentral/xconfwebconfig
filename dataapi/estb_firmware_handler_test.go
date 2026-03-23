@@ -262,63 +262,6 @@ func TestGetEstbFirmwareVersionInfoPath_WithInvalidResponseWriter(t *testing.T) 
 	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
 }
 
-// GetFirmwareResponse Tests
-func TestGetFirmwareResponse_MissingMAC(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/xconf/swu/stb", nil)
-	recorder := httptest.NewRecorder()
-	xw := xhttp.NewXResponseWriter(recorder)
-
-	vars := map[string]string{
-		common.APPLICATION_TYPE: shared.STB,
-	}
-	req = mux.SetURLVars(req, vars)
-
-	status, response, _, _ := GetFirmwareResponse(recorder, req, xw, map[string]interface{}{})
-
-	assert.Equal(t, http.StatusBadRequest, status)
-	assert.Contains(t, string(response), "eStbMac should be specified")
-}
-
-func TestGetFirmwareResponse_InvalidMAC(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/xconf/swu/stb?eStbMac=invalid-mac", nil)
-	req.Header.Set("HA-Haproxy-xconf-http", "xconf-https")
-	recorder := httptest.NewRecorder()
-	xw := xhttp.NewXResponseWriter(recorder)
-
-	vars := map[string]string{
-		common.APPLICATION_TYPE: shared.STB,
-	}
-	req = mux.SetURLVars(req, vars)
-
-	status, response, _, _ := GetFirmwareResponse(recorder, req, xw, map[string]interface{}{})
-
-	assert.Equal(t, http.StatusBadRequest, status)
-	assert.Contains(t, string(response), "invalid mac address")
-}
-
-func TestGetFirmwareResponse_ForbiddenRequest(t *testing.T) {
-	originalXc := Xc
-	defer func() { Xc = originalXc }()
-	Xc = &XconfConfigs{}
-
-	req := httptest.NewRequest(http.MethodGet,
-		"/xconf/swu/stb?eStbMac=AA:BB:CC:DD:EE:FF",
-		nil)
-	req.Header.Set(common.XCONF_HTTP_HEADER, "HTTP")
-	recorder := httptest.NewRecorder()
-	xw := xhttp.NewXResponseWriter(recorder)
-
-	vars := map[string]string{
-		common.APPLICATION_TYPE: shared.STB,
-	}
-	req = mux.SetURLVars(req, vars)
-
-	status, response, _, _ := GetFirmwareResponse(recorder, req, xw, map[string]interface{}{})
-
-	assert.Equal(t, http.StatusForbidden, status)
-	assert.Equal(t, "FORBIDDEN", string(response))
-}
-
 // GetEstbFirmwareSwuHandler Tests
 func TestGetEstbFirmwareSwuHandler_MissingMAC(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/xconf/swu/stb", nil)

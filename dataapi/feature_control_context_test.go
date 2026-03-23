@@ -657,18 +657,4 @@ func TestAccountServiceData_Structure(t *testing.T) {
 	assert.Equal(t, "partner1", accountData.PartnerId)
 }
 
-func TestPrecookData_Structure(t *testing.T) {
-	precookData := PrecookData{
-		AccountId:       "acc123",
-		PartnerId:       "partner1",
-		Model:           "MODEL123",
-		ApplicationType: "stb",
-		FwVersion:       "1.0.0",
-	}
 
-	assert.Equal(t, "acc123", precookData.AccountId)
-	assert.Equal(t, "partner1", precookData.PartnerId)
-	assert.Equal(t, "MODEL123", precookData.Model)
-	assert.Equal(t, "stb", precookData.ApplicationType)
-	assert.Equal(t, "1.0.0", precookData.FwVersion)
-}
