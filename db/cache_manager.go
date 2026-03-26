@@ -19,6 +19,7 @@ package db
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -34,6 +35,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	DEFAULT_TENANT_ID   = "COMCAST"
+	CACHE_KEY_DELIMITER = "::"
+)
+
 var (
 	Conf          *configuration.Config
 	syncCacheLock sync.Mutex
@@ -46,7 +52,7 @@ func ConfigInjection(conf *configuration.Config) {
 
 // CacheChangeNotifier is an interface for notifications on cache changed events
 type CacheChangeNotifier interface {
-	Notify(tableName string, changedKey string, operation OperationType)
+	Notify(tenantId string, tableName string, changedKey string, operation OperationType)
 }
 
 // CacheRefreshTask background task to refresh cache
@@ -66,7 +72,7 @@ func (t *CacheRefreshTask) doSyncChanges() {
 		log.Debug("attempting full cache refresh")
 		// load all data
 		t.lastRefreshedTimestamp = now
-		failedTables := GetCacheManager().RefreshAll()
+		failedTables := GetCacheManager().RefreshAll(DEFAULT_TENANT_ID)
 		if len(failedTables) == 0 {
 			t.refreshAttemptsLeft++
 		} else {
@@ -101,7 +107,7 @@ func (t *CacheRefreshTask) Run() {
 					log.Debug("attempting full cache refresh")
 					// load all data
 					t.lastRefreshedTimestamp = now
-					failedTables := GetCacheManager().RefreshAll()
+					failedTables := GetCacheManager().RefreshAll(DEFAULT_TENANT_ID)
 					if len(failedTables) == 0 {
 						t.refreshAttemptsLeft++
 					} else {
@@ -177,38 +183,50 @@ type CacheStats struct {
 	TotalLoadTime  time.Duration `json:"totalLoadTime"`
 }
 
-// Statistics cache statistics
+// Statistics cache statistics of all tables for a tenant
 type Statistics struct {
-	CacheMap map[string]CacheStats `json:"Statistics"`
+	TableStats map[string]CacheStats `json:"Statistics"`
 }
 
 type CacheInfo struct {
-	cache cache.LoadingCache
-	Stats *CacheStats
+	cache          cache.LoadingCache
+	tenantId       string
+	DaoRefreshTime time.Time
 }
+
+// Cache of all tables for a tenant. Key is table name, value is CacheInfo
+type TableCacheInfo map[string]CacheInfo
 
 // CacheManager a cache manager
 type CacheManager struct {
-	settings                 CacheSettings
-	cacheChangeNotifier      atomic.Value
-	cacheMap                 map[string]CacheInfo
-	refreshCacheTask         CacheRefreshTask
-	applicationCacheEnabled  bool
-	applicationCache         cache.Cache
-	groupServiceFeatureCache cache.Cache
+	settings                  CacheSettings
+	cacheChangeNotifier       atomic.Value
+	refreshCacheTask          CacheRefreshTask
+	applicationCacheEnabled   bool
+	tableCaches               map[string]TableCacheInfo // key is tenantId, e.g. "COMCAST"
+	applicationCaches         map[string]cache.Cache    // key is tenantId
+	groupServiceFeatureCaches map[string]cache.Cache    // key is tenantId
 }
 
 // CacheManager a cache manager
 var cacheManager CacheManager
 var initOnce sync.Once
 var refreshCacheMutex sync.Mutex
-var grpCacheLoadfunc func(k cache.Key) (cache.Value, error)
+var grpCacheLoadFunc cache.LoaderFunc
+var tenants []string = []string{DEFAULT_TENANT_ID}
+
+// GetTenants returns list of tenants. TODO: Extend to support multiple tenants in the future
+func GetTenants() []string {
+	return tenants
+}
 
 // GetCacheManager Initializes a CacheManager
 func GetCacheManager() *CacheManager {
 	initOnce.Do(func() {
 		cacheManager = CacheManager{}
-		cacheManager.cacheMap = make(map[string]CacheInfo)
+		cacheManager.tableCaches = make(map[string]TableCacheInfo)
+		cacheManager.applicationCaches = make(map[string]cache.Cache)
+		cacheManager.groupServiceFeatureCaches = make(map[string]cache.Cache)
 
 		if Conf == nil {
 			// Handle ServerConfig not initialized yet
@@ -238,40 +256,52 @@ func GetCacheManager() *CacheManager {
 			cacheManager.settings.groupServiceExpireAfterAccess = Conf.GetInt64(fmt.Sprintf("xconfwebconfig.%v.cache_expire_after_access_in_mins", Conf.GetString("xconfwebconfig.xconf.group_service_name")))
 			cacheManager.settings.groupServiceRefreshAfterWrite = Conf.GetInt64(fmt.Sprintf("xconfwebconfig.%v.cache_refresh_after_write_in_mins", Conf.GetString("xconfwebconfig.xconf.group_service_name")))
 		}
+		cacheManager.applicationCacheEnabled = cacheManager.settings.applicationCacheEnabled
 
-		// Initialize the cache
-		for tableName, tableInfo := range tableConfig {
-			if !tableInfo.CacheData {
-				continue // No caching for this table
+		tenants := GetTenants()
+		for _, tenantId := range tenants {
+			// Initialize cache for each table for the tenant
+			tableCaches := make(TableCacheInfo)
+			cacheManager.tableCaches[tenantId] = tableCaches
+
+			for tableName, tableInfo := range tableConfig {
+				if !tableInfo.CacheData {
+					continue // No caching for this table
+				}
+
+				// Generate a load function for the table
+				loadFn := generateLoadFunction(tenantId, tableName)
+
+				// Create a LoadingCache for each table
+				var loadingCache cache.LoadingCache
+				if cacheManager.settings.reloadCacheEntries {
+					freshAfterWrite := getDuration(
+						cacheManager.settings.reloadCacheEntriesTimeout, cacheManager.settings.reloadCacheEntriesTimeUnit)
+					loadingCache = cache.NewLoadingCache(
+						loadFn,
+						cache.WithMaximumSize(0), // Unlimited number of entries in the cache.
+						cache.WithRefreshAfterWrite(freshAfterWrite), // Expire entries after specified duration since last created.
+					)
+				} else {
+					loadingCache = cache.NewLoadingCache(
+						loadFn,
+						cache.WithMaximumSize(0), // Unlimited number of entries in the cache.
+					)
+				}
+				tableCaches[tableName] = CacheInfo{tenantId: tenantId, cache: loadingCache}
 			}
 
-			// Generate a load function for the table
-			loadFn := generateLoadFunction(tableName)
+			// Initialize application cache for each tenant
+			cacheManager.applicationCaches[tenantId] = cache.New(cache.WithMaximumSize(0))
 
-			// Create a LoadingCache for each table
-			var loadingCache cache.LoadingCache
-			if cacheManager.settings.reloadCacheEntries {
-				freshAfterWrite := getDuration(
-					cacheManager.settings.reloadCacheEntriesTimeout, cacheManager.settings.reloadCacheEntriesTimeUnit)
-				loadingCache = cache.NewLoadingCache(loadFn,
-					cache.WithMaximumSize(0),                     // Unlimited number of entries in the cache.
-					cache.WithRefreshAfterWrite(freshAfterWrite), // Expire entries after specified duration since last created.
-				)
-			} else {
-				loadingCache = cache.NewLoadingCache(loadFn,
-					cache.WithMaximumSize(0), // Unlimited number of entries in the cache.
-				)
-			}
-			cacheManager.cacheMap[tableName] = CacheInfo{cache: loadingCache, Stats: &CacheStats{}}
+			// Initialize group service feature tags cache for each tenant
+			cacheManager.groupServiceFeatureCaches[tenantId] = cache.NewLoadingCache(
+				GetGrpCacheLoadFunc(),
+				cache.WithMaximumSize(100),
+				cache.WithExpireAfterAccess(time.Duration(cacheManager.settings.groupServiceExpireAfterAccess)*time.Minute),
+				cache.WithRefreshAfterWrite(time.Duration(cacheManager.settings.groupServiceRefreshAfterWrite)*time.Minute),
+			)
 		}
-
-		// Initialize group service feature tags cache
-		cacheManager.groupServiceFeatureCache = cache.NewLoadingCache(
-			cache.LoaderFunc(GetGrpCacheLoadFunc()),
-			cache.WithMaximumSize(100),
-			cache.WithExpireAfterAccess(time.Duration(cacheManager.settings.groupServiceExpireAfterAccess)*time.Minute),
-			cache.WithRefreshAfterWrite(time.Duration(cacheManager.settings.groupServiceRefreshAfterWrite)*time.Minute),
-		)
 
 		cc, ok := GetDatabaseClient().(*CassandraClient)
 		if ok && !cc.IsTestOnly() {
@@ -287,10 +317,6 @@ func GetCacheManager() *CacheManager {
 			}
 			cacheManager.refreshCacheTask.Run()
 		}
-
-		// Initialize application cache
-		cacheManager.applicationCache = cache.New(cache.WithMaximumSize(0))
-		cacheManager.applicationCacheEnabled = cacheManager.settings.applicationCacheEnabled
 	})
 
 	return &cacheManager
@@ -304,78 +330,81 @@ func (cm *CacheManager) SetCacheChangeNotifier(notifier CacheChangeNotifier) {
 	cm.cacheChangeNotifier.Store(notifier)
 }
 
-func (cm CacheManager) GetCacheStats(tableName string) (*CacheStats, error) {
-	if err := cacheManager.updateCacheStats(tableName); err != nil {
+// GetCacheStats returns cache statistics for the specified tenant and table
+func (cm CacheManager) GetCacheStats(tenantId string, tableName string) (*CacheStats, error) {
+	cacheInfo, err := cm.getCacheInfo(tenantId, tableName)
+	if err != nil {
 		return nil, err
 	}
-	return cm.cacheMap[tableName].Stats, nil
+
+	return cacheInfo.getStats(), nil
 }
 
-func (cm CacheManager) updateCacheStats(tableName string) error {
-	cacheInfo := cm.cacheMap[tableName]
-	if cacheInfo.cache == nil {
-		return fmt.Errorf("cache not found or configured for table '%v'", tableName)
-	}
-
+func (cacheInfo *CacheInfo) getStats() *CacheStats {
 	// Get current cache stats
 	stats := cache.Stats{}
 	cacheInfo.cache.Stats(&stats)
 
-	cacheInfo.Stats.CacheSize = cacheInfo.cache.Size()
-	cacheInfo.Stats.RequestCount = stats.RequestCount()
-	cacheInfo.Stats.EvictionCount = stats.EvictionCount
-	cacheInfo.Stats.HitRate = stats.HitRate()
-	cacheInfo.Stats.MissRate = stats.MissRate()
-	cacheInfo.Stats.TotalLoadTime = stats.TotalLoadTime
-
-	nonAbsentCount := 0
-	values := cacheInfo.cache.GetAllValues()
-	for _, v := range values {
-		if v != nil {
-			nonAbsentCount++
-		}
+	cacheStats := CacheStats{
+		DaoRefreshTime: cacheInfo.DaoRefreshTime,
+		CacheSize:      cacheInfo.cache.Size(),
+		RequestCount:   stats.RequestCount(),
+		EvictionCount:  stats.EvictionCount,
+		HitRate:        stats.HitRate(),
+		MissRate:       stats.MissRate(),
+		TotalLoadTime:  stats.TotalLoadTime,
 	}
-	cacheInfo.Stats.NonAbsentCount = nonAbsentCount
 
-	return nil
+	// NonAbsentCount is effectively CacheSize as the cache does not store nil values.
+	// Avoiding GetAllValues() which is O(N) and expensive.
+	cacheStats.NonAbsentCount = cacheStats.CacheSize
+
+	return &cacheStats
 }
 
-// GetStatistics returns cache statistics
-func (cm CacheManager) GetStatistics() *Statistics {
-	statistics := Statistics{CacheMap: make(map[string]CacheStats)}
+// GetStatistics returns cache statistics of all tables for the specified tenant
+func (cm CacheManager) GetStatistics(tenantId string) *Statistics {
+	statistics := Statistics{TableStats: make(map[string]CacheStats)}
 
-	for tableName, cacheInfo := range cm.cacheMap {
+	tableCaches, ok := cm.tableCaches[tenantId]
+	if !ok {
+		log.WithFields(log.Fields{"tenantId": tenantId}).Warnf("GetStatistics called for an unknown tenant")
+		return &statistics
+	}
+
+	for tableName, cacheInfo := range tableCaches {
 		// Get current cache stats
-		stats := cache.Stats{}
-		cacheInfo.cache.Stats(&stats)
-
-		cacheInfo.Stats.CacheSize = cacheInfo.cache.Size()
-		cacheInfo.Stats.RequestCount = stats.RequestCount()
-		cacheInfo.Stats.EvictionCount = stats.EvictionCount
-		cacheInfo.Stats.HitRate = stats.HitRate()
-		cacheInfo.Stats.MissRate = stats.MissRate()
-		cacheInfo.Stats.TotalLoadTime = stats.TotalLoadTime
-
-		statistics.CacheMap[tableName] = *cacheInfo.Stats
+		cacheStats := cacheInfo.getStats()
+		statistics.TableStats[tableName] = *cacheStats
 	}
 
 	return &statistics
 }
 
-// getCacheInfo returns CacheInfo for the specified table
-func (cm CacheManager) getCacheInfo(tableName string) (*CacheInfo, error) {
-	cacheInfo := cm.cacheMap[tableName]
+// getCacheInfo returns CacheInfo for the specified tenant and table
+func (cm CacheManager) getCacheInfo(tenantId string, tableName string) (*CacheInfo, error) {
+	tableCaches, ok := cm.tableCaches[tenantId]
+	if !ok {
+		err := fmt.Errorf("cache not found or configured for tenant %s", tenantId)
+		return nil, err
+	}
+
+	cacheInfo := tableCaches[tableName]
 	if cacheInfo.cache == nil {
-		err := fmt.Errorf("cache not found or configured for table '%v'", tableName)
+		err := fmt.Errorf("cache not found or configured for tenant %s table %s", tenantId, tableName)
 		return nil, err
 	}
 	return &cacheInfo, nil
 }
 
-// getCache returns a LoadingCache for the specified table
-func (cm CacheManager) getCache(tableName string) (cache.LoadingCache, error) {
-	cacheInfo, err := cm.getCacheInfo(tableName)
+// getCache returns a LoadingCache for the specified tenant and table
+func (cm CacheManager) getCache(tenantId string, tableName string) (cache.LoadingCache, error) {
+	cacheInfo, err := cm.getCacheInfo(tenantId, tableName)
 	if err != nil {
+		return nil, err
+	}
+	if cacheInfo.tenantId != tenantId {
+		err := fmt.Errorf("cache tenantId mismatch for tenant %s table %s: actual tenantId is %s", tenantId, tableName, cacheInfo.tenantId)
 		return nil, err
 	}
 	return cacheInfo.cache, nil
@@ -387,8 +416,6 @@ func (cm CacheManager) ForceSyncChanges() {
 
 // Preloading caches
 func (cm CacheManager) initiatePrecaching() {
-	log.Debug("initializing cache...")
-
 	// Just a debugging convenience, load the tables in the same order every time
 	tableList := make([]string, 0, len(tableConfig))
 	for tableName := range tableConfig {
@@ -400,46 +427,51 @@ func (cm CacheManager) initiatePrecaching() {
 
 	precachingStart := time.Now()
 
-	for _, tableName := range tableList {
-		wg.Add(1)
+	for _, tenantId := range tenants {
+		fields := log.Fields{"tenantId": tenantId}
+		log.WithFields(fields).Debug("initializing cache...")
 
-		go func(tableName string) {
-			defer wg.Done()
+		for _, tableName := range tableList {
+			wg.Add(1)
 
-			tableInfo := tableConfig[tableName]
-			if tableInfo.CacheData {
-				log.Debugf("precaching for '%v'...", tableName)
-			} else {
-				log.Debugf("skipped precaching for '%v'", tableName)
-				return
-			}
+			go func(tableName string) {
+				defer wg.Done()
 
-			start := time.Now()
-			var entries map[string]interface{}
-			var err error
-			if tableInfo.IsCompressAndSplit() {
-				entries, err = GetCompressingDataDao().GetAllAsMap(tableName, true)
-			} else {
-				entries, err = GetSimpleDao().GetAllAsMap(tableName, 0)
-			}
+				tableInfo := tableConfig[tableName]
+				if tableInfo.CacheData {
+					log.WithFields(fields).Debugf("precaching for table %s...", tableName)
+				} else {
+					log.WithFields(fields).Debugf("skipped precaching table %s", tableName)
+					return
+				}
 
-			if err != nil {
-				log.Fatalf("failed to preload cache for table '%v': %v", tableName, err)
-				panic(err)
-			}
+				start := time.Now()
+				var entries map[string]interface{}
+				var err error
+				if tableInfo.IsCompressAndSplit() {
+					entries, err = GetCompressingDataDao().GetAllAsMap(tenantId, tableName, true)
+				} else {
+					entries, err = GetSimpleDao().GetAllAsMap(tenantId, tableName, 0)
+				}
 
-			cache, err := cm.getCache(tableName)
-			if err != nil {
-				log.Fatalf("failed to preload cache for table '%v': %v", tableName, err)
-				panic(err)
-			}
+				if err != nil {
+					log.WithFields(fields).Fatalf("failed to preload cache for table %s: %v", tableName, err)
+					panic(err)
+				}
 
-			for k, v := range entries {
-				cache.Put(k, v)
-			}
+				cache, err := cm.getCache(tenantId, tableName)
+				if err != nil {
+					log.WithFields(fields).Fatalf("failed to preload cache for table %s: %v", tableName, err)
+					panic(err)
+				}
 
-			log.Debugf("'%v' precached %v entries in %v", tableName, len(entries), time.Since(start))
-		}(tableName)
+				for k, v := range entries {
+					cache.Put(k, v)
+				}
+
+				log.WithFields(fields).Debugf("table %s precached %v entries in %v", tableName, len(entries), time.Since(start))
+			}(tableName)
+		}
 	}
 
 	wg.Wait()
@@ -452,18 +484,18 @@ func (cm CacheManager) GetChangedKeysTimeWindowSize() int32 {
 }
 
 // RefreshAll Refresh all caches and return list of table names which were not refreshed
-func (cm CacheManager) RefreshAll() []string {
+func (cm CacheManager) RefreshAll(tenantId string) []string {
 	refreshCacheMutex.Lock()
 	defer refreshCacheMutex.Unlock()
 
-	log.Debug("starting cache refresh...")
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug("starting cache refresh...")
 
 	var failedToRefreshTables []string
 	for _, tableInfo := range tableConfig {
 		var err error
 		var start = time.Now()
 		if tableInfo.CacheData {
-			err = GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
+			err = GetCachedSimpleDao().RefreshAll(tenantId, tableInfo.TableName)
 		} else {
 			continue // Skip since data is not cache
 		}
@@ -471,10 +503,10 @@ func (cm CacheManager) RefreshAll() []string {
 		duration := time.Since(start)
 
 		if err == nil {
-			cache, _ := cm.getCache(tableInfo.TableName)
-			log.Debugf("cache refreshed: '%v' precached %v entries in %v", tableInfo.TableName, cache.Size(), duration)
+			cache, _ := cm.getCache(tenantId, tableInfo.TableName)
+			log.WithFields(log.Fields{"tenantId": tenantId}).Debugf("cache refreshed for table %s: precached %v entries in %v", tableInfo.TableName, cache.Size(), duration)
 		} else {
-			log.Errorf("failed to refresh cache for table '%v': %v", tableInfo.TableName, err)
+			log.WithFields(log.Fields{"tenantId": tenantId}).Errorf("failed to refresh cache for table %s: %v", tableInfo.TableName, err)
 			failedToRefreshTables = append(failedToRefreshTables, tableInfo.TableName)
 		}
 	}
@@ -483,54 +515,54 @@ func (cm CacheManager) RefreshAll() []string {
 }
 
 // Refresh Refresh cache for the specified table
-func (cm CacheManager) Refresh(tableName string) error {
+func (cm CacheManager) Refresh(tenantId string, tableName string) error {
 	refreshCacheMutex.Lock()
 	defer refreshCacheMutex.Unlock()
 
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
-		log.Errorf("failed to refresh cache for table '%v': %v", tableName, err)
+		log.WithFields(log.Fields{"tenantId": tenantId}).Errorf("failed to refresh cache table %s: %v", tableName, err)
 		return err
 	}
 
 	if tableInfo.CacheData {
-		err = GetCachedSimpleDao().RefreshAll(tableInfo.TableName)
+		err = GetCachedSimpleDao().RefreshAll(tenantId, tableInfo.TableName)
 		if err != nil {
-			log.Errorf("failed to refresh cache for table '%v': %v", tableInfo.TableName, err)
+			log.WithFields(log.Fields{"tenantId": tenantId}).Errorf("failed to refresh cache for table %s: %v", tableInfo.TableName, err)
 			return err
 		}
 	} else {
-		log.Debugf("unable to refresh cache for table '%v', data is not cached", tableInfo.TableName)
+		log.WithFields(log.Fields{"tenantId": tenantId}).Debugf("unable to refresh cache table %s, data is not cached", tableInfo.TableName)
 	}
 
 	return nil
 }
 
 // Invalidate Evict an entry from cache
-func (cm CacheManager) Invalidate(tableName string, key string) error {
-	cache, err := cm.getCache(tableName)
+func (cm CacheManager) Invalidate(tenantId string, tableName string, key string) error {
+	cache, err := cm.getCache(tenantId, tableName)
 	if err != nil {
 		return err
 	}
 	if util.IsBlank(key) {
-		return fmt.Errorf("failed to invalidate cache for table '%s': key is blank", tableName)
+		return fmt.Errorf("failed to invalidate cache for tenant %s table %s: key is blank", tenantId, tableName)
 	}
 
 	cache.Invalidate(key)
-	cm.ApplicationCacheDeleteAll(tableName) // Invalidate application cache entries for this table
+	cm.ApplicationCacheDeleteAll(tenantId, tableName) // Invalidate application cache entries for this table
 
 	return nil
 }
 
 // InvalidateAll Evict all entries from cache
-func (cm CacheManager) InvalidateAll(tableName string) error {
-	cache, err := cm.getCache(tableName)
+func (cm CacheManager) InvalidateAll(tenantId string, tableName string) error {
+	cache, err := cm.getCache(tenantId, tableName)
 	if err != nil {
 		return err
 	}
 
 	cache.InvalidateAll()
-	cm.ApplicationCacheDeleteAll(tableName) // Invalidate application cache entries for this table
+	cm.ApplicationCacheDeleteAll(tenantId, tableName) // Invalidate application cache entries for this table
 	return nil
 }
 
@@ -576,7 +608,8 @@ func (cm CacheManager) loadChanges(ranges map[int64]*RangeInfo) ([]interface{}, 
 	var result []interface{}
 
 	for rowKey, rangeInfo := range ranges {
-		list, err := GetListingDao().GetRange(TABLE_XCONF_CHANGED_KEYS, rowKey, rangeInfo)
+		// TODO check if GetRange support tenantId is empty for logs table
+		list, err := GetListingDao().GetRange("", TABLE_CHANGE_EVENTS, rowKey, rangeInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -588,16 +621,19 @@ func (cm CacheManager) loadChanges(ranges map[int64]*RangeInfo) ([]interface{}, 
 
 // Apply changed data to keep cache in sync
 func (cm CacheManager) applyChanges(changedDataList []interface{}) error {
-	changedTables := util.Set{}   // Keep track of tables which were changed
-	tablesToRefresh := util.Set{} // Keep track of tables which need to be refreshed
+	changedTables := map[string]util.Set{}   // Keep track of tables which were changed; tenantId -> Set of tableNames
+	tablesToRefresh := map[string]util.Set{} // Keep track of tables which need to be refreshed; tenantId -> Set of tableNames
 
 	// Ensure whatever's already in the list will get refresh
 	defer func() {
-		refreshTables(tablesToRefresh.ToSlice())
+		for tenantId, tables := range tablesToRefresh {
+			refreshTables(tenantId, tables.ToSlice())
+		}
 	}()
 
 	for _, obj := range changedDataList {
 		data := *obj.(*ChangedData)
+		fields := log.Fields{"tenantId": data.TenantId}
 
 		// Fixed issue w/ Xconf AS wrote changedKey field with double quotation marks ("")
 		l := len(data.ChangedKey)
@@ -605,35 +641,28 @@ func (cm CacheManager) applyChanges(changedDataList []interface{}) error {
 			data.ChangedKey = data.ChangedKey[1 : l-1]
 		}
 
-		if data.CfName == "" || data.ChangedKey == "" || data.Operation == "" || data.DaoId == 0 || data.ValidCacheSize == 0 {
-			log.Error("unable to load changed data")
+		if data.TenantId == "" || data.CfName == "" || data.ChangedKey == "" || data.Operation == "" || data.ValidCacheSize == 0 {
+			log.WithFields(fields).Error("unable to load changed data")
 			continue
 		}
-
 		// Skip entry if it was originated by the same server
 		if data.ServerOriginId != "" && data.ServerOriginId == common.ServerOriginId() {
-			log.Debugf("sync cache, skipping %v for table '%v': %v", data.Operation, data.CfName, data.ChangedKey)
+			log.WithFields(fields).Debugf("sync cache, skipping %v for table '%v': %v", data.Operation, data.CfName, data.ChangedKey)
 			continue
 		}
 
-		log.Debugf("sync cache, processing %v for table '%v': %v", data.Operation, data.CfName, data.ChangedKey)
+		log.WithFields(fields).Debugf("sync cache, processing %v for table '%v': %v", data.Operation, data.CfName, data.ChangedKey)
 
 		tableInfo, err := GetTableInfo(data.CfName)
 		if err != nil {
-			log.Errorf("failed to apply changed data %v: %v", data.ChangedKey, err)
+			log.WithFields(fields).Errorf("failed to apply changed data %v: %v", data.ChangedKey, err)
 			return err
 		}
 
-		cache, err := cm.getCache(tableInfo.TableName)
+		cache, err := cm.getCache(data.TenantId, data.CfName)
 		if err != nil {
-			log.Errorf("failed to apply changed data %v: %v", data.ChangedKey, err)
+			log.WithFields(fields).Errorf("failed to apply changed data %v: %v", data.ChangedKey, err)
 			return err
-		}
-
-		if tableInfo.DaoId != data.DaoId {
-			// Log a warning message since DaoId mapping table need to be updated
-			log.Warnf("DaoId (%v) for table %v does not match the expected value (%v)",
-				tableInfo.DaoId, tableInfo.TableName, data.DaoId)
 		}
 
 		switch data.Operation {
@@ -641,111 +670,111 @@ func (cm CacheManager) applyChanges(changedDataList []interface{}) error {
 			cache.Refresh(data.ChangedKey)
 			val, err := cache.Get(data.ChangedKey)
 			if err != nil || val == nil {
-				log.Errorf("failed to apply changed data %v: %v", data.ChangedKey, err)
+				log.WithFields(fields).Errorf("failed to apply changed data %v: %v", data.ChangedKey, err)
 				return err
 			}
 		case DELETE_OPERATION: // evict entry from cache
 			cache.Invalidate(data.ChangedKey)
 		case TRUNCATE_OPERATION:
 			cache.InvalidateAll()
-			return nil
 		}
 
-		changedTables.Add(tableInfo.TableName)
+		changedSet := changedTables[data.TenantId]
+		if changedSet == nil {
+			changedSet = util.Set{}
+			changedTables[data.TenantId] = changedSet
+		}
+		changedSet.Add(tableInfo.TableName)
 
 		cacheSize := cache.Size()
 		if cacheSize < int(data.ValidCacheSize) {
-			log.Warnf("cache size difference, got %v instead of %v, scheduling full refresh for %v",
-				cacheSize, data.ValidCacheSize, tableInfo.TableName)
-			tablesToRefresh.Add(tableInfo.TableName)
+			log.WithFields(fields).Warnf("cache size difference, got %v instead of %v, scheduling full refresh for %v", cacheSize, data.ValidCacheSize, tableInfo.TableName)
+
+			refreshSet := tablesToRefresh[data.TenantId]
+			if refreshSet == nil {
+				refreshSet = util.Set{}
+				tablesToRefresh[data.TenantId] = refreshSet
+			}
+			refreshSet.Add(tableInfo.TableName)
 		}
 	}
 
 	// Invalidate application cache entries for tables that were changed
-	for _, tableName := range changedTables.ToSlice() {
-		cm.ApplicationCacheDeleteAll(tableName)
+	for tenantId, tables := range changedTables {
+		for _, tableName := range tables.ToSlice() {
+			cm.ApplicationCacheDeleteAll(tenantId, tableName)
+		}
 	}
 
 	return nil
 }
 
-// Write changed data to XconfChangedKeys4 table asynchronously
-func (cm CacheManager) WriteCacheLog(tableName string, changedKey string, operation OperationType) {
-	if cache, err := GetCacheManager().getCache(tableName); err == nil {
-		cm.writeCacheLog(tableName, changedKey, operation, int32(cache.Size()))
+// Write changed data to ChangeEvents table asynchronously
+func (cm CacheManager) WriteCacheLog(tenantId string, tableName string, changedKey string, operation OperationType) {
+	if cache, err := cm.getCache(tenantId, tableName); err == nil {
+		cm.writeCacheLog(tenantId, tableName, changedKey, operation, int32(cache.Size()))
 	} else {
-		log.Errorf("failed to write cache changed log: %v", err)
+		log.WithFields(log.Fields{"tenantId": tenantId}).Errorf("failed to write cache changed log: %v", err)
 	}
 }
 
-// Write changed data to XconfChangedKeys4 table async
-func (cm CacheManager) writeCacheLog(tableName string, changedKey string, operation OperationType, cacheSize int32) {
+// Write changed data to ChangeEvents table async
+func (cm CacheManager) writeCacheLog(tenantId string, tableName string, changedKey string, operation OperationType, cacheSize int32) {
 	go func() {
 		currentTS := util.GetTimestamp(time.Now().UTC())
-		rowKey := currentTS - (currentTS % int64(cm.settings.changedKeysTimeWindowSize))
-
-		tableInfo, err := GetTableInfo(tableName)
-		if err != nil {
-			log.Errorf("failed to write cache changed log: %v", err)
-		}
-
-		daoId := tableInfo.DaoId
-		if daoId == 0 {
-			log.Errorf("failed to write cache changed log: DAOid not configured for table '%v'", tableName)
-		}
+		key := currentTS - (currentTS % int64(cm.settings.changedKeysTimeWindowSize))
 
 		changedData := ChangedData{
 			ColumnName:     gocql.TimeUUID(),
 			CfName:         tableName,
 			ChangedKey:     changedKey,
 			Operation:      operation,
-			DaoId:          daoId,
 			ValidCacheSize: cacheSize,
 			UserName:       "XConf",
 			ServerOriginId: common.ServerOriginId(),
+			TenantId:       tenantId,
 		}
 
 		jsonData, err := json.Marshal(changedData)
 		if err == nil {
-			log.Debugf("write cache changed log for table '%v' (%v): %v %v %v", tableName, changedData.DaoId, operation, rowKey, changedData.ValidCacheSize)
-			err = GetListingDao().SetOne(TABLE_XCONF_CHANGED_KEYS, rowKey, changedData.ColumnName, jsonData)
+			log.WithFields(log.Fields{"tenantId": tenantId}).Debugf("write cache changed log for table %s: %v %v %v", tableName, operation, key, changedData.ValidCacheSize)
+			// TODO: ensure SetOne support empty tenantId
+			err = GetListingDao().SetOne("", TABLE_CHANGE_EVENTS, key, changedData.ColumnName, jsonData)
 		}
 
 		if err != nil {
-			log.Errorf("failed to write cache changed log: %v", err)
+			log.WithFields(log.Fields{"tenantId": tenantId}).Errorf("failed to write cache changed log for table %s key %s: %v", tableName, changedKey, err)
 		}
 
 		// Send changed event to a registered observer, if one exists
 		if val := cm.cacheChangeNotifier.Load(); val != nil {
 			if notifier, ok := val.(CacheChangeNotifier); ok {
-				notifier.Notify(tableName, changedKey, operation)
+				notifier.Notify(tenantId, tableName, changedKey, operation)
 			}
 		}
 	}()
 }
 
 // Generates a load function for the cache
-func generateLoadFunction(tableName string) func(k cache.Key) (cache.Value, error) {
+func generateLoadFunction(tenantId string, tableName string) func(k cache.Key) (cache.Value, error) {
 	loadFn := func(k cache.Key) (cache.Value, error) {
-		name := tableName
-		tableInfo, err := GetTableInfo(name)
+		tableInfo, err := GetTableInfo(tableName)
 		if err != nil {
 			return nil, err
 		}
 
 		// Use the appropriate DAO based on compression policy
 		if tableInfo.IsCompressAndSplit() {
-			// return GetCompressingDataDao().GetOne(name, k.(string))
-			ret, err := GetCompressingDataDao().GetOne(name, k.(string))
+			ret, err := GetCompressingDataDao().GetOne(tenantId, tableName, k.(string))
 			return ret, err
 		} else if tableInfo.IsCompressOnly() {
 			twoKeys, err := NewTwoKeysFromString(k.(string))
 			if err != nil {
 				return nil, err
 			}
-			return GetListingDao().GetOne(name, twoKeys.Key, twoKeys.Key2)
+			return GetListingDao().GetOne(tenantId, tableName, twoKeys.Key, twoKeys.Key2)
 		} else {
-			return GetSimpleDao().GetOne(name, k.(string))
+			return GetSimpleDao().GetOne(tenantId, tableName, k.(string))
 		}
 	}
 
@@ -800,122 +829,174 @@ func buildLogForRanges(ranges map[int64]*RangeInfo) string {
 }
 
 // Refresh cache for these tables
-func refreshTables(tableNames []string) {
+func refreshTables(tenantId string, tableNames []string) {
 	for _, tableName := range tableNames {
-		err := GetCachedSimpleDao().RefreshAll(tableName)
+		err := GetCachedSimpleDao().RefreshAll(tenantId, tableName)
 		if err != nil {
-			log.Errorf("failed to refresh cache for table '%v': %v", tableName, err)
+			log.WithFields(log.Fields{"tenantId": tenantId}).Errorf("failed to refresh cache for %s: %v", tableName, err)
 		}
 	}
 }
 
 // ApplicationCacheGet value for the specified table and key
-func (cm CacheManager) ApplicationCacheGet(tableName string, key string) interface{} {
+func (cm CacheManager) ApplicationCacheGet(tenantId string, tableName string, key string) interface{} {
 	if !cm.applicationCacheEnabled {
 		return nil
 	}
 
-	log.Debugf("get from ApplicationCache for table '%v' key '%v'", tableName, key)
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debugf("get from ApplicationCache for table %s key %s", tableName, key)
+
+	cache := cm.applicationCaches[tenantId]
+	if cache == nil {
+		log.WithFields(log.Fields{"tenantId": tenantId}).Error("application cache not found")
+		return nil
+	}
 
 	appKey := getApplicationCacheKey(tableName, key)
-	value, _ := cm.applicationCache.GetIfPresent(appKey)
+	value, _ := cache.GetIfPresent(appKey)
 	return value
 }
 
 // Set value for the specified table and key
-func (cm CacheManager) ApplicationCacheSet(tableName string, key string, value interface{}) {
+func (cm CacheManager) ApplicationCacheSet(tenantId string, tableName string, key string, value interface{}) {
 	if !cm.applicationCacheEnabled {
 		return
 	}
 
-	log.Debugf("set ApplicationCache for table '%v' key '%v'", tableName, key)
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debugf("set ApplicationCache for table %s key %s", tableName, key)
+
+	cache := cm.applicationCaches[tenantId]
+	if cache == nil {
+		log.WithFields(log.Fields{"tenantId": tenantId}).Error("application cache not found")
+		return
+	}
 
 	appKey := getApplicationCacheKey(tableName, key)
-	cm.applicationCache.Put(appKey, value)
+	cache.Put(appKey, value)
 }
 
 // Delete an entry from the application cache
-func (cm CacheManager) ApplicationCacheDelete(tableName string, key string) {
+func (cm CacheManager) ApplicationCacheDelete(tenantId string, tableName string, key string) {
 	if !cm.applicationCacheEnabled {
 		return
 	}
 
-	log.Debugf("delete ApplicationCache for table '%v' key '%v'", tableName, key)
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debugf("delete ApplicationCache for table %s key %s", tableName, key)
+
+	cache := cm.applicationCaches[tenantId]
+	if cache == nil {
+		log.WithFields(log.Fields{"tenantId": tenantId}).Error("application cache not found")
+		return
+	}
 
 	appKey := getApplicationCacheKey(tableName, key)
-	cm.applicationCache.Invalidate(appKey)
+	cache.Invalidate(appKey)
 }
 
 // Delete all entries for the given table
-func (cm CacheManager) ApplicationCacheDeleteAll(tableName string) {
+func (cm CacheManager) ApplicationCacheDeleteAll(tenantId string, tableName string) {
 	if !cm.applicationCacheEnabled {
 		return
 	}
 
-	log.Debugf("delete all ApplicationCache for table '%v'", tableName)
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debugf("delete all ApplicationCache entries for table %s", tableName)
 
-	keys := cm.applicationCache.GetAllKeys()
+	cache := cm.applicationCaches[tenantId]
+	if cache == nil {
+		log.WithFields(log.Fields{"tenantId": tenantId}).Error("application cache not found")
+		return
+	}
+
+	keys := cache.GetAllKeys()
 	for _, key := range keys {
 		if strings.HasPrefix(key.(string), tableName) {
-			cm.applicationCache.Invalidate(key)
+			cache.Invalidate(key)
 		}
 	}
 }
 
 // Delete all entries
-func (cm CacheManager) ApplicationCacheInvalidateAll() {
+func (cm CacheManager) ApplicationCacheInvalidateAll(tenantId string) {
 	if !cm.applicationCacheEnabled {
 		return
 	}
 
-	cm.applicationCache.InvalidateAll()
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug("invalidate all ApplicationCache")
+
+	cache := cm.applicationCaches[tenantId]
+	if cache == nil {
+		log.WithFields(log.Fields{"tenantId": tenantId}).Error("application cache not found")
+		return
+	}
+
+	cache.InvalidateAll()
 }
 
 func getApplicationCacheKey(tableName string, name string) string {
-	return fmt.Sprintf("%v::%v", tableName, name)
+	return tableName + CACHE_KEY_DELIMITER + name
 }
 
 func isNotFoundError(err error) bool {
 	return strings.Contains(err.Error(), "404")
 }
 
-func (cm CacheManager) GetGroupServiceFeatureTags(cacheKey string) map[string]string {
-	featureTags, err := cm.groupServiceFeatureCache.(cache.LoadingCache).Get(cacheKey)
+func (cm CacheManager) GetGroupServiceFeatureTags(tenantId string, cacheKey string) map[string]string {
+	featureCache := cm.groupServiceFeatureCaches[tenantId]
+	if featureCache == nil {
+		log.WithFields(log.Fields{"cacheKey": cacheKey, "tenantId": tenantId}).Error("group service feature cache not found")
+		return map[string]string{}
+	}
+
+	featureTags, err := featureCache.(cache.LoadingCache).Get(cacheKey)
 	if err != nil {
 		if isNotFoundError(err) {
-			log.WithFields(log.Fields{"cacheKey": cacheKey}).Info("Cache miss for key")
+			log.WithFields(log.Fields{"cacheKey": cacheKey, "tenantId": tenantId}).Infof("Cache miss for feature tags")
 			return nil
 		}
-		log.WithFields(log.Fields{"cacheKey": cacheKey, "error": err}).Error("Error retrieving cache")
+		log.WithFields(log.Fields{"cacheKey": cacheKey, "tenantId": tenantId}).Errorf("Error retrieving cache: %v", err)
 		return nil
 	}
 
 	if featureTags == nil {
-		log.WithFields(log.Fields{"cacheKey": cacheKey}).Info("No feature tags found for key")
+		log.WithFields(log.Fields{"cacheKey": cacheKey, "tenantId": tenantId}).Info("No feature tags found")
 		return nil
 	}
 	tags, ok := featureTags.(map[string]string)
 	if !ok {
-		log.WithFields(log.Fields{"key": cacheKey, "expected": "map[string]string", "actual": fmt.Sprintf("%T", featureTags)}).Error("Unexpected type")
+		log.WithFields(log.Fields{"key": cacheKey, "tenantId": tenantId, "expected": "map[string]string", "actual": fmt.Sprintf("%T", featureTags)}).Error("Unexpected type")
 		return nil
 	}
 	return tags
 }
 
-func (cm CacheManager) SetGroupServiceFeatureTags(cacheKey string, tags map[string]string) error {
-	cm.groupServiceFeatureCache.Put(cacheKey, tags)
+func (cm CacheManager) SetGroupServiceFeatureTags(tenantId string, cacheKey string, tags map[string]string) error {
+	cache := cm.groupServiceFeatureCaches[tenantId]
+	if cache == nil {
+		err := errors.New("group service feature cache not found")
+		log.WithFields(log.Fields{"cacheKey": cacheKey, "tenantId": tenantId}).Error(err)
+		return err
+	}
+
+	cache.Put(cacheKey, tags)
 	return nil
 }
 
-func (cm CacheManager) DeleteGroupServiceFeatureTags(cacheKey string) error {
-	cm.groupServiceFeatureCache.Invalidate(cacheKey)
+func (cm CacheManager) DeleteGroupServiceFeatureTags(tenantId string, cacheKey string) error {
+	cache := cm.groupServiceFeatureCaches[tenantId]
+	if cache == nil {
+		err := errors.New("group service feature cache not found")
+		log.WithFields(log.Fields{"cacheKey": cacheKey, "tenantId": tenantId}).Error(err)
+		return err
+	}
+
+	cache.Invalidate(cacheKey)
 	return nil
 }
 
-func SetGrpCacheLoadFunc(f func(k cache.Key) (cache.Value, error)) {
-	grpCacheLoadfunc = f
+func SetGrpCacheLoadFunc(f cache.LoaderFunc) {
+	grpCacheLoadFunc = f
 }
 
-func GetGrpCacheLoadFunc() func(k cache.Key) (cache.Value, error) {
-	return grpCacheLoadfunc
+func GetGrpCacheLoadFunc() cache.LoaderFunc {
+	return grpCacheLoadFunc
 }
