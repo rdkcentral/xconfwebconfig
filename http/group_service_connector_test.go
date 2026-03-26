@@ -176,8 +176,8 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_Success(t *testing.T) {
 				rfc_precook_url_template    = "%%s/path/%%s"
 				feature_url_template        = "%%s/path/%%s"
 				security_token_url_template = "%%s/path/%%s"
-				accountId_template        = "%%s/path/%%s"
-				account_products_template  = "%%s/path/%%s"
+				account_id_url_template        = "%%s/path/%%s"
+				account_products_url_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -225,8 +225,8 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_EmptyResponse(t *testing.
 				rfc_precook_url_template    = "%%s/path/%%s"
 				feature_url_template        = "%%s/path/%%s"
 				security_token_url_template = "%%s/path/%%s"
-				accountId_template        = "%%s/path/%%s"
-				account_products_template  = "%%s/path/%%s"
+				account_id_url_template        = "%%s/path/%%s"
+				account_products_url_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -260,8 +260,8 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_ServerError(t *testing.T)
 				rfc_precook_url_template    = "%%s/path/%%s"
 				feature_url_template        = "%%s/path/%%s"
 				security_token_url_template = "%%s/path/%%s"
-				accountId_template        = "%%s/path/%%s"
-				account_products_template  = "%%s/path/%%s"
+				account_id_url_template        = "%%s/path/%%s"
+				account_products_url_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -383,8 +383,8 @@ func TestDefaultGroupService_GetCpeGroups_Success(t *testing.T) {
 				rfc_precook_url_template    = "%%s/path/%%s"
 				feature_url_template        = "%%s/path/%%s"
 				security_token_url_template = "%%s/path/%%s"
-				accountId_template        = "%%s/path/%%s"
-				account_products_template  = "%%s/path/%%s"
+				account_id_url_template        = "%%s/path/%%s"
+				account_products_url_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -430,8 +430,8 @@ func TestDefaultGroupService_GetCpeGroups_AllGroupsEnabled(t *testing.T) {
 				rfc_precook_url_template    = "%%s/path/%%s"
 				feature_url_template        = "%%s/path/%%s"
 				security_token_url_template = "%%s/path/%%s"
-				accountId_template        = "%%s/path/%%s"
-				account_products_template  = "%%s/path/%%s"
+				account_id_url_template        = "%%s/path/%%s"
+				account_products_url_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -476,8 +476,8 @@ func TestDefaultGroupService_GetCpeGroups_NoGroupsEnabled(t *testing.T) {
 				rfc_precook_url_template    = "%%s/path/%%s"
 				feature_url_template        = "%%s/path/%%s"
 				security_token_url_template = "%%s/path/%%s"
-				accountId_template        = "%%s/path/%%s"
-				account_products_template  = "%%s/path/%%s"
+				account_id_url_template        = "%%s/path/%%s"
+				account_products_url_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -511,8 +511,8 @@ func TestDefaultGroupService_GetCpeGroups_ServerError(t *testing.T) {
 				rfc_precook_url_template    = "%%s/path/%%s"
 				feature_url_template        = "%%s/path/%%s"
 				security_token_url_template = "%%s/path/%%s"
-				accountId_template        = "%%s/path/%%s"
-				account_products_template  = "%%s/path/%%s"
+				account_id_url_template        = "%%s/path/%%s"
+				account_products_url_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -563,8 +563,8 @@ func TestDefaultGroupService_GetRfcPrecookDetails_Success(t *testing.T) {
 				rfc_precook_url_template    = "%%s/path/%%s"
 				feature_url_template        = "%%s/path/%%s"
 				security_token_url_template = "%%s/path/%%s"
-				accountId_template        = "%%s/path/%%s"
-				account_products_template  = "%%s/path/%%s"
+				account_id_url_template        = "%%s/path/%%s"
+				account_products_url_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -605,8 +605,8 @@ func TestDefaultGroupService_GetRfcPrecookDetails_ServerError(t *testing.T) {
 				rfc_precook_url_template    = "%%s/path/%%s"
 				feature_url_template        = "%%s/path/%%s"
 				security_token_url_template = "%%s/path/%%s"
-				accountId_template        = "%%s/path/%%s"
-				account_products_template  = "%%s/path/%%s"
+				account_id_url_template        = "%%s/path/%%s"
+				account_products_url_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
