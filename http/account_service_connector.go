@@ -86,10 +86,10 @@ func NewAccountServiceConnector(conf *configuration.Config, tlsConfig *tls.Confi
 			panic(fmt.Errorf("%s is required", confKey))
 		}
 
-		getDevicesPathKey := fmt.Sprintf("xconfwebconfig.%v.device_path_template", accountServiceName)
+		getDevicesPathKey := fmt.Sprintf("xconfwebconfig.%v.device_url_template", accountServiceName)
 		getDevicesPath := conf.GetString(getDevicesPathKey)
 
-		getAccountPathKey := fmt.Sprintf("xconfwebconfig.%v.account_path_template", accountServiceName)
+		getAccountPathKey := fmt.Sprintf("xconfwebconfig.%v.account_url_template", accountServiceName)
 		getAccountPath := conf.GetString(getAccountPathKey)
 
 		return &DefaultAccountService{
