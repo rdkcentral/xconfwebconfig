@@ -64,10 +64,17 @@ func TestDefaultTaggingService_GetTagsForMacAddress_Success(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				tagging_service_name = "tagging-service"
+				tagging_service_name = "tagging_service"
 			}
-			tagging-service {
+			tagging_service {
 				host = "%s"
+				tags_mac_address_template = "%%s/path/%%s"
+				tags_partner_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_template = "%%s/path/%%s"
+				tags_mac_address_and_account_template = "%%s/path/%%s"
+				tags_account_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_and_account_template = "%%s/path/%%s"
+				tags_partner_and_account_template = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -99,10 +106,17 @@ func TestDefaultTaggingService_GetTagsForPartner_Success(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				tagging_service_name = "tagging-service"
+				tagging_service_name = "tagging_service"
 			}
-			tagging-service {
+			tagging_service {
 				host = "%s"
+				tags_mac_address_template = "%%s/path/%%s"
+				tags_partner_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_template = "%%s/path/%%s"
+				tags_mac_address_and_account_template = "%%s/path/%%s"
+				tags_account_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_and_account_template = "%%s/path/%%s"
+				tags_partner_and_account_template = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -133,10 +147,17 @@ func TestDefaultTaggingService_GetTagsForPartnerAndMacAddress_Success(t *testing
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				tagging_service_name = "tagging-service"
+				tagging_service_name = "tagging_service"
 			}
-			tagging-service {
+			tagging_service {
 				host = "%s"
+				tags_mac_address_template = "%%s/path/%%s"
+				tags_partner_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_template = "%%s/path/%%s/%%s"
+				tags_mac_address_and_account_template = "%%s/path/%%s/%%s"
+				tags_account_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_and_account_template = "%%s/path/%%s/%%s/%%s"
+				tags_partner_and_account_template = "%%s/path/%%s/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -168,10 +189,17 @@ func TestDefaultTaggingService_GetTagsForMacAddressAndAccount_Success(t *testing
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				tagging_service_name = "tagging-service"
+				tagging_service_name = "tagging_service"
 			}
-			tagging-service {
+			tagging_service {
 				host = "%s"
+				tags_mac_address_template = "%%s/path/%%s"
+				tags_partner_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_template = "%%s/path/%%s/%%s"
+				tags_mac_address_and_account_template = "%%s/path/%%s/%%s"
+				tags_account_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_and_account_template = "%%s/path/%%s/%%s/%%s"
+				tags_partner_and_account_template = "%%s/path/%%s/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -201,10 +229,17 @@ func TestDefaultTaggingService_GetTagsForAccount_Success(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				tagging_service_name = "tagging-service"
+				tagging_service_name = "tagging_service"
 			}
-			tagging-service {
+			tagging_service {
 				host = "%s"
+				tags_mac_address_template = "%%s/path/%%s"
+				tags_partner_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_template = "%%s/path/%%s"
+				tags_mac_address_and_account_template = "%%s/path/%%s"
+				tags_account_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_and_account_template = "%%s/path/%%s"
+				tags_partner_and_account_template = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -235,10 +270,17 @@ func TestDefaultTaggingService_GetTagsForPartnerAndMacAddressAndAccount_Success(
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				tagging_service_name = "tagging-service"
+				tagging_service_name = "tagging_service"
 			}
-			tagging-service {
+			tagging_service {
 				host = "%s"
+				tags_mac_address_template = "%%s/path/%%s"
+				tags_partner_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_template = "%%s/path/%%s/%%s"
+				tags_mac_address_and_account_template = "%%s/path/%%s/%%s"
+				tags_account_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_and_account_template = "%%s/path/%%s/%%s/%%s"
+				tags_partner_and_account_template = "%%s/path/%%s/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -269,10 +311,17 @@ func TestDefaultTaggingService_GetTagsForPartnerAndAccount_Success(t *testing.T)
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				tagging_service_name = "tagging-service"
+				tagging_service_name = "tagging_service"
 			}
-			tagging-service {
+			tagging_service {
 				host = "%s"
+				tags_mac_address_template = "%%s/path/%%s"
+				tags_partner_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_template = "%%s/path/%%s/%%s"
+				tags_mac_address_and_account_template = "%%s/path/%%s/%%s"
+				tags_account_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_and_account_template = "%%s/path/%%s/%%s/%%s"
+				tags_partner_and_account_template = "%%s/path/%%s/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -300,10 +349,17 @@ func TestDefaultTaggingService_GetTagsForContext_Success(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				tagging_service_name = "tagging-service"
+				tagging_service_name = "tagging_service"
 			}
-			tagging-service {
+			tagging_service {
 				host = "%s"
+				tags_mac_address_template = "%%s/path/%%s"
+				tags_partner_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_template = "%%s/path/%%s"
+				tags_mac_address_and_account_template = "%%s/path/%%s"
+				tags_account_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_and_account_template = "%%s/path/%%s"
+				tags_partner_and_account_template = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -336,10 +392,17 @@ func TestDefaultTaggingService_GetTagsForMacAddress_ServerError(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				tagging_service_name = "tagging-service"
+				tagging_service_name = "tagging_service"
 			}
-			tagging-service {
+			tagging_service {
 				host = "%s"
+				tags_mac_address_template = "%%s/path/%%s"
+				tags_partner_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_template = "%%s/path/%%s"
+				tags_mac_address_and_account_template = "%%s/path/%%s"
+				tags_account_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_and_account_template = "%%s/path/%%s"
+				tags_partner_and_account_template = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -363,10 +426,17 @@ func TestDefaultTaggingService_GetTagsForPartner_EmptyResponse(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				tagging_service_name = "tagging-service"
+				tagging_service_name = "tagging_service"
 			}
-			tagging-service {
+			tagging_service {
 				host = "%s"
+				tags_mac_address_template = "%%s/path/%%s"
+				tags_partner_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_template = "%%s/path/%%s"
+				tags_mac_address_and_account_template = "%%s/path/%%s"
+				tags_account_template = "%%s/path/%%s"
+				tags_partner_and_mac_address_and_account_template = "%%s/path/%%s"
+				tags_partner_and_account_template = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))

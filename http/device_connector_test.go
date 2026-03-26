@@ -260,6 +260,7 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_Success(t *testing.T)
 			}
 			device-service {
 				host = "%s"
+				pod_url_template = "%%s/test-url/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -303,6 +304,7 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_NotFound(t *testing.T
 			}
 			device-service {
 				host = "%s"
+				pod_url_template = "%%s/test-url/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -334,6 +336,7 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_ServerError(t *testin
 			}
 			device-service {
 				host = "%s"
+				pod_url_template = "%%s/test-url/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -364,6 +367,7 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_InvalidJSON(t *testin
 			}
 			device-service {
 				host = "%s"
+				pod_url_template = "%%s/test-url/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -398,6 +402,7 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_EmptySerial(t *testin
 			}
 			device-service {
 				host = "%s"
+				pod_url_template = "%%s/test-url/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -451,6 +456,7 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_MultipleValidRequests
 					}
 					device-service {
 						host = "%s"
+						pod_url_template = "%%s/test-url/%%s"
 					}
 				}
 			`, mockServer.URL))

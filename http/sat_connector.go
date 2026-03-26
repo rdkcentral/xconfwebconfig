@@ -29,11 +29,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	satServiceUrlTemplate        = "%s/v2/oauth/token"
-	satServicePartnerUrlTemplate = "%s/v2/oauth/token?partners=%s"
-)
-
 var satServiceName string
 
 type SatServiceConnector interface {
@@ -46,10 +41,12 @@ type SatServiceConnector interface {
 }
 
 type DefaultSatService struct {
-	host         string
-	consumerHost string
-	headers      map[string]string
-	name         string
+	host            string
+	consumerHost    string
+	headers         map[string]string
+	name            string
+	tokenUrl        string
+	tokenPartnerUrl string
 	*HttpClient
 }
 
@@ -101,12 +98,21 @@ func NewSatServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, e
 			"X-Client-Secret": satClientSecret,
 		}
 
+		// Read URL path templates from config
+		tokenUrlKey := fmt.Sprintf("xconfwebconfig.%v.token_url", satServiceName)
+		tokenUrl := conf.GetString(tokenUrlKey)
+
+		tokenPartnerUrlKey := fmt.Sprintf("xconfwebconfig.%v.token_partner_url", satServiceName)
+		tokenPartnerUrl := conf.GetString(tokenPartnerUrlKey)
+
 		return &DefaultSatService{
-			HttpClient:   NewHttpClient(conf, satServiceName, tlsConfig),
-			host:         host,
-			consumerHost: consumerHost,
-			headers:      headers,
-			name:         satServiceName,
+			HttpClient:      NewHttpClient(conf, satServiceName, tlsConfig),
+			host:            host,
+			consumerHost:    consumerHost,
+			headers:         headers,
+			name:            satServiceName,
+			tokenUrl:        tokenUrl,
+			tokenPartnerUrl: tokenPartnerUrl,
 		}
 	}
 }
@@ -137,9 +143,9 @@ func (c *DefaultSatService) GetSatTokenFromSatService(fields log.Fields, vargs .
 
 	if len(vargs) > 0 {
 		partnerId := vargs[0]
-		url = fmt.Sprintf(satServicePartnerUrlTemplate, c.SatServiceHost(), partnerId)
+		url = fmt.Sprintf(c.tokenPartnerUrl, c.SatServiceHost(), partnerId)
 	} else {
-		url = fmt.Sprintf(satServiceUrlTemplate, c.SatServiceHost())
+		url = fmt.Sprintf(c.tokenUrl, c.SatServiceHost())
 	}
 	rbytes, err := c.DoWithRetries("POST", url, c.headers, nil, fields, satServiceName)
 	if err != nil {
