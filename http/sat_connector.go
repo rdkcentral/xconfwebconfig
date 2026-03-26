@@ -99,10 +99,10 @@ func NewSatServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, e
 		}
 
 		// Read URL path templates from config
-		tokenUrlKey := fmt.Sprintf("xconfwebconfig.%v.token_url", satServiceName)
+		tokenUrlKey := fmt.Sprintf("xconfwebconfig.%v.token_url_template", satServiceName)
 		tokenUrl := conf.GetString(tokenUrlKey)
 
-		tokenPartnerUrlKey := fmt.Sprintf("xconfwebconfig.%v.token_partner_url", satServiceName)
+		tokenPartnerUrlKey := fmt.Sprintf("xconfwebconfig.%v.token_partner_url_template", satServiceName)
 		tokenPartnerUrl := conf.GetString(tokenPartnerUrlKey)
 
 		return &DefaultSatService{

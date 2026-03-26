@@ -84,10 +84,10 @@ func NewGroupServiceConnector(conf *configuration.Config, tlsConfig *tls.Config,
 		getSecurityTokenUrlKey := fmt.Sprintf("xconfwebconfig.%v.security_token_url_template", groupServiceName)
 		getSecurityTokenUrl := conf.GetString(getSecurityTokenUrlKey)
 
-		getAccountIdUrlKey := fmt.Sprintf("xconfwebconfig.%v.accountId_template", groupServiceName)
+		getAccountIdUrlKey := fmt.Sprintf("xconfwebconfig.%v.account_id_url_template", groupServiceName)
 		getAccountIdUrl := conf.GetString(getAccountIdUrlKey)
 
-		getAccountProductsUrlKey := fmt.Sprintf("xconfwebconfig.%v.account_products_template", groupServiceName)
+		getAccountProductsUrlKey := fmt.Sprintf("xconfwebconfig.%v.account_products_url_template", groupServiceName)
 		getAccountProductsUrl := conf.GetString(getAccountProductsUrlKey)
 
 		return &DefaultGroupService{
