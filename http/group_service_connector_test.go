@@ -33,12 +33,12 @@ import (
 // Test DefaultGroupService getter/setter functions
 func TestDefaultGroupService_GroupServiceHost(t *testing.T) {
 	service := &DefaultGroupService{
-		host: "https://group-service.example.com",
+		host: "https://group_service.example.com",
 	}
 
 	result := service.GroupServiceHost()
 
-	assert.Equal(t, "https://group-service.example.com", result)
+	assert.Equal(t, "https://group_service.example.com", result)
 }
 
 func TestDefaultGroupService_SetGroupServiceHost(t *testing.T) {
@@ -168,10 +168,16 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_Success(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -211,10 +217,16 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_EmptyResponse(t *testing.
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -240,10 +252,16 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_ServerError(t *testing.T)
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -255,6 +273,162 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_ServerError(t *testing.T)
 
 	// Should return an error due to HTTP 500
 	assert.Error(t, err)
+}
+
+// Test GetSecurityTokenInfo function with mocked HTTP responses
+func TestDefaultGroupService_GetSecurityTokenInfo_Success(t *testing.T) {
+	// Create a mock HTTP server
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Contains(t, r.URL.Path, "security-123")
+
+		// Create a test XdasHashes protobuf message for security token info
+		testHashes := &conversion.XdasHashes{
+			Fields: map[string]string{
+				"token":      "abc123token", // Mock token for testing purposes only - not a real credential
+				"expires_at": "2025-12-31",
+				"scope":      "read",
+			},
+		}
+		data, err := proto.Marshal(testHashes)
+		assert.NoError(t, err)
+
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+	}))
+	defer mockServer.Close()
+
+	// Create test configuration
+	conf := configuration.ParseString(fmt.Sprintf(`
+		xconfwebconfig {
+			xconf {
+				group_service_name = "group_service"
+			}
+			group_service {
+				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
+			}
+		}
+	`, mockServer.URL))
+
+	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
+	fields := log.Fields{"security_test": "value"}
+
+	result, err := service.GetSecurityTokenInfo("security-123", fields)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, 3, len(result))
+	assert.Equal(t, "abc123token", result["token"])
+	assert.Equal(t, "2025-12-31", result["expires_at"])
+	assert.Equal(t, "read", result["scope"])
+}
+
+func TestDefaultGroupService_GetSecurityTokenInfo_InvalidIdentifier(t *testing.T) {
+	// Create a mock HTTP server returning empty response for invalid identifier
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Contains(t, r.URL.Path, "invalid-id")
+
+		// Create empty XdasHashes protobuf message
+		testHashes := &conversion.XdasHashes{
+			Fields: map[string]string{},
+		}
+		data, err := proto.Marshal(testHashes)
+		assert.NoError(t, err)
+
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+	}))
+	defer mockServer.Close()
+
+	// Create test configuration
+	conf := configuration.ParseString(fmt.Sprintf(`
+		xconfwebconfig {
+			xconf {
+				group_service_name = "group_service"
+			}
+			group_service {
+				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
+			}
+		}
+	`, mockServer.URL))
+
+	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
+	fields := log.Fields{"test": "value"}
+
+	result, err := service.GetSecurityTokenInfo("invalid-id", fields)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(result))
+}
+
+func TestDefaultGroupService_GetSecurityTokenInfo_MultipleFields(t *testing.T) {
+	// Test with comprehensive security token info
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		testHashes := &conversion.XdasHashes{
+			Fields: map[string]string{
+				"access_token":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", // Mock JWT token for testing only - not a real credential
+				"refresh_token": "refresh_abc123",                       // Mock refresh token for testing only - not a real credential
+				"token_type":    "Bearer",
+				"expires_in":    "3600",
+				"scope":         "read write",
+				"client_id":     "client-456",
+				"issued_at":     "2024-11-12T10:00:00Z",
+			},
+		}
+		data, err := proto.Marshal(testHashes)
+		assert.NoError(t, err)
+
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+	}))
+	defer mockServer.Close()
+
+	conf := configuration.ParseString(fmt.Sprintf(`
+		xconfwebconfig {
+			xconf {
+				group_service_name = "group_service"
+			}
+			group_service {
+				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
+			}
+		}
+	`, mockServer.URL))
+
+	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
+	fields := log.Fields{"comprehensive_test": "value"}
+
+	result, err := service.GetSecurityTokenInfo("comprehensive-token", fields)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 7, len(result))
+	assert.Equal(t, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", result["access_token"])
+	assert.Equal(t, "refresh_abc123", result["refresh_token"])
+	assert.Equal(t, "Bearer", result["token_type"])
+	assert.Equal(t, "3600", result["expires_in"])
+	assert.Equal(t, "read write", result["scope"])
+	assert.Equal(t, "client-456", result["client_id"])
+	assert.Equal(t, "2024-11-12T10:00:00Z", result["issued_at"])
 }
 
 // Test CreateListFromGroupServiceProto function (non-HTTP, direct testing)
@@ -357,10 +531,16 @@ func TestDefaultGroupService_GetCpeGroups_Success(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -398,10 +578,16 @@ func TestDefaultGroupService_GetCpeGroups_AllGroupsEnabled(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -438,10 +624,16 @@ func TestDefaultGroupService_GetCpeGroups_NoGroupsEnabled(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -467,10 +659,16 @@ func TestDefaultGroupService_GetCpeGroups_ServerError(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -513,10 +711,16 @@ func TestDefaultGroupService_GetRfcPrecookDetails_Success(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -549,10 +753,16 @@ func TestDefaultGroupService_GetRfcPrecookDetails_ServerError(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))

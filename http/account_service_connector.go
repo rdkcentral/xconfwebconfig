@@ -30,11 +30,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	getDevicesPath = "%s/devices?%s=%s&status=Active,PendingActivation"
-	getAccountPath = "%s/account/%s"
-)
-
 type AccountServiceConnector interface {
 	AccountServiceHost() string
 	SetAccountServiceHost(host string)
@@ -44,7 +39,10 @@ type AccountServiceConnector interface {
 
 type DefaultAccountService struct {
 	*HttpClient
-	host string
+	host           string
+	conf           *configuration.Config
+	getDevicesPath string
+	getAccountPath string
 }
 
 type AccountServiceDevices struct {
@@ -88,9 +86,18 @@ func NewAccountServiceConnector(conf *configuration.Config, tlsConfig *tls.Confi
 			panic(fmt.Errorf("%s is required", confKey))
 		}
 
+		getDevicesPathKey := fmt.Sprintf("xconfwebconfig.%v.device_path_template", accountServiceName)
+		getDevicesPath := conf.GetString(getDevicesPathKey)
+
+		getAccountPathKey := fmt.Sprintf("xconfwebconfig.%v.account_path_template", accountServiceName)
+		getAccountPath := conf.GetString(getAccountPathKey)
+
 		return &DefaultAccountService{
-			HttpClient: NewHttpClient(conf, accountServiceName, tlsConfig),
-			host:       host,
+			HttpClient:     NewHttpClient(conf, accountServiceName, tlsConfig),
+			host:           host,
+			conf:           conf,
+			getDevicesPath: getDevicesPath,
+			getAccountPath: getAccountPath,
 		}
 	}
 }
@@ -104,7 +111,7 @@ func (c *DefaultAccountService) SetAccountServiceHost(host string) {
 }
 
 func (c *DefaultAccountService) GetAccountData(serviceAccountId string, token string, fields log.Fields) (Account, error) {
-	url := fmt.Sprintf(getAccountPath, c.AccountServiceHost(), serviceAccountId)
+	url := fmt.Sprintf(c.getAccountPath, c.AccountServiceHost(), serviceAccountId)
 	headers := map[string]string{
 		common.HeaderAuthorization: fmt.Sprintf("Bearer %s", token),
 		common.HeaderUserAgent:     common.HeaderXconfDataService,
@@ -122,7 +129,7 @@ func (c *DefaultAccountService) GetAccountData(serviceAccountId string, token st
 }
 
 func (c *DefaultAccountService) GetDevices(macKey string, macValue string, token string, fields log.Fields) (AccountServiceDevices, error) {
-	url := fmt.Sprintf(getDevicesPath, c.AccountServiceHost(), macKey, macValue)
+	url := fmt.Sprintf(c.getDevicesPath, c.AccountServiceHost(), macKey, macValue)
 	headers := map[string]string{
 		common.HeaderAuthorization: fmt.Sprintf("Bearer %s", token),
 		common.HeaderUserAgent:     common.HeaderXconfDataService,

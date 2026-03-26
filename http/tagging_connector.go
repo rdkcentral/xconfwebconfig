@@ -29,16 +29,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	getTagsForMacAddressUrlTemplate                     = "%s/getTagsForMacAddress/%s"
-	getTagsForPartnerUrlTemplate                        = "%s/getTagsForPartner/%s"
-	getTagsForPartnerAndMacAddressUrlTemplate           = "%s/getTagsForPartnerAndMacAddress/partner/%s/macaddress/%s"
-	getTagsForMacAddressAndAccountUrlTemplate           = "%s/getTagsForMacAddressAndAccount/macaddress/%s/account/%s"
-	getTagsForAccountUrlTemplate                        = "%s/getTagsForAccount/%s"
-	getTagsForPartnerAndMacAddressAndAccountUrlTemplate = "%s/getTagsForPartnerAndMacAddressAndAccount/partner/%s/macaddress/%s/account/%s"
-	getTagsForPartnerAndAccountUrlTemplate              = "%s/getTagsForPartnerAndAccount/partner/%s/account/%s"
-)
-
 type TaggingConnector interface {
 	MakeGetTagsRequest(url string, token string, vargs ...log.Fields) ([]string, error)
 	GetTagsForContext(contextMap map[string]string, token string, fields log.Fields) ([]string, error)
@@ -55,7 +45,14 @@ type TaggingConnector interface {
 
 type DefaultTaggingService struct {
 	*HttpClient
-	host string
+	host                                        string
+	getTagsForMacAddressUrl                     string
+	getTagsForPartnerUrl                        string
+	getTagsForPartnerAndMacAddressUrl           string
+	getTagsForMacAddressAndAccountUrl           string
+	getTagsForAccountUrl                        string
+	getTagsForPartnerAndMacAddressAndAccountUrl string
+	getTagsForPartnerAndAccountUrl              string
 }
 
 var taggingServiceName string
@@ -71,9 +68,39 @@ func NewTaggingConnector(conf *configuration.Config, tlsConfig *tls.Config, exte
 			panic(fmt.Errorf("%s is required", confKey))
 		}
 
+		// Read URL path templates from config
+		getTagsForMacAddressUrlKey := fmt.Sprintf("xconfwebconfig.%v.tags_mac_address_template", taggingServiceName)
+		getTagsForMacAddressUrl := conf.GetString(getTagsForMacAddressUrlKey)
+
+		getTagsForPartnerUrlKey := fmt.Sprintf("xconfwebconfig.%v.tags_partner_template", taggingServiceName)
+		getTagsForPartnerUrl := conf.GetString(getTagsForPartnerUrlKey)
+
+		getTagsForPartnerAndMacAddressUrlKey := fmt.Sprintf("xconfwebconfig.%v.tags_partner_and_mac_address_template", taggingServiceName)
+
+		getTagsForPartnerAndMacAddressUrl := conf.GetString(getTagsForPartnerAndMacAddressUrlKey)
+
+		getTagsForMacAddressAndAccountUrlKey := fmt.Sprintf("xconfwebconfig.%v.tags_mac_address_and_account_template", taggingServiceName)
+		getTagsForMacAddressAndAccountUrl := conf.GetString(getTagsForMacAddressAndAccountUrlKey)
+
+		getTagsForAccountUrlKey := fmt.Sprintf("xconfwebconfig.%v.tags_account_template", taggingServiceName)
+		getTagsForAccountUrl := conf.GetString(getTagsForAccountUrlKey)
+
+		getTagsForPartnerAndMacAddressAndAccountUrlKey := fmt.Sprintf("xconfwebconfig.%v.tags_partner_and_mac_address_and_account_template", taggingServiceName)
+		getTagsForPartnerAndMacAddressAndAccountUrl := conf.GetString(getTagsForPartnerAndMacAddressAndAccountUrlKey)
+
+		getTagsForPartnerAndAccountUrlKey := fmt.Sprintf("xconfwebconfig.%v.tags_partner_and_account_template", taggingServiceName)
+		getTagsForPartnerAndAccountUrl := conf.GetString(getTagsForPartnerAndAccountUrlKey)
+
 		return &DefaultTaggingService{
-			HttpClient: NewHttpClient(conf, taggingServiceName, tlsConfig),
-			host:       host,
+			HttpClient:                        NewHttpClient(conf, taggingServiceName, tlsConfig),
+			host:                              host,
+			getTagsForMacAddressUrl:           getTagsForMacAddressUrl,
+			getTagsForPartnerUrl:              getTagsForPartnerUrl,
+			getTagsForPartnerAndMacAddressUrl: getTagsForPartnerAndMacAddressUrl,
+			getTagsForMacAddressAndAccountUrl: getTagsForMacAddressAndAccountUrl,
+			getTagsForAccountUrl:              getTagsForAccountUrl,
+			getTagsForPartnerAndMacAddressAndAccountUrl: getTagsForPartnerAndMacAddressAndAccountUrl,
+			getTagsForPartnerAndAccountUrl:              getTagsForPartnerAndAccountUrl,
 		}
 	}
 }
@@ -111,37 +138,37 @@ func (c *DefaultTaggingService) MakeGetTagsRequest(url string, token string, var
 }
 
 func (c *DefaultTaggingService) GetTagsForMacAddress(macAddress string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(getTagsForMacAddressUrlTemplate, c.TaggingHost(), macAddress)
+	url := fmt.Sprintf(c.getTagsForMacAddressUrl, c.TaggingHost(), macAddress)
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForPartner(partnerId string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(getTagsForPartnerUrlTemplate, c.TaggingHost(), partnerId)
+	url := fmt.Sprintf(c.getTagsForPartnerUrl, c.TaggingHost(), partnerId)
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForPartnerAndMacAddress(partnerId string, macAddress string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(getTagsForPartnerAndMacAddressUrlTemplate, c.TaggingHost(), partnerId, macAddress)
+	url := fmt.Sprintf(c.getTagsForPartnerAndMacAddressUrl, c.TaggingHost(), partnerId, macAddress)
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForMacAddressAndAccount(macAddress string, accountId string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(getTagsForMacAddressAndAccountUrlTemplate, c.TaggingHost(), macAddress, accountId)
+	url := fmt.Sprintf(c.getTagsForMacAddressAndAccountUrl, c.TaggingHost(), macAddress, accountId)
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForAccount(accountId string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(getTagsForAccountUrlTemplate, c.TaggingHost(), accountId)
+	url := fmt.Sprintf(c.getTagsForAccountUrl, c.TaggingHost(), accountId)
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForPartnerAndMacAddressAndAccount(partnerId string, macAddress string, accountId string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(getTagsForPartnerAndMacAddressAndAccountUrlTemplate, c.TaggingHost(), partnerId, macAddress, accountId)
+	url := fmt.Sprintf(c.getTagsForPartnerAndMacAddressAndAccountUrl, c.TaggingHost(), partnerId, macAddress, accountId)
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForPartnerAndAccount(partnerId string, accountId string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(getTagsForPartnerAndAccountUrlTemplate, c.TaggingHost(), partnerId, accountId)
+	url := fmt.Sprintf(c.getTagsForPartnerAndAccountUrl, c.TaggingHost(), partnerId, accountId)
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
