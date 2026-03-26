@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	estb "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
@@ -71,36 +71,35 @@ var customBase64Encoding = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefg
 
 func DeleteAllEntities() {
 	cachedTableList := []string{
-		ds.TABLE_DCM_RULE,
-		ds.TABLE_ENVIRONMENT,
-		ds.TABLE_MODEL,
-		ds.TABLE_FIRMWARE_CONFIG,
-		ds.TABLE_FIRMWARE_RULE,
-		ds.TABLE_FIRMWARE_RULE_TEMPLATE,
-		ds.TABLE_SINGLETON_FILTER_VALUE,
-		ds.TABLE_UPLOAD_REPOSITORY,
-		ds.TABLE_LOG_FILE,
-		ds.TABLE_LOG_FILE_LIST,
-		ds.TABLE_LOG_FILES_GROUPS,
-		ds.TABLE_LOG_UPLOAD_SETTINGS,
-		ds.TABLE_SETTING_PROFILES,
-		ds.TABLE_SETTING_RULES,
-		ds.TABLE_DEVICE_SETTINGS,
-		ds.TABLE_VOD_SETTINGS,
-		ds.TABLE_TELEMETRY,
-		ds.TABLE_PERMANENT_TELEMETRY,
-		ds.TABLE_TELEMETRY_RULES,
-		ds.TABLE_TELEMETRY_TWO_PROFILES,
-		ds.TABLE_TELEMETRY_TWO_RULES,
-		ds.TABLE_XCONF_FEATURE,
-		ds.TABLE_FEATURE_CONTROL_RULE,
-		ds.TABLE_LOGS,
-		ds.TABLE_GENERIC_NS_LIST,
+		db.TABLE_DCM_RULES,
+		db.TABLE_ENVIRONMENTS,
+		db.TABLE_MODELS,
+		db.TABLE_FIRMWARE_CONFIGS,
+		db.TABLE_FIRMWARE_RULES,
+		db.TABLE_FIRMWARE_RULE_TEMPLATES,
+		db.TABLE_SINGLETON_FILTER_VALUES,
+		db.TABLE_UPLOAD_REPOSITORIES,
+		db.TABLE_LOG_FILES,
+		db.TABLE_LOG_FILE_LISTS,
+		db.TABLE_LOG_UPLOAD_SETTINGS,
+		db.TABLE_SETTING_PROFILES,
+		db.TABLE_SETTING_RULES,
+		db.TABLE_DEVICE_SETTINGS,
+		db.TABLE_VOD_SETTINGS,
+		db.TABLE_TELEMETRY_PROFILES,
+		db.TABLE_PERMANENT_TELEMETRY_PROFILES,
+		db.TABLE_TELEMETRY_RULES,
+		db.TABLE_TELEMETRY_TWO_PROFILES,
+		db.TABLE_TELEMETRY_TWO_RULES,
+		db.TABLE_FEATURES,
+		db.TABLE_FEATURE_CONTROL_RULES,
+		db.TABLE_LOGS,
+		db.TABLE_GENERIC_NS_LIST,
 	}
 	for _, table := range cachedTableList {
-		tablemap, _ := ds.GetCachedSimpleDao().GetAllAsMap(table)
+		tablemap, _ := db.GetCachedSimpleDao().GetAllAsMap(db.DEFAULT_TENANT_ID, table)
 		for key := range tablemap {
-			ds.GetCachedSimpleDao().DeleteOne(table, key.(string))
+			db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, table, key.(string))
 		}
 	}
 }
@@ -148,7 +147,7 @@ func CreateFirmwareRule(id string, templateId string, applicationType string, ac
 }
 
 func SetFirmwareRule(firmwareRule *corefw.FirmwareRule) {
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_FIRMWARE_RULE, firmwareRule.ID, firmwareRule)
+	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
 }
 
 func CreateRuleAction(typ string, actiontyp corefw.ApplicableActionType, firmwareConfigId string) *corefw.ApplicableAction {
@@ -229,7 +228,7 @@ func CreateODPPartnerObjectWithPartnerAndTimezoneInvalid() xwhttp.DeviceServiceO
 
 func CreateAndSaveModel(id string) *shared.Model {
 	model := shared.NewModel(id, "ModelDescription")
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_MODEL, model.ID, model)
+	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, model.ID, model)
 	if err != nil {
 		return nil
 	}
@@ -239,7 +238,7 @@ func CreateAndSaveModel(id string) *shared.Model {
 
 func CreateAndSaveEnvironment(id string) *shared.Environment {
 	env := shared.NewEnvironment(id, "ENV_MODEL_RULE_ENVIRONMENT_ID")
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_ENVIRONMENT, env.ID, env)
+	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_ENVIRONMENTS, env.ID, env)
 	if err != nil {
 		return nil
 	}
@@ -249,7 +248,7 @@ func CreateAndSaveEnvironment(id string) *shared.Environment {
 
 func CreateAndSaveGenericNamespacedList(name string, ttype string, data string) *shared.GenericNamespacedList {
 	namespacedList := CreateGenericNamespacedList(name, ttype, data)
-	err := ds.GetCachedSimpleDao().SetOne(ds.TABLE_GENERIC_NS_LIST, namespacedList.ID, namespacedList)
+	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, namespacedList.ID, namespacedList)
 	if err != nil {
 		return nil
 	}

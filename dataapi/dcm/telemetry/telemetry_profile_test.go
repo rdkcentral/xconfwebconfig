@@ -237,7 +237,7 @@ func TestGetTelemetryTwoProfileByTelemetryRules(t *testing.T) {
 		}
 
 		// Mock the database call to return profiles
-		GetOneTelemetryTwoProfileFunc = func(id string) *logupload.TelemetryTwoProfile {
+		GetOneTelemetryTwoProfileFunc = func(tenantId string, id string) *logupload.TelemetryTwoProfile {
 			profiles := map[string]*logupload.TelemetryTwoProfile{
 				"profile1": {ID: "profile1", Name: "Profile 1"},
 				"profile2": {ID: "profile2", Name: "Profile 2"},
@@ -265,7 +265,7 @@ func TestGetTelemetryTwoProfileByTelemetryRules(t *testing.T) {
 	t.Run("GetProfilesWithEmptyRules", func(t *testing.T) {
 		rules := []*logupload.TelemetryTwoRule{}
 
-		GetOneTelemetryTwoProfileFunc = func(id string) *logupload.TelemetryTwoProfile {
+		GetOneTelemetryTwoProfileFunc = func(tenantId string, id string) *logupload.TelemetryTwoProfile {
 			return &logupload.TelemetryTwoProfile{ID: id}
 		}
 
@@ -282,7 +282,7 @@ func TestGetTelemetryTwoProfileByTelemetryRules(t *testing.T) {
 		}
 
 		// Mock to return nil for missing profile
-		GetOneTelemetryTwoProfileFunc = func(id string) *logupload.TelemetryTwoProfile {
+		GetOneTelemetryTwoProfileFunc = func(tenantId string, id string) *logupload.TelemetryTwoProfile {
 			if id == "profile1" {
 				return &logupload.TelemetryTwoProfile{ID: "profile1", Name: "Profile 1"}
 			}
@@ -302,7 +302,7 @@ func TestGetTelemetryTwoProfileByTelemetryRules(t *testing.T) {
 			{ID: "rule1", Name: "Rule 1", BoundTelemetryIDs: []string{"profile1", "profile1", "profile1"}},
 		}
 
-		GetOneTelemetryTwoProfileFunc = func(id string) *logupload.TelemetryTwoProfile {
+		GetOneTelemetryTwoProfileFunc = func(tenantId string, id string) *logupload.TelemetryTwoProfile {
 			return &logupload.TelemetryTwoProfile{ID: id, Name: "Test Profile"}
 		}
 
@@ -326,7 +326,7 @@ func TestCreateTelemetryProfile(t *testing.T) {
 	// Mock the SetTelemetryProfile function
 	var capturedKey string
 	var capturedProfile logupload.TelemetryProfile
-	SetTelemetryProfileFunc = func(key string, profile logupload.TelemetryProfile) {
+	SetTelemetryProfileFunc = func(tenantId string, key string, profile logupload.TelemetryProfile) {
 		capturedKey = key
 		capturedProfile = profile
 	}
@@ -355,7 +355,7 @@ func TestDropTelemetryFor(t *testing.T) {
 		defer func() { GetTelemetryProfileMapFunc = originalGetFunc }()
 
 		// Mock to return nil
-		GetTelemetryProfileMapFunc = func() *map[string]logupload.TelemetryProfile {
+		GetTelemetryProfileMapFunc = func(tenantId string) *map[string]logupload.TelemetryProfile {
 			return nil
 		}
 
@@ -374,12 +374,12 @@ func TestDropTelemetryFor(t *testing.T) {
 
 		// Mock to return empty map
 		emptyMap := make(map[string]logupload.TelemetryProfile)
-		GetTelemetryProfileMapFunc = func() *map[string]logupload.TelemetryProfile {
+		GetTelemetryProfileMapFunc = func(tenantId string) *map[string]logupload.TelemetryProfile {
 			return &emptyMap
 		}
 
 		var deletedKeys []string
-		DeleteTelemetryProfileFunc = func(key string) {
+		DeleteTelemetryProfileFunc = func(tenantId string, key string) {
 			deletedKeys = append(deletedKeys, key)
 		}
 

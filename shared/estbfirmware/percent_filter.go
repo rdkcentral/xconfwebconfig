@@ -392,7 +392,7 @@ func (p *PercentFilterValue) GetEnvModelPercentage(name string) *EnvModelPercent
 }
 
 func GetDefaultPercentFilterValueOneDB() (*PercentFilterValue, error) {
-	dbinst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_SINGLETON_FILTER_VALUE, PERCENT_FILTER_SINGLETON_ID)
+	dbinst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_SINGLETON_FILTER_VALUES, PERCENT_FILTER_SINGLETON_ID)
 
 	if err != nil {
 		log.Error(fmt.Sprintf("GetDefaultPercentFilterValueOneDB %v", err))

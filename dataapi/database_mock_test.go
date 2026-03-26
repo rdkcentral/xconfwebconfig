@@ -18,8 +18,8 @@ type MockGroupServiceCacheDao struct {
 	mock.Mock
 }
 
-func (m *MockGroupServiceCacheDao) GetGroupServiceFeatureTags(cacheKey string) map[string]string {
-	args := m.Called(cacheKey)
+func (m *MockGroupServiceCacheDao) GetGroupServiceFeatureTags(tenantId string, cacheKey string) map[string]string {
+	args := m.Called(tenantId, cacheKey)
 	result := args.Get(0)
 	if result == nil {
 		return nil
@@ -27,13 +27,13 @@ func (m *MockGroupServiceCacheDao) GetGroupServiceFeatureTags(cacheKey string) m
 	return result.(map[string]string)
 }
 
-func (m *MockGroupServiceCacheDao) SetGroupServiceFeatureTags(cacheKey string, tags map[string]string) error {
-	args := m.Called(cacheKey, tags)
+func (m *MockGroupServiceCacheDao) SetGroupServiceFeatureTags(tenantId string, cacheKey string, tags map[string]string) error {
+	args := m.Called(tenantId, cacheKey, tags)
 	return args.Error(0)
 }
 
-func (m *MockGroupServiceCacheDao) DeleteGroupServiceFeatureTags(cacheKey string) error {
-	args := m.Called(cacheKey)
+func (m *MockGroupServiceCacheDao) DeleteGroupServiceFeatureTags(tenantId string, cacheKey string) error {
+	args := m.Called(tenantId, cacheKey)
 	return args.Error(0)
 }
 
@@ -57,7 +57,7 @@ func AddGroupServiceFTContextWithDAO(groupServiceDao db.GroupServiceCacheDao, ma
 
 			if Xc.GroupServiceCacheEnabled {
 				// THIS IS THE KEY DATABASE INTERACTION WE'RE TESTING
-				Tags := groupServiceDao.GetGroupServiceFeatureTags(partner)
+				Tags := groupServiceDao.GetGroupServiceFeatureTags(db.DEFAULT_TENANT_ID, partner)
 				for key, value := range Tags {
 					if keyWithoutPrefix, ok := RemovePrefix(key, Xc.PartnerTagsPrefixList); ok {
 						if getPrefixData {
@@ -89,7 +89,7 @@ func TestAddGroupServiceFTContext_DatabasePath(t *testing.T) {
 		"partner_security_level":  "high",
 		"non_partner_key":         "should_be_ignored", // This should be filtered out
 	}
-	mockDAO.On("GetGroupServiceFeatureTags", "COMCAST").Return(mockTags)
+	mockDAO.On("GetGroupServiceFeatureTags", db.DEFAULT_TENANT_ID, "COMCAST").Return(mockTags)
 
 	// Setup configuration to enable the database code path
 	partnerTagsSet := util.NewSet()

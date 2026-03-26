@@ -35,10 +35,10 @@ type ChangedData struct {
 	CfName         string        `json:"cfName"`
 	ChangedKey     string        `json:"changedKey"`
 	Operation      OperationType `json:"operation"`
-	DaoId          int32         `json:"DAOid"`
 	ValidCacheSize int32         `json:"validCacheSize"`
 	UserName       string        `json:"userName"`
 	ServerOriginId string        `json:"serverOriginId"`
+	TenantId       string        `json:"tenantId"`
 }
 
 func NewChangedDataInf() interface{} {

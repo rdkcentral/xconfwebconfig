@@ -190,7 +190,7 @@ func (d *DownloadLocationRoundRobinFilterValue) GetDownloadLocations() []string 
 
 func GetDownloadLocationRoundRobinFilterValOneDB(filterId string) (*DownloadLocationRoundRobinFilterValue, error) {
 	log.Debug("GetDownloadLocationRoundRobinFilterValOneDB starts...")
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_SINGLETON_FILTER_VALUE, filterId)
+	inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_SINGLETON_FILTER_VALUES, filterId)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +229,7 @@ func CreateDownloadLocationRoundRobinFilterValOneDB(dl *DownloadLocationRoundRob
 	}
 
 	// create record in DB
-	return db.GetCachedSimpleDao().SetOne(db.TABLE_SINGLETON_FILTER_VALUE, sfv.ID, sfv)
+	return db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_SINGLETON_FILTER_VALUES, sfv.ID, sfv)
 }
 
 func NewEmptyDownloadLocationFilter() *DownloadLocationFilter {

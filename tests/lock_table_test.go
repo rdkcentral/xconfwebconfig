@@ -90,9 +90,9 @@ func TestLockTable(t *testing.T) {
 
 	lockUser1 := "testUser1"
 	lockUser2 := "testUser2"
-	modelTableLock := db.NewDistributedLock(db.TABLE_MODEL, 5)
+	modelTableLock := db.NewDistributedLock(db.TABLE_MODELS, 5)
 	assert.Assert(t, modelTableLock != nil)
-	assert.Equal(t, modelTableLock.Name(), db.TABLE_MODEL)
+	assert.Equal(t, modelTableLock.Name(), db.TABLE_MODELS)
 	assert.Equal(t, modelTableLock.TTL(), 5)
 	assert.Equal(t, modelTableLock.Retries(), 0)
 	assert.Assert(t, modelTableLock.RetryInMsecs() > 0)
@@ -117,7 +117,7 @@ func TestLockTable(t *testing.T) {
 	assert.NilError(t, err)
 
 	// Acquire expired lock
-	envLockTable := db.NewDistributedLock(db.TABLE_ENVIRONMENT, 1)
+	envLockTable := db.NewDistributedLock(db.TABLE_ENVIRONMENTS, 1)
 	assert.Assert(t, envLockTable != nil)
 
 	// Acquire a new lock
@@ -148,7 +148,7 @@ func TestTableRowLock(t *testing.T) {
 
 	lockUser1 := "testUser1"
 	lockUser2 := "testUser2"
-	modelTableLock := db.NewDistributedLock(db.TABLE_MODEL, 1)
+	modelTableLock := db.NewDistributedLock(db.TABLE_MODELS, 1)
 	assert.Assert(t, modelTableLock != nil)
 
 	// Acquire a new lock

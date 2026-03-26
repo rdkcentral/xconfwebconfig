@@ -30,62 +30,62 @@ import (
 
 type cachedSimpleDaoMock struct{}
 
-func (dao cachedSimpleDaoMock) GetOne(tableName string, rowKey string) (interface{}, error) {
-	return getOneMock(tableName, rowKey)
+func (dao cachedSimpleDaoMock) GetOne(tenantId string, tableName string, rowKey string) (interface{}, error) {
+	return getOneMock(tenantId, tableName, rowKey)
 }
 
-func (dao cachedSimpleDaoMock) GetOneFromCacheOnly(tableName string, rowKey string) (interface{}, error) {
-	return getOneMock(tableName, rowKey)
+func (dao cachedSimpleDaoMock) GetOneFromCacheOnly(tenantId string, tableName string, rowKey string) (interface{}, error) {
+	return getOneMock(tenantId, tableName, rowKey)
 }
 
-func (dao cachedSimpleDaoMock) SetOne(tableName string, rowKey string, entity interface{}) error {
-	return setOneMock(tableName, rowKey, entity)
+func (dao cachedSimpleDaoMock) SetOne(tenantId string, tableName string, rowKey string, entity interface{}) error {
+	return setOneMock(tenantId, tableName, rowKey, entity)
 }
 
-func (dao cachedSimpleDaoMock) DeleteOne(tableName string, rowKey string) error {
-	return deleteOneMock(tableName, rowKey)
+func (dao cachedSimpleDaoMock) DeleteOne(tenantId string, tableName string, rowKey string) error {
+	return deleteOneMock(tenantId, tableName, rowKey)
 }
 
-func (dao cachedSimpleDaoMock) GetAllByKeys(tableName string, rowKeys []string) ([]interface{}, error) {
-	return getAllByKeysMock(tableName, rowKeys)
+func (dao cachedSimpleDaoMock) GetAllByKeys(tenantId string, tableName string, rowKeys []string) ([]interface{}, error) {
+	return getAllByKeysMock(tenantId, tableName, rowKeys)
 }
 
-func (dao cachedSimpleDaoMock) GetAllAsList(tableName string, maxResults int) ([]interface{}, error) {
-	return getAllAsListMock(tableName, maxResults)
+func (dao cachedSimpleDaoMock) GetAllAsList(tenantId string, tableName string, maxResults int) ([]interface{}, error) {
+	return getAllAsListMock(tenantId, tableName, maxResults)
 }
 
-func (dao cachedSimpleDaoMock) GetAllAsMap(tableName string) (map[interface{}]interface{}, error) {
-	return getAllAsMapMock(tableName)
+func (dao cachedSimpleDaoMock) GetAllAsMap(tenantId string, tableName string) (map[interface{}]interface{}, error) {
+	return getAllAsMapMock(tenantId, tableName)
 }
 
-func (dao cachedSimpleDaoMock) GetKeys(tableName string) ([]interface{}, error) {
-	return getKeysMock(tableName)
+func (dao cachedSimpleDaoMock) GetKeys(tenantId string, tableName string) ([]interface{}, error) {
+	return getKeysMock(tenantId, tableName)
 }
 
-func (dao cachedSimpleDaoMock) RefreshAll(tableName string) error {
-	return refreshAllMock(tableName)
+func (dao cachedSimpleDaoMock) RefreshAll(tenantId string, tableName string) error {
+	return refreshAllMock(tenantId, tableName)
 }
 
-func (dao cachedSimpleDaoMock) RefreshOne(tableName string, rowKey string) error {
-	return refreshOne(tableName, rowKey)
+func (dao cachedSimpleDaoMock) RefreshOne(tenantId string, tableName string, rowKey string) error {
+	return refreshOneMock(tenantId, tableName, rowKey)
 }
 
-var getOneMock func(tableName string, rowKey string) (interface{}, error)
-var setOneMock func(tableName string, rowKey string, entity interface{}) error
-var deleteOneMock func(tableName string, rowKey string) error
-var getAllByKeysMock func(tableName string, rowKeys []string) ([]interface{}, error)
-var getAllAsListMock func(tableName string, maxResults int) ([]interface{}, error)
-var getAllAsMapMock func(tableName string) (map[interface{}]interface{}, error)
-var getKeysMock func(tableName string) ([]interface{}, error)
-var refreshAllMock func(tableName string) error
-var refreshOne func(tableName string, rowKey string) error
+var getOneMock func(tenantID string, tableName string, rowKey string) (interface{}, error)
+var setOneMock func(tenantID string, tableName string, rowKey string, entity interface{}) error
+var deleteOneMock func(tenantID string, tableName string, rowKey string) error
+var getAllByKeysMock func(tenantID string, tableName string, rowKeys []string) ([]interface{}, error)
+var getAllAsListMock func(tenantID string, tableName string, maxResults int) ([]interface{}, error)
+var getAllAsMapMock func(tenantID string, tableName string) (map[interface{}]interface{}, error)
+var getKeysMock func(tenantID string, tableName string) ([]interface{}, error)
+var refreshAllMock func(tenantID string, tableName string) error
+var refreshOneMock func(tenantID string, tableName string, rowKey string) error
 
 func TestGetOne(t *testing.T) {
 	GetCachedSimpleDaoFunc = func() db.CachedSimpleDao {
 		return cachedSimpleDaoMock{}
 	}
-	getOneMock = func(tableName string, rowKey string) (interface{}, error) {
-		if tableName == db.TABLE_TELEMETRY {
+	getOneMock = func(tenantID string, tableName string, rowKey string) (interface{}, error) {
+		if tableName == db.TABLE_TELEMETRY_PROFILES {
 			telemetryProfile := TelemetryProfile{
 				ID:               "id",
 				Name:             "name",
@@ -99,7 +99,7 @@ func TestGetOne(t *testing.T) {
 		}
 		return nil, nil
 	}
-	telemetryProfile := GetOneTelemetryProfile("rowKey")
+	telemetryProfile := GetOneTelemetryProfile(db.DEFAULT_TENANT_ID, "rowKey")
 	assert.Equal(t, telemetryProfile.ID, "id")
 	assert.Equal(t, telemetryProfile.Schedule, "Schedule")
 	var a int64 = 123456
@@ -111,8 +111,8 @@ func TestGetTelemetryProfileList(t *testing.T) {
 	GetCachedSimpleDaoFunc = func() db.CachedSimpleDao {
 		return cachedSimpleDaoMock{}
 	}
-	getAllAsListMock = func(tableName string, maxResults int) ([]interface{}, error) {
-		if tableName == db.TABLE_TELEMETRY {
+	getAllAsListMock = func(tenantID string, tableName string, maxResults int) ([]interface{}, error) {
+		if tableName == db.TABLE_TELEMETRY_PROFILES {
 			telemetryProfile1 := TelemetryProfile{
 				ID:               "id1",
 				Name:             "name1",
@@ -139,7 +139,7 @@ func TestGetTelemetryProfileList(t *testing.T) {
 		return nil, nil
 	}
 	//[]*TelemetryProfile
-	telemetryProfileList := GetTelemetryProfileList()
+	telemetryProfileList := GetTelemetryProfileList(db.DEFAULT_TENANT_ID)
 	assert.Equal(t, len(telemetryProfileList), 2)
 	assert.Equal(t, telemetryProfileList[0].ApplicationType, "ApplicationType1")
 	assert.Equal(t, telemetryProfileList[1].UploadRepository, "uploadRepository:URL2")
@@ -150,8 +150,8 @@ func TestGetTelemetryProfileMap(t *testing.T) {
 	GetCachedSimpleDaoFunc = func() db.CachedSimpleDao {
 		return cachedSimpleDaoMock{}
 	}
-	getAllAsMapMock = func(tableName string) (map[interface{}]interface{}, error) {
-		if tableName == db.TABLE_TELEMETRY {
+	getAllAsMapMock = func(tenantID string, tableName string) (map[interface{}]interface{}, error) {
+		if tableName == db.TABLE_TELEMETRY_PROFILES {
 			telemetryProfile1 := TelemetryProfile{
 				ID:               "id1",
 				Name:             "name1",
@@ -192,7 +192,7 @@ func TestGetTelemetryProfileMap(t *testing.T) {
 		}
 		return nil, nil
 	}
-	finalMap := GetTelemetryProfileMap()
+	finalMap := GetTelemetryProfileMap(db.DEFAULT_TENANT_ID)
 	assert.Equal(t, len(*finalMap), 2)
 	var a1 int64 = 1234561
 	for k, v := range *finalMap {

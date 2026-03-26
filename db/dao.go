@@ -32,11 +32,11 @@ configured for the TableConfig variable.
 The returned value is an empty interface{} so the caller needs to cast the value
 to the target data type.
 
-The following code illustrates how to retrieve a specific Model from the Model table:
+The following code illustrates how to retrieve a specific model from the models table:
 
     import "github.com/rdkcentral/xconfwebconfig/db"
 
-	obj, err := db.GetSimpleDao().GetOne("Model", "PX013ANM")
+	obj, err := db.GetSimpleDao().GetOne("COMCAST", "models", "PX013ANM")
 	if err != nil {
 		// Handle error!
 	}
@@ -46,37 +46,21 @@ The following code illustrates how to retrieve a specific Model from the Model t
 
 // SimpleDao interface
 type SimpleDao interface {
+	GetOne(tenantId string, tableName string, rowKey string) (interface{}, error)
+	SetOne(tenantId string, tableName string, rowKey string, value []byte) error
+	DeleteOne(tenantId string, tableName string, rowKey string) error
+	GetAllByKeys(tenantId string, tableName string, rowKeys []string) ([]interface{}, error)
+	GetAllAsList(tenantId string, tableName string, maxResults int) ([]interface{}, error)
+	GetAllAsMap(tenantId string, tableName string, maxResults int) (map[string]interface{}, error)
+	GetAllAsMapRaw(tenantId string, tableName string, maxResults int) (map[string]json.RawMessage, error)
+	GetKeys(tenantId string, tableName string) []string
+
 	Modify(query string, queryParams ...string) error
 	Query(query string, queryParams ...string) ([]map[string]interface{}, error)
-	GetOne(tableName string, rowKey string) (interface{}, error)
-	SetOne(tableName string, rowKey string, value []byte) error
-	DeleteOne(tableName string, rowKey string) error
-	GetAllByKeys(tableName string, rowKeys []string) ([]interface{}, error)
-	GetAllAsList(tableName string, maxResults int) ([]interface{}, error)
-	GetAllAsMap(tableName string, maxResults int) (map[string]interface{}, error)
-	GetKeys(tableName string) []string
-	GetAllAsMapRaw(tableName string, maxResults int) (map[string]json.RawMessage, error)
 
 	// Batch operations
 	NewBatch(batchType int) BatchOperation
 	ExecuteBatch(batch BatchOperation) error
-}
-
-// GetAllAsMap get a map of all Xconf records as JSON string
-func (sd simpleDaoImpl) GetAllAsMapRaw(tableName string, maxResults int) (map[string]json.RawMessage, error) {
-	var result = make(map[string]json.RawMessage)
-
-	if _, err := GetTableInfo(tableName); err != nil {
-		return nil, err
-	}
-
-	// Get data from DB as a map of key and raw JSON []byte
-	dataMap := GetDatabaseClient().GetAllXconfDataAsMap(tableName, maxResults)
-	for key, jsonData := range dataMap {
-		result[key] = json.RawMessage(jsonData)
-	}
-
-	return result, nil
 }
 
 type simpleDaoImpl struct{}
@@ -89,14 +73,14 @@ func GetSimpleDao() SimpleDao {
 }
 
 // GetOne get one Xconf record
-func (sd simpleDaoImpl) GetOne(tableName string, rowKey string) (interface{}, error) {
+func (sd simpleDaoImpl) GetOne(tenantId string, tableName string, rowKey string) (interface{}, error) {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get data from DB as raw JSON []byte
-	jsonData, err := GetDatabaseClient().GetXconfData(tableName, rowKey)
+	jsonData, err := GetDatabaseClient().GetXconfData(tenantId, tableName, rowKey)
 	if err != nil {
 		return nil, err
 	}
@@ -108,6 +92,114 @@ func (sd simpleDaoImpl) GetOne(tableName string, rowKey string) (interface{}, er
 	}
 
 	return obj, nil
+}
+
+// SetOne set Xconf record
+func (sd simpleDaoImpl) SetOne(tenantId string, tableName string, rowKey string, value []byte) error {
+	tableInfo, err := GetTableInfo(tableName)
+	if err != nil {
+		return err
+	}
+
+	err = GetDatabaseClient().SetXconfData(tenantId, tableName, rowKey, value, tableInfo.TTL)
+	return err
+}
+
+// DeleteOne delete Xconf record
+func (sd simpleDaoImpl) DeleteOne(tenantId string, tableName string, rowKey string) error {
+	err := GetDatabaseClient().DeleteXconfData(tenantId, tableName, rowKey)
+	return err
+}
+
+// GetAllByKeys get Xconf records for the specified list of rowKeys
+func (sd simpleDaoImpl) GetAllByKeys(tenantId string, tableName string, rowKeys []string) ([]interface{}, error) {
+	var result []interface{}
+
+	tableInfo, err := GetTableInfo(tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get data from DB as a list of raw JSON []byte
+	rows := GetDatabaseClient().GetAllXconfDataByKeys(tenantId, tableName, rowKeys)
+	for _, jsonData := range rows {
+		obj := tableInfo.ConstructorFunc()  // Instantiate a new model/struct
+		err = json.Unmarshal(jsonData, obj) // Deserialize the raw JSON []byte to a struct
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, obj)
+	}
+
+	return result, err
+}
+
+// GetAllAsList get a list of all Xconf records
+func (sd simpleDaoImpl) GetAllAsList(tenantId string, tableName string, maxResults int) ([]interface{}, error) {
+	var result []interface{}
+
+	tableInfo, err := GetTableInfo(tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get data from DB as a list of raw JSON []byte
+	rows := GetDatabaseClient().GetAllXconfDataAsList(tenantId, tableName, maxResults)
+	for _, jsonData := range rows {
+		obj := tableInfo.ConstructorFunc()  // Instantiate a new model/struct
+		err = json.Unmarshal(jsonData, obj) // Deserialize the raw JSON []byte to a struct
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, obj)
+	}
+
+	return result, err
+}
+
+// GetAllAsMap get a map of all Xconf records
+func (sd simpleDaoImpl) GetAllAsMap(tenantId string, tableName string, maxResults int) (map[string]interface{}, error) {
+	var result = make(map[string]interface{})
+
+	tableInfo, err := GetTableInfo(tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get data from DB as a map of key and raw JSON []byte
+	dataMap := GetDatabaseClient().GetAllXconfDataAsMap(tenantId, tableName, maxResults)
+	for key, jsonData := range dataMap {
+		obj := tableInfo.ConstructorFunc()  // Instantiate a new model/struct
+		err = json.Unmarshal(jsonData, obj) // Deserialize the raw JSON []byte to a struct
+		if err != nil {
+			return nil, err
+		}
+		result[key] = obj
+	}
+
+	return result, err
+}
+
+// GetAllAsMap get a map of all Xconf records as JSON string
+func (sd simpleDaoImpl) GetAllAsMapRaw(tenantId string, tableName string, maxResults int) (map[string]json.RawMessage, error) {
+	var result = make(map[string]json.RawMessage)
+
+	if _, err := GetTableInfo(tableName); err != nil {
+		return nil, err
+	}
+
+	// Get data from DB as a map of key and raw JSON []byte
+	dataMap := GetDatabaseClient().GetAllXconfDataAsMap(tenantId, tableName, maxResults)
+	for key, jsonData := range dataMap {
+		result[key] = json.RawMessage(jsonData)
+	}
+
+	return result, nil
+}
+
+// GetKeys get all Xconf keys
+func (sd simpleDaoImpl) GetKeys(tenantId string, tableName string) []string {
+	return GetDatabaseClient().GetAllXconfKeys(tenantId, tableName)
 }
 
 func (sd simpleDaoImpl) Modify(query string, queryParams ...string) error {
@@ -128,95 +220,4 @@ func (sd simpleDaoImpl) NewBatch(batchType int) BatchOperation {
 
 func (sd simpleDaoImpl) ExecuteBatch(batch BatchOperation) error {
 	return GetDatabaseClient().ExecuteBatch(batch)
-}
-
-// SetOne set Xconf record
-func (sd simpleDaoImpl) SetOne(tableName string, rowKey string, value []byte) error {
-	tableInfo, err := GetTableInfo(tableName)
-	if err != nil {
-		return err
-	}
-
-	err = GetDatabaseClient().SetXconfData(tableName, rowKey, value, tableInfo.TTL)
-	return err
-}
-
-// DeleteOne delete Xconf record
-func (sd simpleDaoImpl) DeleteOne(tableName string, rowKey string) error {
-	err := GetDatabaseClient().DeleteXconfData(tableName, rowKey)
-	return err
-}
-
-// GetAllByKeys get Xconf records for the specified list of rowKeys
-func (sd simpleDaoImpl) GetAllByKeys(tableName string, rowKeys []string) ([]interface{}, error) {
-	var result []interface{}
-
-	tableInfo, err := GetTableInfo(tableName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get data from DB as a list of raw JSON []byte
-	rows := GetDatabaseClient().GetAllXconfDataByKeys(tableName, rowKeys)
-	for _, jsonData := range rows {
-		obj := tableInfo.ConstructorFunc()  // Instantiate a new model/struct
-		err = json.Unmarshal(jsonData, obj) // Deserialize the raw JSON []byte to a struct
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, obj)
-	}
-
-	return result, err
-}
-
-// GetAllAsList get a list of all Xconf records
-func (sd simpleDaoImpl) GetAllAsList(tableName string, maxResults int) ([]interface{}, error) {
-	var result []interface{}
-
-	tableInfo, err := GetTableInfo(tableName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get data from DB as a list of raw JSON []byte
-	rows := GetDatabaseClient().GetAllXconfDataAsList(tableName, maxResults)
-	for _, jsonData := range rows {
-		obj := tableInfo.ConstructorFunc()  // Instantiate a new model/struct
-		err = json.Unmarshal(jsonData, obj) // Deserialize the raw JSON []byte to a struct
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, obj)
-	}
-
-	return result, err
-}
-
-// GetAllAsMap get a map of all Xconf records
-func (sd simpleDaoImpl) GetAllAsMap(tableName string, maxResults int) (map[string]interface{}, error) {
-	var result = make(map[string]interface{})
-
-	tableInfo, err := GetTableInfo(tableName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get data from DB as a map of key and raw JSON []byte
-	dataMap := GetDatabaseClient().GetAllXconfDataAsMap(tableName, maxResults)
-	for key, jsonData := range dataMap {
-		obj := tableInfo.ConstructorFunc()  // Instantiate a new model/struct
-		err = json.Unmarshal(jsonData, obj) // Deserialize the raw JSON []byte to a struct
-		if err != nil {
-			return nil, err
-		}
-		result[key] = obj
-	}
-
-	return result, err
-}
-
-// GetKeys get all Xconf keys
-func (sd simpleDaoImpl) GetKeys(tableName string) []string {
-	return GetDatabaseClient().GetAllXconfKeys(tableName)
 }

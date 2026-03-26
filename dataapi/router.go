@@ -34,7 +34,6 @@ import (
 	fw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
-	"github.com/rdkcentral/xconfwebconfig/tag"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
 	cache "github.com/Comcast/goburrow-cache"
@@ -98,73 +97,30 @@ var registerOnce sync.Once
 
 func RegisterTables() {
 	registerOnce.Do(func() {
-		db.RegisterTableConfigSimple(db.TABLE_DCM_RULE, logupload.NewDCMGenericRuleInf)
-		db.RegisterTableConfigSimple(db.TABLE_ENVIRONMENT, shared.NewEnvironmentInf)
-		db.RegisterTableConfigSimple(db.TABLE_MODEL, shared.NewModelInf)
-		db.RegisterTableConfigSimple(db.TABLE_IP_ADDRESS_GROUP, shared.NewIpAddressGroupInf)
-		db.RegisterTableConfigSimple(db.TABLE_FIRMWARE_CONFIG, sharedef.NewFirmwareConfigInf)
-		db.RegisterTableConfigSimple(db.TABLE_FIRMWARE_RULE, fw.NewFirmwareRuleInf)
-		db.RegisterTableConfigSimple(db.TABLE_FIRMWARE_RULE_TEMPLATE, fw.NewFirmwareRuleTemplateInf)
-		db.RegisterTableConfigSimple(db.TABLE_SINGLETON_FILTER_VALUE, sharedef.NewSingletonFilterValueInf)
-		db.RegisterTableConfigSimple(db.TABLE_UPLOAD_REPOSITORY, logupload.NewUploadRepositoryInf)
-		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE, logupload.NewLogFileInf)
-		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE_LIST, logupload.NewLogFileListInf)
-		db.RegisterTableConfigSimple(db.TABLE_LOG_FILES_GROUPS, logupload.NewLogFilesGroupsInf)
-		db.RegisterTableConfigSimple(db.TABLE_LOG_UPLOAD_SETTINGS, logupload.NewLogUploadSettingsInf)
-		db.RegisterTableConfigSimple(db.TABLE_SETTING_PROFILES, logupload.NewSettingProfilesInf)
-		db.RegisterTableConfigSimple(db.TABLE_SETTING_RULES, logupload.NewSettingRulesInf)
-		db.RegisterTableConfigSimple(db.TABLE_DEVICE_SETTINGS, logupload.NewDeviceSettingsInf)
-		db.RegisterTableConfigSimple(db.TABLE_VOD_SETTINGS, logupload.NewVodSettingsInf)
-		db.RegisterTableConfigSimple(db.TABLE_TELEMETRY, logupload.NewTelemetryProfileInf)
-		db.RegisterTableConfigSimple(db.TABLE_PERMANENT_TELEMETRY, logupload.NewPermanentTelemetryProfileInf)
-		db.RegisterTableConfigSimple(db.TABLE_TELEMETRY_RULES, logupload.NewTelemetryRuleInf)
-		db.RegisterTableConfigSimple(db.TABLE_TELEMETRY_TWO_PROFILES, logupload.NewTelemetryTwoProfileInf)
-		db.RegisterTableConfigSimple(db.TABLE_TELEMETRY_TWO_RULES, logupload.NewTelemetryTwoRuleInf)
-		db.RegisterTableConfigSimple(db.TABLE_XCONF_FEATURE, rfc.NewFeatureInf)
-		db.RegisterTableConfigSimple(db.TABLE_FEATURE_CONTROL_RULE, rfc.NewFeatureRuleInf)
 		db.RegisterTableConfigSimple(db.TABLE_APP_SETTINGS, shared.NewAppSettingInf)
 		db.RegisterTableConfigSimple(db.TABLE_APPLICATION_TYPES, shared.NewApplicationTypeInf)
-		db.RegisterTableConfigSimple(db.TABLE_TAG, tag.NewTagInf)
-
-		db.RegisterTableConfig(&db.TableInfo{
-			TableName:       db.TABLE_XCONF_CHANGE,
-			ConstructorFunc: change.NewChangeInf,
-			CacheData:       false,
-		})
-
-		db.RegisterTableConfig(&db.TableInfo{
-			TableName:       db.TABLE_XCONF_APPROVED_CHANGE,
-			ConstructorFunc: change.NewApprovedChangeInf,
-			TTL:             432000,
-			CacheData:       false,
-		})
-
-		db.RegisterTableConfig(&db.TableInfo{
-			TableName:       db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
-			ConstructorFunc: change.NewTelemetryTwoChangeInf,
-		})
-
-		db.RegisterTableConfig(&db.TableInfo{
-			TableName:       db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
-			ConstructorFunc: change.NewApprovedTelemetryTwoChangeInf,
-			TTL:             432000,
-		})
-
-		db.RegisterTableConfig(&db.TableInfo{
-			TableName:       db.TABLE_LOGS,
-			ConstructorFunc: sharedef.NewConfigChangeLogInf,
-			Compress:        true,
-			TTL:             90 * 24 * 60 * 60,
-			Key2FieldName:   db.DefaultKey2FieldName,
-		})
-
-		db.RegisterTableConfig(&db.TableInfo{
-			TableName:       db.TABLE_NS_LIST,
-			ConstructorFunc: shared.NewNamespacedListInf,
-			Compress:        true,
-			Split:           true,
-			CacheData:       true,
-		})
+		db.RegisterTableConfigSimple(db.TABLE_ENVIRONMENTS, shared.NewEnvironmentInf)
+		db.RegisterTableConfigSimple(db.TABLE_MODELS, shared.NewModelInf)
+		db.RegisterTableConfigSimple(db.TABLE_FEATURE_CONTROL_RULES, rfc.NewFeatureRuleInf)
+		db.RegisterTableConfigSimple(db.TABLE_FEATURES, rfc.NewFeatureInf)
+		db.RegisterTableConfigSimple(db.TABLE_FIRMWARE_RULES, fw.NewFirmwareRuleInf)
+		db.RegisterTableConfigSimple(db.TABLE_FIRMWARE_CONFIGS, sharedef.NewFirmwareConfigInf)
+		db.RegisterTableConfigSimple(db.TABLE_FIRMWARE_RULE_TEMPLATES, fw.NewFirmwareRuleTemplateInf)
+		db.RegisterTableConfigSimple(db.TABLE_SINGLETON_FILTER_VALUES, sharedef.NewSingletonFilterValueInf)
+		db.RegisterTableConfigSimple(db.TABLE_DCM_RULES, logupload.NewDCMGenericRuleInf)
+		db.RegisterTableConfigSimple(db.TABLE_UPLOAD_REPOSITORIES, logupload.NewUploadRepositoryInf)
+		db.RegisterTableConfigSimple(db.TABLE_LOG_UPLOAD_SETTINGS, logupload.NewLogUploadSettingsInf)
+		db.RegisterTableConfigSimple(db.TABLE_LOG_FILES, logupload.NewLogFileInf)
+		db.RegisterTableConfigSimple(db.TABLE_LOG_FILE_LISTS, logupload.NewLogFileListInf)
+		db.RegisterTableConfigSimple(db.TABLE_DEVICE_SETTINGS, logupload.NewDeviceSettingsInf)
+		db.RegisterTableConfigSimple(db.TABLE_VOD_SETTINGS, logupload.NewVodSettingsInf)
+		db.RegisterTableConfigSimple(db.TABLE_SETTING_RULES, logupload.NewSettingRulesInf)
+		db.RegisterTableConfigSimple(db.TABLE_SETTING_PROFILES, logupload.NewSettingProfilesInf)
+		db.RegisterTableConfigSimple(db.TABLE_TELEMETRY_RULES, logupload.NewTelemetryRuleInf)
+		db.RegisterTableConfigSimple(db.TABLE_TELEMETRY_PROFILES, logupload.NewTelemetryProfileInf)
+		db.RegisterTableConfigSimple(db.TABLE_TELEMETRY_TWO_RULES, logupload.NewTelemetryTwoRuleInf)
+		db.RegisterTableConfigSimple(db.TABLE_TELEMETRY_TWO_PROFILES, logupload.NewTelemetryTwoProfileInf)
+		db.RegisterTableConfigSimple(db.TABLE_PERMANENT_TELEMETRY_PROFILES, logupload.NewPermanentTelemetryProfileInf)
 
 		db.RegisterTableConfig(&db.TableInfo{
 			TableName:       db.TABLE_GENERIC_NS_LIST,
@@ -172,24 +128,54 @@ func RegisterTables() {
 			Compress:        true,
 			Split:           true,
 			CacheData:       true,
+			Key2FieldName:   db.Key2FieldNameForList,
 		})
 
 		db.RegisterTableConfig(&db.TableInfo{
-			TableName:       db.TABLE_XCONF_CHANGED_KEYS,
-			ConstructorFunc: db.NewChangedDataInf,
-			Key2FieldName:   db.ChangedKeysKey2FieldName,
-			TTL:             86400 * 7, // one week
+			TableName:       db.TABLE_TELEMETRY_CHANGES,
+			ConstructorFunc: change.NewChangeInf,
+			CacheData:       false,
 		})
 
 		db.RegisterTableConfig(&db.TableInfo{
-			TableName:       db.TABLE_XCONF_TELEMETRY_TWO_CHANGE,
+			TableName:       db.TABLE_TELEMETRY_APPROVED_CHANGES,
+			ConstructorFunc: change.NewApprovedChangeInf,
+			TTL:             432000,
+			CacheData:       false,
+		})
+
+		db.RegisterTableConfig(&db.TableInfo{
+			TableName:       db.TABLE_TELEMETRY_TWO_CHANGES,
 			ConstructorFunc: change.NewTelemetryTwoChangeInf,
 		})
 
 		db.RegisterTableConfig(&db.TableInfo{
-			TableName:       db.TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
+			TableName:       db.TABLE_TELEMETRY_APPROVED_TWO_CHANGES,
 			ConstructorFunc: change.NewApprovedTelemetryTwoChangeInf,
 			TTL:             432000,
+		})
+
+		db.RegisterTableConfig(&db.TableInfo{
+			TableName:       db.TABLE_CONFIG_CHANGE_LOGS,
+			ConstructorFunc: sharedef.NewConfigChangeLogInf,
+			Compress:        true,
+			Key2FieldName:   db.Key2FieldNameForList,
+			TTL:             90 * 24 * 60 * 60,
+		})
+
+		db.RegisterTableConfig(&db.TableInfo{
+			TableName:       db.TABLE_CHANGE_EVENTS,
+			ConstructorFunc: db.NewChangedDataInf,
+			Key2FieldName:   db.Key2FieldNameForChangedKeys,
+			TTL:             86400 * 7, // one week
+		})
+
+		db.RegisterTableConfig(&db.TableInfo{
+			TableName:       db.TABLE_LOGS,
+			ConstructorFunc: sharedef.NewConfigChangeLogInf,
+			Compress:        true,
+			Key2FieldName:   db.Key2FieldNameForList,
+			TTL:             90 * 24 * 60 * 60,
 		})
 	})
 }
@@ -473,7 +459,7 @@ func LoadGroupServiceFeatureTags(key cache.Key) (cache.Value, error) {
 
 			// Cache the absence of tags by storing nil
 			emptyTags := map[string]string{}
-			cacheErr := db.GetCacheManager().SetGroupServiceFeatureTags(partnerID, emptyTags)
+			cacheErr := db.GetCacheManager().SetGroupServiceFeatureTags(db.DEFAULT_TENANT_ID, partnerID, emptyTags)
 			if cacheErr != nil {
 				log.WithFields(log.Fields{"error": cacheErr, "partnerId": partnerID}).Error("Failed to cache empty tags")
 			}

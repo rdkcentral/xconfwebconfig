@@ -31,12 +31,12 @@ import (
 func GetSettingRuleAllAsList() ([]*logupload.SettingRule, error) {
 	cm := db.GetCacheManager()
 	cacheKey := "SettingRuleList"
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_SETTING_RULES, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_SETTING_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*logupload.SettingRule), nil
 	}
 
-	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_SETTING_RULES, 0)
+	list, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_SETTING_RULES, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func GetSettingRuleAllAsList() ([]*logupload.SettingRule, error) {
 	}
 
 	if len(settingRules) > 0 {
-		cm.ApplicationCacheSet(db.TABLE_SETTING_RULES, cacheKey, settingRules)
+		cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_SETTING_RULES, cacheKey, settingRules)
 	}
 
 	return settingRules, nil
@@ -75,7 +75,7 @@ func GetSettingRulesBySettingType(settingType string) []*logupload.SettingRule {
 func GetSettingProfileBySettingRule(settingRule *logupload.SettingRule) *logupload.SettingProfiles {
 	var settingProfile *logupload.SettingProfiles
 	if settingRule != nil && settingRule.BoundSettingID != "" {
-		profileData, err := db.GetCachedSimpleDao().GetOne(db.TABLE_SETTING_PROFILES, settingRule.BoundSettingID)
+		profileData, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_SETTING_PROFILES, settingRule.BoundSettingID)
 		if err == nil {
 			settingProfile = profileData.(*logupload.SettingProfiles)
 		}

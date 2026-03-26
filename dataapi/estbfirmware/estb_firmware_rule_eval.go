@@ -266,7 +266,7 @@ func (e *EstbFirmwareRuleBase) GetSortedTemplate(actionType corefw.ApplicableAct
 	}
 
 	cm := db.GetCacheManager()
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_FIRMWARE_RULE_TEMPLATE, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*corefw.FirmwareRuleTemplate)
 	}
@@ -294,7 +294,7 @@ func (e *EstbFirmwareRuleBase) GetSortedTemplate(actionType corefw.ApplicableAct
 		})
 	}
 
-	cm.ApplicationCacheSet(db.TABLE_FIRMWARE_RULE_TEMPLATE, cacheKey, sortedList)
+	cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, cacheKey, sortedList)
 
 	return sortedList
 }

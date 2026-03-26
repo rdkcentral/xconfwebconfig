@@ -255,7 +255,7 @@ func AddGroupServiceFTContext(ws *xhttp.XconfServer, macAddressKey string, conte
 			log.WithFields(fields).Debugf("Getting all data from GroupService /ft keyspace for partnerId=%s", partner)
 
 			if Xc.GroupServiceCacheEnabled {
-				Tags := groupServiceDao.GetGroupServiceFeatureTags(partner)
+				Tags := groupServiceDao.GetGroupServiceFeatureTags(db.DEFAULT_TENANT_ID, partner)
 				for key, value := range Tags {
 					if keyWithoutPrefix, ok := RemovePrefix(key, Xc.PartnerTagsPrefixList); ok {
 						if getPrefixData {

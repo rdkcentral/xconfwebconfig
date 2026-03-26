@@ -36,16 +36,16 @@ to the target data type.
 
 // ListingDao interface
 type ListingDao interface {
-	GetOne(tableName string, rowKey string, key2 interface{}) (interface{}, error)
-	SetOne(tableName string, rowKey interface{}, key2 interface{}, value []byte) error
-	DeleteOne(tableName string, rowKey string, key2 interface{}) error
-	DeleteAll(tableName string, rowKey string) error
-	GetAll(tableName string, rowKey string) ([]interface{}, error)
-	GetAllAsList(tableName string) ([]interface{}, error)
-	GetAllAsMap(tableName string, rowKey string, key2List []interface{}) (map[interface{}]interface{}, error)
-	GetRange(tableName string, rowKey interface{}, rangeInfo *RangeInfo) ([]interface{}, error)
-	GetKeys(tableName string) ([]TwoKeys, error)
-	GetKey2AsList(tableName string, rowKey string) ([]interface{}, error)
+	GetOne(tenantId string, tableName string, key string, key2 interface{}) (interface{}, error)
+	SetOne(tenantId string, tableName string, key interface{}, key2 interface{}, value []byte) error
+	DeleteOne(tenantId string, tableName string, key string, key2 interface{}) error
+	DeleteAll(tenantId string, tableName string, key string) error
+	GetAll(tenantId string, tableName string, key string) ([]interface{}, error)
+	GetAllAsList(tenantId string, tableName string) ([]interface{}, error)
+	GetAllAsMap(tenantId string, tableName string, key string, key2List []interface{}) (map[interface{}]interface{}, error)
+	GetRange(tenantId string, tableName string, key interface{}, rangeInfo *RangeInfo) ([]interface{}, error)
+	GetKeys(tenantId string, tableName string) ([]TwoKeys, error)
+	GetKey2AsList(tenantId string, tableName string, key string) ([]interface{}, error)
 }
 
 type listingDaoImpl struct{}
@@ -58,14 +58,14 @@ func GetListingDao() ListingDao {
 }
 
 // GetOne get one Xconf record for two keys
-func (ld listingDaoImpl) GetOne(tableName string, rowKey string, key2 interface{}) (interface{}, error) {
+func (ld listingDaoImpl) GetOne(tenantId string, tableName string, key string, key2 interface{}) (interface{}, error) {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get data from DB as raw JSON []byte
-	data, err := GetDatabaseClient().GetXconfDataTwoKeys(tableName, rowKey, tableInfo.Key2FieldName, key2)
+	data, err := GetDatabaseClient().GetXconfDataTwoKeys(tenantId, tableName, key, tableInfo.Key2FieldName, key2)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (ld listingDaoImpl) GetOne(tableName string, rowKey string, key2 interface{
 	if tableInfo.Compress {
 		jsonData, err = decompress(data)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
+			return nil, fmt.Errorf("failed to decompress tenantId %s table %s key %s key2 %v: %w", tenantId, tableName, key, key2, err)
 		}
 	} else {
 		jsonData = data
@@ -90,7 +90,7 @@ func (ld listingDaoImpl) GetOne(tableName string, rowKey string, key2 interface{
 }
 
 // SetOne set Xconf record for two keys
-func (ld listingDaoImpl) SetOne(tableName string, rowKey interface{}, key2 interface{}, value []byte) error {
+func (ld listingDaoImpl) SetOne(tenantId string, tableName string, key interface{}, key2 interface{}, value []byte) error {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return err
@@ -104,27 +104,27 @@ func (ld listingDaoImpl) SetOne(tableName string, rowKey interface{}, key2 inter
 		data = value
 	}
 
-	err = GetDatabaseClient().SetXconfDataTwoKeys(tableName, rowKey, tableInfo.Key2FieldName, key2, data, tableInfo.TTL)
+	err = GetDatabaseClient().SetXconfDataTwoKeys(tenantId, tableName, key, tableInfo.Key2FieldName, key2, data, tableInfo.TTL)
 	return err
 }
 
 // DeleteOne delete Xconf record for two keys
-func (ld listingDaoImpl) DeleteOne(tableName string, rowKey string, key2 interface{}) error {
+func (ld listingDaoImpl) DeleteOne(tenantId string, tableName string, key string, key2 interface{}) error {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return err
 	}
 
-	return GetDatabaseClient().DeleteXconfDataTwoKeys(tableName, rowKey, tableInfo.Key2FieldName, key2)
+	return GetDatabaseClient().DeleteXconfDataTwoKeys(tenantId, tableName, key, tableInfo.Key2FieldName, key2)
 }
 
-func (ld listingDaoImpl) DeleteAll(tableName string, rowKey string) error {
-	err := GetDatabaseClient().DeleteXconfData(tableName, rowKey)
+func (ld listingDaoImpl) DeleteAll(tenantId string, tableName string, key string) error {
+	err := GetDatabaseClient().DeleteXconfData(tenantId, tableName, key)
 	return err
 }
 
-// GetAll get multiple Xconf records for the specified rowKey
-func (ld listingDaoImpl) GetAll(tableName string, rowKey string) ([]interface{}, error) {
+// GetAll get multiple Xconf records for the specified key
+func (ld listingDaoImpl) GetAll(tenantId string, tableName string, key string) ([]interface{}, error) {
 	var result []interface{}
 
 	tableInfo, err := GetTableInfo(tableName)
@@ -133,13 +133,13 @@ func (ld listingDaoImpl) GetAll(tableName string, rowKey string) ([]interface{},
 	}
 
 	// Get data from DB as a list of raw JSON []byte
-	rows := GetDatabaseClient().GetAllXconfData(tableName, rowKey)
+	rows := GetDatabaseClient().GetAllXconfData(tenantId, tableName, key)
 	for _, data := range rows {
 		var jsonData []byte
 		if tableInfo.Compress {
 			jsonData, err = decompress(data)
 			if err != nil {
-				return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
+				return nil, fmt.Errorf("failed to decompress tenantId %s table %s key %s: %w", tenantId, tableName, key, err)
 			}
 		} else {
 			jsonData = data
@@ -157,7 +157,7 @@ func (ld listingDaoImpl) GetAll(tableName string, rowKey string) ([]interface{},
 }
 
 // GetAllAsList get a list of all Xconf records
-func (ld listingDaoImpl) GetAllAsList(tableName string) ([]interface{}, error) {
+func (ld listingDaoImpl) GetAllAsList(tenantId string, tableName string) ([]interface{}, error) {
 	var result []interface{}
 
 	tableInfo, err := GetTableInfo(tableName)
@@ -165,7 +165,7 @@ func (ld listingDaoImpl) GetAllAsList(tableName string) ([]interface{}, error) {
 		return nil, err
 	}
 
-	rows := GetDatabaseClient().GetAllXconfDataAsList(tableName, 0)
+	rows := GetDatabaseClient().GetAllXconfDataAsList(tenantId, tableName, 0)
 	for _, data := range rows {
 		var jsonData []byte
 		if tableInfo.Compress {
@@ -189,7 +189,7 @@ func (ld listingDaoImpl) GetAllAsList(tableName string) ([]interface{}, error) {
 }
 
 // GetAllAsMap get a map of all Xconf records for the specified key2 list
-func (ld listingDaoImpl) GetAllAsMap(tableName string, rowKey string, key2List []interface{}) (map[interface{}]interface{}, error) {
+func (ld listingDaoImpl) GetAllAsMap(tenantId string, tableName string, key string, key2List []interface{}) (map[interface{}]interface{}, error) {
 	var result = make(map[interface{}]interface{})
 
 	tableInfo, err := GetTableInfo(tableName)
@@ -198,13 +198,13 @@ func (ld listingDaoImpl) GetAllAsMap(tableName string, rowKey string, key2List [
 	}
 
 	// Get data from DB as a map of key2 and raw JSON []byte
-	dataMap := GetDatabaseClient().GetAllXconfDataTwoKeysAsMap(tableName, rowKey, tableInfo.Key2FieldName, key2List)
+	dataMap := GetDatabaseClient().GetAllXconfDataTwoKeysAsMap(tenantId, tableName, key, tableInfo.Key2FieldName, key2List)
 	for key2, data := range dataMap {
 		var jsonData []byte
 		if tableInfo.Compress {
 			jsonData, err = decompress(data)
 			if err != nil {
-				return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
+				return nil, fmt.Errorf("failed to decompress tenantId %s table %s key %s key2 %v: %w", tenantId, tableName, key, key2, err)
 			}
 		} else {
 			jsonData = data
@@ -221,7 +221,7 @@ func (ld listingDaoImpl) GetAllAsMap(tableName string, rowKey string, key2List [
 	return result, err
 }
 
-func (ld listingDaoImpl) GetRange(tableName string, rowKey interface{}, rangeInfo *RangeInfo) ([]interface{}, error) {
+func (ld listingDaoImpl) GetRange(tenantId string, tableName string, key interface{}, rangeInfo *RangeInfo) ([]interface{}, error) {
 	var result []interface{}
 
 	tableInfo, err := GetTableInfo(tableName)
@@ -230,13 +230,13 @@ func (ld listingDaoImpl) GetRange(tableName string, rowKey interface{}, rangeInf
 	}
 
 	// Get data from DB as a list of raw JSON []byte
-	rows := GetDatabaseClient().GetAllXconfDataTwoKeysRange(tableName, rowKey, tableInfo.Key2FieldName, rangeInfo)
+	rows := GetDatabaseClient().GetAllXconfDataTwoKeysRange(tenantId, tableName, key, tableInfo.Key2FieldName, rangeInfo)
 	for _, data := range rows {
 		var jsonData []byte
 		if tableInfo.Compress {
 			jsonData, err = decompress(data)
 			if err != nil {
-				return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
+				return nil, fmt.Errorf("failed to decompress tenantId %s table %s key %v: %w", tenantId, tableName, key, err)
 			}
 		} else {
 			jsonData = data
@@ -254,21 +254,21 @@ func (ld listingDaoImpl) GetRange(tableName string, rowKey interface{}, rangeInf
 }
 
 // GetKeys get all Xconf two keys
-func (ld listingDaoImpl) GetKeys(tableName string) ([]TwoKeys, error) {
+func (ld listingDaoImpl) GetKeys(tenantId string, tableName string) ([]TwoKeys, error) {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return nil, err
 	}
 
-	return GetDatabaseClient().GetAllXconfTwoKeys(tableName, tableInfo.Key2FieldName), nil
+	return GetDatabaseClient().GetAllXconfTwoKeys(tenantId, tableName, tableInfo.Key2FieldName), nil
 }
 
 // GetKeys get a list of Xconf key2 for the specified rowKey
-func (ld listingDaoImpl) GetKey2AsList(tableName string, rowKey string) ([]interface{}, error) {
+func (ld listingDaoImpl) GetKey2AsList(tenantId string, tableName string, rowKey string) ([]interface{}, error) {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return nil, err
 	}
 
-	return GetDatabaseClient().GetAllXconfKey2s(tableName, rowKey, tableInfo.Key2FieldName), nil
+	return GetDatabaseClient().GetAllXconfKey2s(tenantId, tableName, rowKey, tableInfo.Key2FieldName), nil
 }

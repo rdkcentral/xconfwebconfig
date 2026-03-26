@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
@@ -91,24 +91,24 @@ var (
 )
 
 func TestListingCRUD(t *testing.T) {
-	if !ds.IsCassandraClient() {
+	if !db.IsCassandraClient() {
 		t.Skip("Not using Cassandra DB")
 	}
 
-	truncateTable(ds.TABLE_LOGS)
+	truncateTable(db.TABLE_LOGS)
 
 	rowKey := "A4:F3:E8:79:C8:60"
 
 	// test create
-	err := ds.GetListingDao().SetOne(ds.TABLE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID, []byte(configChangeLogJsonTemplate1))
+	err := db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID, []byte(configChangeLogJsonTemplate1))
 	assert.NilError(t, err)
-	err = ds.GetListingDao().SetOne(ds.TABLE_LOGS, rowKey, "tvxads-de-k8-xconfds-0153e903b521e2a9e_1", []byte(configChangeLogJsonTemplate1))
+	err = db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, rowKey, "tvxads-de-k8-xconfds-0153e903b521e2a9e_1", []byte(configChangeLogJsonTemplate1))
 	assert.NilError(t, err)
-	err = ds.GetListingDao().SetOne(ds.TABLE_LOGS, rowKey, "tvxads-de-k8-xconfds-0153e903b521e2a9e_2", []byte(configChangeLogJsonTemplate1))
+	err = db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, rowKey, "tvxads-de-k8-xconfds-0153e903b521e2a9e_2", []byte(configChangeLogJsonTemplate1))
 	assert.NilError(t, err)
 
 	// test retrieve
-	obj, err := ds.GetListingDao().GetOne(ds.TABLE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID)
+	obj, err := db.GetListingDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID)
 	assert.NilError(t, err)
 	assert.Assert(t, obj != nil)
 	changeLog := obj.(*coreef.ConfigChangeLog)
@@ -154,16 +154,16 @@ func TestListingCRUD(t *testing.T) {
 	assert.Assert(t, len(changeLog.Explanation) > 100)
 	assert.Assert(t, changeLog.HasMinimumFirmware)
 
-	list, err := ds.GetListingDao().GetAll(ds.TABLE_LOGS, rowKey)
+	list, err := db.GetListingDao().GetAll(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, rowKey)
 	assert.NilError(t, err)
 	assert.Assert(t, list != nil)
 	assert.Assert(t, len(list) == 3)
 
 	// test delete
-	err = ds.GetListingDao().DeleteOne(ds.TABLE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID)
+	err = db.GetListingDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID)
 	assert.NilError(t, err)
 
-	list, err = ds.GetListingDao().GetKey2AsList(ds.TABLE_LOGS, rowKey)
+	list, err = db.GetListingDao().GetKey2AsList(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, rowKey)
 	assert.NilError(t, err)
 	assert.Assert(t, list != nil)
 	assert.Assert(t, len(list) == 2)
@@ -172,27 +172,20 @@ func TestListingCRUD(t *testing.T) {
 	assert.Assert(t, util.Contains(keys, list[0]))
 	assert.Assert(t, util.Contains(keys, list[1]))
 
-	err = ds.GetListingDao().DeleteAll(ds.TABLE_LOGS, rowKey)
+	err = db.GetListingDao().DeleteAll(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, rowKey)
 	assert.NilError(t, err)
 }
 
 func TestListingGetRange(t *testing.T) {
-	if !ds.IsCassandraClient() {
+	if !db.IsCassandraClient() {
 		t.Skip("Not using Cassandra DB")
 	}
 
-	tableInfo, err := ds.GetTableInfo(ds.TABLE_MODEL)
-	assert.NilError(t, err)
-
-	daoId := tableInfo.DaoId
-	assert.Assert(t, daoId != 0)
-
-	changedData := ds.ChangedData{
+	changedData := db.ChangedData{
 		ColumnName:     gocql.TimeUUID(),
-		CfName:         ds.TABLE_MODEL,
+		CfName:         db.TABLE_MODELS,
 		ChangedKey:     fmt.Sprintf("Model-%s", uuid.New().String()),
-		Operation:      ds.CREATE_OPERATION,
-		DaoId:          daoId,
+		Operation:      db.CREATE_OPERATION,
 		ValidCacheSize: 1000,
 		UserName:       "DataService",
 		ServerOriginId: common.ServerOriginId(),
@@ -205,24 +198,23 @@ func TestListingGetRange(t *testing.T) {
 	currentTS := util.GetTimestamp(time.Now().UTC())
 	rowKey := currentTS - (currentTS % int64(10000)) // 10 secs window
 
-	err = ds.GetListingDao().SetOne(ds.TABLE_XCONF_CHANGED_KEYS, rowKey, changedData.ColumnName, jsonData)
+	err = db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_CHANGE_EVENTS, rowKey, changedData.ColumnName, jsonData)
 	assert.NilError(t, err)
 
 	// test retrieve
 	startUuid, err := util.UUIDFromTime(currentTS, 0, 0)
 	assert.NilError(t, err)
 
-	rangeInfo := &ds.RangeInfo{StartValue: startUuid}
-	list, err := ds.GetListingDao().GetRange(ds.TABLE_XCONF_CHANGED_KEYS, rowKey, rangeInfo)
+	rangeInfo := &db.RangeInfo{StartValue: startUuid}
+	list, err := db.GetListingDao().GetRange(db.DEFAULT_TENANT_ID, db.TABLE_CHANGE_EVENTS, rowKey, rangeInfo)
 	assert.NilError(t, err)
 	assert.Assert(t, len(list) == 1)
 
-	inst := *list[0].(*ds.ChangedData)
+	inst := *list[0].(*db.ChangedData)
 	assert.Equal(t, inst.ColumnName, changedData.ColumnName)
 	assert.Equal(t, inst.CfName, changedData.CfName)
 	assert.Equal(t, inst.ChangedKey, changedData.ChangedKey)
 	assert.Equal(t, inst.Operation, changedData.Operation)
-	assert.Equal(t, inst.DaoId, changedData.DaoId)
 	assert.Equal(t, inst.ValidCacheSize, changedData.ValidCacheSize)
 	assert.Equal(t, inst.UserName, changedData.UserName)
 	assert.Equal(t, inst.ServerOriginId, changedData.ServerOriginId)

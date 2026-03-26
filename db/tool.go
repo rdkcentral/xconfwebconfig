@@ -19,7 +19,10 @@ package db
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
+
+	"github.com/spaolacci/murmur3"
 )
 
 func GetValuesStr(length int) string {
@@ -51,4 +54,42 @@ func GetSetColumnsStr(columns []string) string {
 		buffer.WriteString(s)
 	}
 	return buffer.String()
+}
+
+// GetShardId returns the shard ID for the given key which can be
+// used in a partition key to distribute data across multiple nodes
+func GetShardId(key interface{}) int {
+	switch t := key.(type) {
+	case int:
+		return getShardIdForInt64(int64(t))
+	case int32:
+		return getShardIdForInt64(int64(t))
+	case int64:
+		return getShardIdForInt64(t)
+	case string:
+		return ComputeShardId([]byte(t), ScalingFactor)
+	default:
+		return 0 // default to shard 0 for unsupported key types
+	}
+}
+
+// getShardIdForInt64 computes the shard ID for an int64 key by converting it to a byte slice and hashing it
+func getShardIdForInt64(key int64) int {
+	var data [8]byte
+
+	// Convert the int64 to a byte slice using LittleEndian byte order.
+	// It's important to be consistent in order to reproduce the same hash across different systems.
+	binary.LittleEndian.PutUint64(data[:], uint64(key))
+	return ComputeShardId(data[:], ScalingFactor)
+}
+
+// ComputeShardId calculates a deterministic bucket between 0 and n-1
+func ComputeShardId(data []byte, n int) int {
+	if n <= 1 {
+		return 0
+	}
+	hash := murmur3.Sum32(data)
+
+	// Standard modulo: results in 0 to N-1
+	return int(hash % uint32(n))
 }

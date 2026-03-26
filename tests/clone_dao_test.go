@@ -22,13 +22,13 @@ import (
 	"reflect"
 	"testing"
 
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 
 	"gotest.tools/assert"
 )
 
 func TestCloneFunctionExists(t *testing.T) {
-	tables := ds.GetAllTableInfo()
+	tables := db.GetAllTableInfo()
 	assert.Assert(t, tables != nil)
 
 	// Make sure Clone() function is defined for cached DAO object

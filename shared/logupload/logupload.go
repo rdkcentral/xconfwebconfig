@@ -261,12 +261,12 @@ func (dcm *DCMGenericRule) ToStringOnlyBaseProperties() string {
 func GetDCMGenericRuleList() []*DCMGenericRule {
 	cm := db.GetCacheManager()
 	cacheKey := "DCMGenericRuleList"
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_DCM_RULE, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*DCMGenericRule)
 	}
 
-	dmcRuleList, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_DCM_RULE, 0)
+	dmcRuleList, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, 0)
 	if err != nil {
 		log.Warn("no dmcRule found")
 		return []*DCMGenericRule{}
@@ -282,7 +282,7 @@ func GetDCMGenericRuleList() []*DCMGenericRule {
 	}
 
 	if len(all) > 0 {
-		cm.ApplicationCacheSet(db.TABLE_DCM_RULE, cacheKey, all)
+		cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, cacheKey, all)
 	}
 
 	return all
@@ -290,7 +290,7 @@ func GetDCMGenericRuleList() []*DCMGenericRule {
 
 func GetDCMGenericRuleListForAS() []*DCMGenericRule {
 	all := []*DCMGenericRule{}
-	dmcRuleList, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_DCM_RULE, 0)
+	dmcRuleList, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, 0)
 	if err != nil {
 		log.Warn("no dmcRule found")
 		return all
@@ -305,7 +305,7 @@ func GetDCMGenericRuleListForAS() []*DCMGenericRule {
 }
 
 func GetOneDCMGenericRule(id string) *DCMGenericRule {
-	dmcRuleInst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_DCM_RULE, id)
+	dmcRuleInst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no dmcRule found for:%s ", id))
 		return nil

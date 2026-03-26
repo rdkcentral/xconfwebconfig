@@ -25,7 +25,7 @@ import (
 )
 
 func (c *CassandraClient) SetUp() error {
-	if !c.TestOnly {
+	if !c.testOnly {
 		err := errors.New("DB Setup() can only be invoked from unit test")
 		fmt.Println(err.Error())
 		return err
@@ -52,7 +52,7 @@ func (c *CassandraClient) SetUp() error {
 }
 
 func (c *CassandraClient) TearDown() error {
-	if !c.TestOnly {
+	if !c.testOnly {
 		err := errors.New("DB TearDown() can only be invoked from unit test")
 		fmt.Println(err.Error())
 		return err

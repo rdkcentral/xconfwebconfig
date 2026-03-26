@@ -32,7 +32,6 @@ import (
 )
 
 type LogUploadRuleBase struct {
-	//DcmRuleDAO           ds.CachedSimpleDao
 	RuleProcessorFactory re.RuleProcessorFactory
 }
 
@@ -62,7 +61,7 @@ func (l *LogUploadRuleBase) Eval(context map[string]string, fields log.Fields) *
 func (l *LogUploadRuleBase) getSortedDcmRules() []*logupload.DCMGenericRule {
 	cm := db.GetCacheManager()
 	cacheKey := "DCMGenericRuleListSorted"
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_DCM_RULE, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*logupload.DCMGenericRule)
 	}
@@ -79,7 +78,7 @@ func (l *LogUploadRuleBase) getSortedDcmRules() []*logupload.DCMGenericRule {
 		return sortedList[i].Priority < sortedList[j].Priority
 	})
 
-	cm.ApplicationCacheSet(db.TABLE_DCM_RULE, cacheKey, sortedList)
+	cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, cacheKey, sortedList)
 
 	return sortedList
 }

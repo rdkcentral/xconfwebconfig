@@ -34,7 +34,7 @@ The following code illustrates how to retrieve a specific Model from the Model t
 
     import 	"github.com/rdkcentral/xconfwebconfig/db"
 
-	obj, err := db.GetCachedSimpleDao().GetOne("Model", "PX013ANM")
+	obj, err := db.GetCachedSimpleDao().GetOne("COMCAST", "Model", "PX013ANM")
 	if err != nil {
 		// Handle error!
 	}
@@ -45,16 +45,16 @@ The following code illustrates how to retrieve a specific Model from the Model t
 
 // CachedSimpleDao interface for SimpleDao and CompressingDataDao
 type CachedSimpleDao interface {
-	GetOne(tableName string, rowKey string) (interface{}, error)
-	GetOneFromCacheOnly(tableName string, rowKey string) (interface{}, error)
-	SetOne(tableName string, rowKey string, entity interface{}) error
-	DeleteOne(tableName string, rowKey string) error
-	GetAllByKeys(tableName string, rowKeys []string) ([]interface{}, error)
-	GetAllAsList(tableName string, maxResults int) ([]interface{}, error)
-	GetAllAsMap(tableName string) (map[interface{}]interface{}, error)
-	GetKeys(tableName string) ([]interface{}, error)
-	RefreshAll(tableName string) error
-	RefreshOne(tableName string, rowKey string) error
+	GetOne(tenantId string, tableName string, key string) (interface{}, error)
+	GetOneFromCacheOnly(tenantId string, tableName string, key string) (interface{}, error)
+	SetOne(tenantId string, tableName string, key string, entity interface{}) error
+	DeleteOne(tenantId string, tableName string, key string) error
+	GetAllByKeys(tenantId string, tableName string, keys []string) ([]interface{}, error)
+	GetAllAsList(tenantId string, tableName string, maxResults int) ([]interface{}, error)
+	GetAllAsMap(tenantId string, tableName string) (map[interface{}]interface{}, error)
+	GetKeys(tenantId string, tableName string) ([]interface{}, error)
+	RefreshAll(tenantId string, tableName string) error
+	RefreshOne(tenantId string, tableName string, key string) error
 }
 
 type cachedSimpleDaoImpl struct{}
@@ -67,13 +67,13 @@ func GetCachedSimpleDao() CachedSimpleDao {
 }
 
 // GetOne get one Xconf record from cache
-func (csd cachedSimpleDaoImpl) GetOne(tableName string, rowKey string) (interface{}, error) {
-	cache, err := GetCacheManager().getCache(tableName)
+func (csd cachedSimpleDaoImpl) GetOne(tenantId string, tableName string, key string) (interface{}, error) {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
 
-	obj, err := cache.Get(rowKey)
+	obj, err := cache.Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -90,46 +90,45 @@ func (csd cachedSimpleDaoImpl) GetOne(tableName string, rowKey string) (interfac
 	return cloneObj, nil
 }
 
-func (csd cachedSimpleDaoImpl) RefreshOne(tableName string, rowKey string) error {
+func (csd cachedSimpleDaoImpl) RefreshOne(tenantId string, tableName string, key string) error {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return err
 	}
 
-	cacheInfo, err := GetCacheManager().getCacheInfo(tableName)
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return err
 	}
-	cache := cacheInfo.cache
 
 	// First, invalidate the entry in the cache then reload from DB
-	cache.Invalidate(rowKey)
+	cache.Invalidate(key)
 
 	var entry interface{}
 	if tableInfo.IsCompressAndSplit() {
-		entry, err = GetCompressingDataDao().GetOne(tableName, rowKey)
+		entry, err = GetCompressingDataDao().GetOne(tenantId, tableName, key)
 	} else {
-		entry, err = GetSimpleDao().GetOne(tableName, rowKey)
+		entry, err = GetSimpleDao().GetOne(tenantId, tableName, key)
 	}
 
 	if err != nil {
 		return err
 	}
 
-	cache.Put(rowKey, entry)
+	cache.Put(key, entry)
 
 	return nil
 }
 
 // GetOne get one Xconf record from cache if exists and skips loading from DB.
 // Returns gocql.ErrNotFound if there is no cache value for the rowKey.
-func (csd cachedSimpleDaoImpl) GetOneFromCacheOnly(tableName string, rowKey string) (interface{}, error) {
-	cache, err := GetCacheManager().getCache(tableName)
+func (csd cachedSimpleDaoImpl) GetOneFromCacheOnly(tenantId string, tableName string, key string) (interface{}, error) {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
 
-	obj, exists := cache.GetIfPresent(rowKey)
+	obj, exists := cache.GetIfPresent(key)
 	if !exists {
 		return nil, gocql.ErrNotFound
 	}
@@ -147,7 +146,7 @@ func (csd cachedSimpleDaoImpl) GetOneFromCacheOnly(tableName string, rowKey stri
 }
 
 // SetOne set Xconf record in DB and cache where entity param is the *struct
-func (csd cachedSimpleDaoImpl) SetOne(tableName string, rowKey string, entity interface{}) error {
+func (csd cachedSimpleDaoImpl) SetOne(tenantId string, tableName string, key string, entity interface{}) error {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return err
@@ -166,7 +165,7 @@ func (csd cachedSimpleDaoImpl) SetOne(tableName string, rowKey string, entity in
 
 	cm := GetCacheManager()
 
-	cache, err := cm.getCache(tableName)
+	cache, err := cm.getCache(tenantId, tableName)
 	if err != nil {
 		return err
 	}
@@ -178,54 +177,54 @@ func (csd cachedSimpleDaoImpl) SetOne(tableName string, rowKey string, entity in
 
 	// 1st update data the DB as Json Data
 	if tableInfo.IsCompressAndSplit() {
-		err = GetCompressingDataDao().SetOne(tableName, rowKey, jsonData)
+		err = GetCompressingDataDao().SetOne(tenantId, tableName, key, jsonData)
 	} else {
-		err = GetSimpleDao().SetOne(tableName, rowKey, jsonData)
+		err = GetSimpleDao().SetOne(tenantId, tableName, key, jsonData)
 	}
 
 	// Next update the cache with the actual model/struct
 	if err == nil {
-		cache.Put(rowKey, entity)
+		cache.Put(key, entity)
 		// Invalidate application cache entries for this table
-		cm.ApplicationCacheDeleteAll(tableName)
+		cm.ApplicationCacheDeleteAll(tenantId, tableName)
 		// Write cache changed log
-		cm.writeCacheLog(tableName, rowKey, CREATE_OPERATION, int32(cache.Size()))
+		cm.writeCacheLog(tenantId, tableName, key, CREATE_OPERATION, int32(cache.Size()))
 	}
 
 	return err
 }
 
 // DeleteOne delete Xconf record from DB and cache
-func (csd cachedSimpleDaoImpl) DeleteOne(tableName string, rowKey string) error {
+func (csd cachedSimpleDaoImpl) DeleteOne(tenantId string, tableName string, key string) error {
 	cm := GetCacheManager()
 
-	cache, err := cm.getCache(tableName)
+	cache, err := cm.getCache(tenantId, tableName)
 	if err != nil {
 		return err
 	}
 
 	// 1st delete from DB
-	err = GetDatabaseClient().DeleteXconfData(tableName, rowKey)
+	err = GetDatabaseClient().DeleteXconfData(tenantId, tableName, key)
 	if err == nil {
 		// Calculate cache size since removal doesn't take place immediately
 		cacheSize := int32(cache.Size() - 1)
 		// Next invalidate entry from the cache
-		cache.Invalidate(rowKey)
+		cache.Invalidate(key)
 		// Invalidate application cache entries for this table
-		cm.ApplicationCacheDeleteAll(tableName)
+		cm.ApplicationCacheDeleteAll(tenantId, tableName)
 		// Write cache changed log
-		cm.writeCacheLog(tableName, rowKey, DELETE_OPERATION, cacheSize)
+		cm.writeCacheLog(tenantId, tableName, key, DELETE_OPERATION, cacheSize)
 	}
 
 	return err
 }
 
 // GetAllByKeys get all Xconf keys from cache
-func (csd cachedSimpleDaoImpl) GetAllByKeys(tableName string, rowKeys []string) ([]interface{}, error) {
-	result := make([]interface{}, len(rowKeys))
+func (csd cachedSimpleDaoImpl) GetAllByKeys(tenantId string, tableName string, keys []string) ([]interface{}, error) {
+	result := make([]interface{}, len(keys))
 
-	for i, rowKey := range rowKeys {
-		obj, err := csd.GetOne(tableName, rowKey)
+	for i, key := range keys {
+		obj, err := csd.GetOne(tenantId, tableName, key)
 		if err != nil {
 			return nil, err
 		}
@@ -237,8 +236,8 @@ func (csd cachedSimpleDaoImpl) GetAllByKeys(tableName string, rowKeys []string) 
 }
 
 // GetAllAsList get multiple Xconf records from cache where a maxResults value of 0 indicates no limit
-func (csd cachedSimpleDaoImpl) GetAllAsList(tableName string, maxResults int) ([]interface{}, error) {
-	cache, err := GetCacheManager().getCache(tableName)
+func (csd cachedSimpleDaoImpl) GetAllAsList(tenantId string, tableName string, maxResults int) ([]interface{}, error) {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -270,8 +269,8 @@ func (csd cachedSimpleDaoImpl) GetAllAsList(tableName string, maxResults int) ([
 }
 
 // GetAllAsMap get all Xconf records as a map from cache
-func (csd cachedSimpleDaoImpl) GetAllAsMap(tableName string) (map[interface{}]interface{}, error) {
-	cache, err := GetCacheManager().getCache(tableName)
+func (csd cachedSimpleDaoImpl) GetAllAsMap(tenantId string, tableName string) (map[interface{}]interface{}, error) {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -297,8 +296,8 @@ func (csd cachedSimpleDaoImpl) GetAllAsMap(tableName string) (map[interface{}]in
 }
 
 // GetKeys get all Xconf keys from cache
-func (csd cachedSimpleDaoImpl) GetKeys(tableName string) ([]interface{}, error) {
-	cache, err := GetCacheManager().getCache(tableName)
+func (csd cachedSimpleDaoImpl) GetKeys(tenantId string, tableName string) ([]interface{}, error) {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -308,8 +307,8 @@ func (csd cachedSimpleDaoImpl) GetKeys(tableName string) ([]interface{}, error) 
 	return keys, nil
 }
 
-func (csd cachedSimpleDaoImpl) RefreshAll(tableName string) error {
-	log.Debug(fmt.Sprintf("Refresh cache for '%v'...", tableName))
+func (csd cachedSimpleDaoImpl) RefreshAll(tenantId string, tableName string) error {
+	log.Debug(fmt.Sprintf("Refresh cache for tenantId %s table %s...", tenantId, tableName))
 
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
@@ -317,8 +316,7 @@ func (csd cachedSimpleDaoImpl) RefreshAll(tableName string) error {
 	}
 
 	cm := GetCacheManager()
-
-	cacheInfo, err := cm.getCacheInfo(tableName)
+	cacheInfo, err := cm.getCacheInfo(tenantId, tableName)
 	if err != nil {
 		return err
 	}
@@ -329,9 +327,9 @@ func (csd cachedSimpleDaoImpl) RefreshAll(tableName string) error {
 
 	var entries map[string]interface{}
 	if tableInfo.IsCompressAndSplit() {
-		entries, err = GetCompressingDataDao().GetAllAsMap(tableName, true)
+		entries, err = GetCompressingDataDao().GetAllAsMap(tenantId, tableName, true)
 	} else {
-		entries, err = GetSimpleDao().GetAllAsMap(tableName, 0)
+		entries, err = GetSimpleDao().GetAllAsMap(tenantId, tableName, 0)
 	}
 
 	if err != nil {
@@ -342,10 +340,10 @@ func (csd cachedSimpleDaoImpl) RefreshAll(tableName string) error {
 		cache.Put(k, v)
 	}
 
-	cacheInfo.Stats.DaoRefreshTime = time.Now().UTC()
+	cacheInfo.DaoRefreshTime = time.Now().UTC()
 
 	// Invalidate application cache entries for this table
-	cm.ApplicationCacheDeleteAll(tableName)
+	cm.ApplicationCacheDeleteAll(tenantId, tableName)
 
 	return nil
 }

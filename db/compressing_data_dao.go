@@ -33,13 +33,13 @@ const (
 
 // CompressingDataDao interface
 type CompressingDataDao interface {
-	GetOne(tableName string, rowKey string) (interface{}, error)
-	SetOne(tableName string, rowKey string, value []byte) error
-	DeleteOne(tableName string, rowKey string) error
-	GetAllByKeys(tableName string, rowKeys []string) ([]interface{}, error)
-	GetAllAsList(tableName string, continueOnError bool) ([]interface{}, error)
-	GetAllAsMap(tableName string, continueOnError bool) (map[string]interface{}, error)
-	GetKeys(tableName string) []string
+	GetOne(tenantId string, tableName string, key string) (interface{}, error)
+	SetOne(tenantId string, tableName string, key string, value []byte) error
+	DeleteOne(tenantId string, tableName string, key string) error
+	GetAllByKeys(tenantId string, tableName string, keys []string) ([]interface{}, error)
+	GetAllAsList(tenantId string, tableName string, continueOnError bool) ([]interface{}, error)
+	GetAllAsMap(tenantId string, tableName string, continueOnError bool) (map[string]interface{}, error)
+	GetKeys(tenantId string, tableName string) []string
 }
 
 type compressingDataDaoImpl struct{}
@@ -52,21 +52,21 @@ func GetCompressingDataDao() CompressingDataDao {
 }
 
 // GetOne get one compressed Xconf record
-func (cd compressingDataDaoImpl) GetOne(tableName string, rowKey string) (interface{}, error) {
+func (cd compressingDataDaoImpl) GetOne(tenantId string, tableName string, key string) (interface{}, error) {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get data from DB as compressed JSON []byte
-	compressedData, err := GetDatabaseClient().GetXconfCompressedData(tableName, rowKey)
+	compressedData, err := GetDatabaseClient().GetXconfCompressedData(tenantId, tableName, key)
 	if err != nil {
 		return nil, err
 	}
 
 	jsonData, err := decompress(compressedData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
+		return nil, fmt.Errorf("failed to decompress tenantId %s table %s key %s: %w", tenantId, tableName, key, err)
 	}
 
 	obj := tableInfo.ConstructorFunc()  // Instantiate a new model/struct
@@ -79,7 +79,7 @@ func (cd compressingDataDaoImpl) GetOne(tableName string, rowKey string) (interf
 }
 
 // SetOne set compressed Xconf record
-func (cd compressingDataDaoImpl) SetOne(tableName string, rowKey string, value []byte) error {
+func (cd compressingDataDaoImpl) SetOne(tenantId string, tableName string, key string, value []byte) error {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return err
@@ -89,23 +89,23 @@ func (cd compressingDataDaoImpl) SetOne(tableName string, rowKey string, value [
 	compressedData := compress(value)
 	values := split(compressedData, CompressionChunkSize)
 
-	err = GetDatabaseClient().SetXconfCompressedData(tableName, rowKey, values, tableInfo.TTL)
+	err = GetDatabaseClient().SetXconfCompressedData(tenantId, tableName, key, values, tableInfo.TTL)
 	return err
 }
 
 // DeleteOne delete Xconf record
-func (cd compressingDataDaoImpl) DeleteOne(tableName string, rowKey string) error {
-	err := GetDatabaseClient().DeleteXconfData(tableName, rowKey)
+func (cd compressingDataDaoImpl) DeleteOne(tenantId string, tableName string, key string) error {
+	err := GetDatabaseClient().DeleteXconfData(tenantId, tableName, key)
 	return err
 }
 
-// GetAllByKeys get Xconf records for the specified list of rowKeys
-func (cd compressingDataDaoImpl) GetAllByKeys(tableName string, rowKeys []string) ([]interface{}, error) {
+// GetAllByKeys get Xconf records for the specified list of keys
+func (cd compressingDataDaoImpl) GetAllByKeys(tenantId string, tableName string, keys []string) ([]interface{}, error) {
 	var result []interface{}
 
 	// Process one compressed record at a time
-	for _, rowKey := range rowKeys {
-		obj, err := cd.GetOne(tableName, rowKey)
+	for _, key := range keys {
+		obj, err := cd.GetOne(tenantId, tableName, key)
 		if err != nil {
 			return nil, err
 		}
@@ -116,8 +116,8 @@ func (cd compressingDataDaoImpl) GetAllByKeys(tableName string, rowKeys []string
 }
 
 // GetAllAsList get a list of all Xconf records
-func (cd compressingDataDaoImpl) GetAllAsList(tableName string, continueOnError bool) ([]interface{}, error) {
-	resultMap, err := cd.GetAllAsMap(tableName, continueOnError)
+func (cd compressingDataDaoImpl) GetAllAsList(tenantId string, tableName string, continueOnError bool) ([]interface{}, error) {
+	resultMap, err := cd.GetAllAsMap(tenantId, tableName, continueOnError)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (cd compressingDataDaoImpl) GetAllAsList(tableName string, continueOnError 
 }
 
 // GetAllAsMap get a map of all Xconf records
-func (cd compressingDataDaoImpl) GetAllAsMap(tableName string, continueOnError bool) (map[string]interface{}, error) {
+func (cd compressingDataDaoImpl) GetAllAsMap(tenantId string, tableName string, continueOnError bool) (map[string]interface{}, error) {
 	var result = make(map[string]interface{})
 
 	tableInfo, err := GetTableInfo(tableName)
@@ -140,11 +140,11 @@ func (cd compressingDataDaoImpl) GetAllAsMap(tableName string, continueOnError b
 	}
 
 	// Get data from DB as a map of key and compressed JSON []byte
-	compressedDataMap := GetDatabaseClient().GetAllXconfCompressedDataAsMap(tableName)
+	compressedDataMap := GetDatabaseClient().GetAllXconfCompressedDataAsMap(tenantId, tableName)
 	for key, compressedData := range compressedDataMap {
 		jsonData, err := decompress(compressedData)
 		if err != nil {
-			err = fmt.Errorf("failed to decompress rowKey '%s': %w", key, err)
+			err = fmt.Errorf("failed to decompress tenantId %s table %s key %s: %w", tenantId, tableName, key, err)
 			if continueOnError {
 				log.Error(err)
 				continue
@@ -164,8 +164,8 @@ func (cd compressingDataDaoImpl) GetAllAsMap(tableName string, continueOnError b
 }
 
 // GetKeys get all Xconf keys
-func (cd compressingDataDaoImpl) GetKeys(tableName string) []string {
-	return GetDatabaseClient().GetAllXconfKeys(tableName)
+func (cd compressingDataDaoImpl) GetKeys(tenantId string, tableName string) []string {
+	return GetDatabaseClient().GetAllXconfKeys(tenantId, tableName)
 }
 
 func compress(data []byte) []byte {

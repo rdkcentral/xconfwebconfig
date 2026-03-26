@@ -481,7 +481,7 @@ func RemoveAllByRuleTypes(rules map[string][]*FirmwareRule, ruleType string) {
 }
 
 func GetFirmwareRuleOneDB(id string) (*FirmwareRule, error) {
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_FIRMWARE_RULE, id)
+	inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, id)
 	if err != nil {
 		return nil, err
 	}
@@ -490,7 +490,7 @@ func GetFirmwareRuleOneDB(id string) (*FirmwareRule, error) {
 }
 
 func GetFirmwareRuleTemplateOneDBWithId(id string) (*FirmwareRuleTemplate, error) {
-	dbinst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_FIRMWARE_RULE_TEMPLATE, id)
+	dbinst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, id)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareRuleTemplateOneDBWithId: %v", err))
 		return nil, err
@@ -500,7 +500,7 @@ func GetFirmwareRuleTemplateOneDBWithId(id string) (*FirmwareRuleTemplate, error
 }
 
 func GetFirmwareRuleTemplateOneDB(ruleType string) (*FirmwareRuleTemplate, error) {
-	dbinst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_FIRMWARE_RULE_TEMPLATE, ruleType)
+	dbinst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, ruleType)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareRuleTemplateOneDB: %v", err))
 		return nil, err
@@ -512,13 +512,13 @@ func GetFirmwareRuleTemplateOneDB(ruleType string) (*FirmwareRuleTemplate, error
 func GetFirmwareRuleAllAsListDB() ([]*FirmwareRule, error) {
 	cm := db.GetCacheManager()
 	cacheKey := "FirmwareRuleList"
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_FIRMWARE_RULE, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*FirmwareRule), nil
 	}
 
 	// pass 0 or -1 as unlimit
-	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULE, 0)
+	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -542,7 +542,7 @@ func GetFirmwareRuleAllAsListDB() ([]*FirmwareRule, error) {
 
 func GetFirmwareRuleAllAsListDBForAdmin() ([]*FirmwareRule, error) {
 	// pass 0 or -1 as unlimit
-	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULE, 0)
+	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -559,7 +559,7 @@ func GetFirmwareRuleAllAsListDBForAdmin() ([]*FirmwareRule, error) {
 func GetFirmwareRulesByApplicationType(applicationType string) ([]*FirmwareRule, error) {
 	cm := db.GetCacheManager()
 	cacheKey := fmt.Sprintf("%s_%s", "FirmwareRuleList", applicationType)
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_FIRMWARE_RULE, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*FirmwareRule), nil
 	}
@@ -581,7 +581,7 @@ func GetFirmwareRulesByApplicationType(applicationType string) ([]*FirmwareRule,
 		}
 	}
 
-	cm.ApplicationCacheSet(db.TABLE_FIRMWARE_RULE, cacheKey, filtereddRules)
+	cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, cacheKey, filtereddRules)
 
 	return filtereddRules, nil
 }
@@ -589,7 +589,7 @@ func GetFirmwareRulesByApplicationType(applicationType string) ([]*FirmwareRule,
 func GetEnvModelFirmwareRules(applicationType string) ([]*FirmwareRule, error) {
 	cm := db.GetCacheManager()
 	cacheKey := fmt.Sprintf("%s_%s", "EnvModelFirmwareRuleList", applicationType)
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_FIRMWARE_RULE, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*FirmwareRule), nil
 	}
@@ -609,7 +609,7 @@ func GetEnvModelFirmwareRules(applicationType string) ([]*FirmwareRule, error) {
 	}
 
 	if len(filtereddRules) > 0 {
-		cm.ApplicationCacheSet(db.TABLE_FIRMWARE_RULE, cacheKey, filtereddRules)
+		cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, cacheKey, filtereddRules)
 	}
 
 	return filtereddRules, nil
@@ -639,7 +639,7 @@ func GetEnvModelFirmwareRulesForAS(applicationType string) ([]*FirmwareRule, err
 func GetFirmwareSortedRuleAllAsListDB() ([]*FirmwareRule, error) {
 	cm := db.GetCacheManager()
 	cacheKey := "FirmwareSortedRuleList"
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_FIRMWARE_RULE, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*FirmwareRule), nil
 	}
@@ -657,7 +657,7 @@ func GetFirmwareSortedRuleAllAsListDB() ([]*FirmwareRule, error) {
 		return strings.Compare(sortedList[i].Name, sortedList[j].Name) < 0
 	})
 
-	cm.ApplicationCacheSet(db.TABLE_FIRMWARE_RULE, cacheKey, sortedList)
+	cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, cacheKey, sortedList)
 
 	return sortedList, nil
 }
@@ -686,7 +686,7 @@ func GetFirmwareRuleAllAsListByApplicationType(applicationType string) (map[stri
 func GetFirmwareRuleAllAsListByApplicationTypeForAS(applicationType string) (map[string][]*FirmwareRule, error) {
 	log.Debug("GetFirmwareRuleAllAsListByApplicationType starts...")
 	// pass 0 or -1 as unlimit
-	rulemap, err := db.GetCachedSimpleDao().GetAllAsMap(db.TABLE_FIRMWARE_RULE)
+	rulemap, err := db.GetCachedSimpleDao().GetAllAsMap(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES)
 	if err != nil {
 		return nil, err
 	}
@@ -716,13 +716,13 @@ func GetFirmwareRuleAllAsListByApplicationTypeForAS(applicationType string) (map
 func GetFirmwareRuleTemplateAllAsListDB(actionType ApplicableActionType) ([]*FirmwareRuleTemplate, error) {
 	cm := db.GetCacheManager()
 	cacheKey := "FirmwareRuleTemplateList"
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_FIRMWARE_RULE_TEMPLATE, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*FirmwareRuleTemplate), nil
 	}
 
 	// pass 0 or -1 as unlimit
-	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULE_TEMPLATE, 0)
+	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, 0)
 	if err != nil {
 		log.Error(fmt.Sprintf("Error load all template rules %v", err))
 		return nil, err
@@ -738,14 +738,14 @@ func GetFirmwareRuleTemplateAllAsListDB(actionType ApplicableActionType) ([]*Fir
 	}
 
 	if len(result) > 0 {
-		cm.ApplicationCacheSet(db.TABLE_FIRMWARE_RULE_TEMPLATE, cacheKey, result)
+		cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, cacheKey, result)
 	}
 
 	return result, nil
 }
 
 func GetFirmwareRuleTemplateAllAsListDBForAS(actionType ApplicableActionType) ([]*FirmwareRuleTemplate, error) {
-	tmprulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULE_TEMPLATE, 0)
+	tmprulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, 0)
 	if err != nil {
 		log.Error(fmt.Sprintf("Error load all template rules %v", err))
 		return nil, err
@@ -769,13 +769,13 @@ func GetFirmwareRuleTemplateAllAsListDBForAS(actionType ApplicableActionType) ([
 func GetFirmwareRuleTemplateAllAsListByActionType(actionType ApplicableActionType) ([]*FirmwareRuleTemplate, error) {
 	cm := db.GetCacheManager()
 	cacheKey := fmt.Sprintf("%s_%s", "FirmwareRuleTemplateList", actionType)
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_FIRMWARE_RULE_TEMPLATE, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*FirmwareRuleTemplate), nil
 	}
 
 	// pass 0 or -1 as unlimit
-	tmprulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_RULE_TEMPLATE, 0)
+	tmprulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, 0)
 	if err != nil {
 		log.Error(fmt.Sprintf("Error load all template rules %v", err))
 		return nil, err
@@ -799,7 +799,7 @@ func GetFirmwareRuleTemplateAllAsListByActionType(actionType ApplicableActionTyp
 		return nil, common.NotFound
 	}
 
-	cm.ApplicationCacheSet(db.TABLE_FIRMWARE_RULE_TEMPLATE, cacheKey, rulereflst)
+	cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, cacheKey, rulereflst)
 
 	return rulereflst, nil
 }
@@ -814,11 +814,11 @@ func CreateFirmwareRuleOneDB(fr *FirmwareRule) error {
 	}
 	fr.Updated = util.GetTimestamp()
 
-	return db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, fr.ID, fr)
+	return db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, fr.ID, fr)
 }
 
 func DeleteOneFirmwareRule(id string) error {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_FIRMWARE_RULE, id)
+	err := db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, id)
 	if err != nil {
 		return err
 	}
@@ -829,7 +829,7 @@ func CreateFirmwareRuleTemplateOneDB(ft *FirmwareRuleTemplate) error {
 	if err := ft.Validate(); err != nil {
 		return err
 	}
-	return db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE_TEMPLATE, ft.ID, ft)
+	return db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULE_TEMPLATES, ft.ID, ft)
 }
 
 func ValidateRuleName(id string, name string, applicationType string) error {

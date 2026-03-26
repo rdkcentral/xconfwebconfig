@@ -170,7 +170,7 @@ func (e *Environment) CreateEnvironmentResponse() *EnvironmentResponse {
 
 func GetAllEnvironmentList() []*Environment {
 	result := []*Environment{}
-	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_ENVIRONMENT, 0)
+	list, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_ENVIRONMENTS, 0)
 	if err != nil {
 		log.Warn("no environment found")
 		return result
@@ -183,7 +183,7 @@ func GetAllEnvironmentList() []*Environment {
 }
 
 func GetOneEnvironment(id string) *Environment {
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_ENVIRONMENT, id)
+	inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_ENVIRONMENTS, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no environment found for:%s ", id))
 		return nil
@@ -193,7 +193,7 @@ func GetOneEnvironment(id string) *Environment {
 
 func SetOneEnvironment(env *Environment) (*Environment, error) {
 	env.Updated = util.GetTimestamp()
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_ENVIRONMENT, env.ID, env)
+	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_ENVIRONMENTS, env.ID, env)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func SetOneEnvironment(env *Environment) (*Environment, error) {
 }
 
 func DeleteOneEnvironment(id string) error {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_ENVIRONMENT, id)
+	err := db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_ENVIRONMENTS, id)
 	if err != nil {
 		return err
 	}
@@ -249,7 +249,7 @@ func NewModel(id string, description string) *Model {
 
 func GetAllModelList() []*Model {
 	result := []*Model{}
-	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_MODEL, 0)
+	list, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, 0)
 	if err != nil {
 		log.Warn("no model found")
 		return result
@@ -262,7 +262,7 @@ func GetAllModelList() []*Model {
 }
 
 func GetOneModel(id string) *Model {
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_MODEL, id)
+	inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no model found for:%s ", id))
 		return nil
@@ -272,7 +272,7 @@ func GetOneModel(id string) *Model {
 
 func SetOneModel(model *Model) (*Model, error) {
 	model.Updated = util.GetTimestamp(time.Now())
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_MODEL, model.ID, model)
+	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, model.ID, model)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +280,7 @@ func SetOneModel(model *Model) (*Model, error) {
 }
 
 func DeleteOneModel(id string) error {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_MODEL, id)
+	err := db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, id)
 	if err != nil {
 		return err
 	}
@@ -289,7 +289,7 @@ func DeleteOneModel(id string) error {
 
 func IsExistModel(id string) bool {
 	if !util.IsBlank(id) {
-		inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_MODEL, id)
+		inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, id)
 		if inst != nil && err == nil {
 			return true
 		}
@@ -337,7 +337,7 @@ func GetBooleanAppSetting(key string, vargs ...bool) bool {
 		defaultVal = vargs[0]
 	}
 
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
+	inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_APP_SETTINGS, key)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
 		return defaultVal
@@ -353,7 +353,7 @@ func GetIntAppSetting(key string, vargs ...int) int {
 		defaultVal = vargs[0]
 	}
 
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
+	inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_APP_SETTINGS, key)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
 		return defaultVal
@@ -375,7 +375,7 @@ func GetFloat64AppSetting(key string, vargs ...float64) float64 {
 		defaultVal = vargs[0]
 	}
 
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
+	inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_APP_SETTINGS, key)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
 		return defaultVal
@@ -391,7 +391,7 @@ func GetTimeAppSetting(key string, vargs ...time.Time) time.Time {
 		defaultVal = vargs[0]
 	}
 
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
+	inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_APP_SETTINGS, key)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no AppSetting found for %s", key))
 		return defaultVal
@@ -413,7 +413,7 @@ func GetStringAppSetting(key string, vargs ...string) string {
 		defaultVal = vargs[0]
 	}
 
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_APP_SETTINGS, key)
+	inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_APP_SETTINGS, key)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no AppSetting found for:%s ", key))
 		return defaultVal
@@ -426,7 +426,7 @@ func GetStringAppSetting(key string, vargs ...string) string {
 func GetAppSettings() (map[string]interface{}, error) {
 	settings := make(map[string]interface{})
 
-	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_APP_SETTINGS, 0)
+	list, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_APP_SETTINGS, 0)
 	if err != nil {
 		return settings, err
 	}
@@ -444,7 +444,7 @@ func SetAppSetting(key string, value interface{}) (*AppSetting, error) {
 		Value:   value,
 	}
 
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_APP_SETTINGS, setting.ID, &setting)
+	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_APP_SETTINGS, setting.ID, &setting)
 	if err != nil {
 		return nil, err
 	}

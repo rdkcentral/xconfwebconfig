@@ -19,7 +19,7 @@ package tests
 
 import (
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
@@ -72,19 +72,19 @@ func createSecurityTokenConfig(securityKey string, groupServiceEnabled bool) *xw
 
 func preCreateFormula(id string, priority int, uploadRepoUrl string, rule rulesengine.Rule) {
 	uploadRepo := createUploadRepository(id, uploadRepoUrl)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_UPLOAD_REPOSITORY, uploadRepo.ID, uploadRepo)
+	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_UPLOAD_REPOSITORIES, uploadRepo.ID, uploadRepo)
 
 	deviceSetting := createDeviceSettings(id)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_DEVICE_SETTINGS, deviceSetting.ID, deviceSetting)
+	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_DEVICE_SETTINGS, deviceSetting.ID, deviceSetting)
 
 	logUploadSettings := createLogUploadSettings(id, uploadRepo.ID)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_LOG_UPLOAD_SETTINGS, logUploadSettings.ID, logUploadSettings)
+	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_LOG_UPLOAD_SETTINGS, logUploadSettings.ID, logUploadSettings)
 
 	vodSettings := createVodSettings(id)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_VOD_SETTINGS, vodSettings.ID, vodSettings)
+	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_VOD_SETTINGS, vodSettings.ID, vodSettings)
 
 	dcmRule := createDcmRule(id, priority, rule)
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_DCM_RULE, dcmRule.ID, dcmRule)
+	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, dcmRule.ID, dcmRule)
 }
 
 func createDcmRule(id string, priority int, rule rulesengine.Rule) *logupload.DCMGenericRule {

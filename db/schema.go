@@ -22,100 +22,94 @@ import (
 )
 
 const (
-	// LogUpload
-	TABLE_DCM_RULE            = "DcmRule"
-	TABLE_UPLOAD_REPOSITORY   = "UploadRepository"
-	TABLE_LOG_UPLOAD_SETTINGS = "LogUploadSettings2"
-	TABLE_LOG_FILE            = "LogFile"
-	TABLE_LOG_FILE_LIST       = "LogFileList"
-	TABLE_INDEXED_LOG_FILES   = "IndexedLogFiles"
-	TABLE_LOG_FILES_GROUPS    = "LogFilesGroups"
-	TABLE_DEVICE_SETTINGS     = "DeviceSettings2"
-	TABLE_VOD_SETTINGS        = "VodSettings2"
-
-	// Setting
-	TABLE_SETTING_PROFILES = "SettingProfiles"
-	TABLE_SETTING_RULES    = "SettingRules"
-
-	// Telemetry
-	TABLE_TELEMETRY              = "Telemetry"
-	TABLE_TELEMETRY_RULES        = "TelemetryRules"
-	TABLE_TELEMETRY_TWO_RULES    = "TelemetryTwoRules"
-	TABLE_TELEMETRY_TWO_PROFILES = "TelemetryTwoProfiles"
-	TABLE_PERMANENT_TELEMETRY    = "PermanentTelemetry"
+	// Common
+	TABLE_APPLICATION_TYPES  = "application_types"
+	TABLE_ENVIRONMENTS       = "environments"
+	TABLE_MODELS             = "models"
+	TABLE_GENERIC_NS_LIST    = "generic_named_lists"
+	TABLE_APP_SETTINGS       = "app_settings"
+	TABLE_LOCKS              = "locks"
+	TABLE_CONFIG_CHANGE_LOGS = "config_change_logs"
+	TABLE_CHANGE_EVENTS      = "change_events"
 
 	// Firmware
-	TABLE_FIRMWARE_RULE          = "FirmwareRule4"
-	TABLE_FIRMWARE_RULE_TEMPLATE = "FirmwareRuleTemplate"
-	TABLE_FIRMWARE_CONFIG        = "FirmwareConfig"
-	TABLE_SINGLETON_FILTER_VALUE = "SingletonFilterValue"
+	TABLE_FIRMWARE_RULES          = "firmware_rules"
+	TABLE_FIRMWARE_CONFIGS        = "firmware_configs"
+	TABLE_FIRMWARE_RULE_TEMPLATES = "firmware_rule_templates"
+	TABLE_SINGLETON_FILTER_VALUES = "singleton_filter_values"
 
 	// RFC
-	TABLE_FEATURE_CONTROL_RULE = "FeatureControlRule2"
-	TABLE_XCONF_FEATURE        = "XconfFeature"
+	TABLE_FEATURE_CONTROL_RULES = "feature_control_rules"
+	TABLE_FEATURES              = "features"
 
-	// Change
-	TABLE_XCONF_CHANGE                        = "XconfChange"
-	TABLE_XCONF_APPROVED_CHANGE               = "XconfApprovedChange"
-	TABLE_XCONF_TELEMETRY_TWO_CHANGE          = "XconfTelemetryTwoChange"
-	TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE = "XconfApprovedTelemetryTwoChange"
+	// Setting
+	TABLE_SETTING_PROFILES = "setting_profiles"
+	TABLE_SETTING_RULES    = "setting_rules"
 
-	// Common
-	TABLE_ENVIRONMENT        = "Environment"
-	TABLE_MODEL              = "Model"
-	TABLE_IP_ADDRESS_GROUP   = "IpAddressGroupExtended"
-	TABLE_NS_LIST            = "XconfNamedList"
-	TABLE_GENERIC_NS_LIST    = "GenericXconfNamedList"
-	TABLE_LOGS               = "Logs2"
-	TABLE_XCONF_CHANGED_KEYS = "XconfChangedKeys4"
-	TABLE_APP_SETTINGS       = "AppSettings"
-	TABLE_APPLICATION_TYPES  = "ApplicationTypes"
-	TABLE_TAG                = "Tag"
-	TABLE_LOCKS              = "Locks"
+	// DCM - LogUpload
+	TABLE_DCM_RULES           = "dcm_rules"
+	TABLE_UPLOAD_REPOSITORIES = "upload_repositories"
+	TABLE_LOG_UPLOAD_SETTINGS = "log_upload_settings"
+	TABLE_LOG_FILES           = "log_files"
+	TABLE_LOG_FILE_LISTS      = "log_file_lists"
+	TABLE_DEVICE_SETTINGS     = "device_settings"
+	TABLE_VOD_SETTINGS        = "vod_settings"
+
+	// Telemetry
+	TABLE_TELEMETRY_PROFILES           = "telemetry_profiles"
+	TABLE_TELEMETRY_RULES              = "telemetry_rules"
+	TABLE_TELEMETRY_TWO_PROFILES       = "telemetry_two_profiles"
+	TABLE_TELEMETRY_TWO_RULES          = "telemetry_two_rules"
+	TABLE_PERMANENT_TELEMETRY_PROFILES = "permanent_telemetry_profiles"
+
+	// Telemetry - Changes
+	TABLE_TELEMETRY_CHANGES              = "telemetry_changes"
+	TABLE_TELEMETRY_APPROVED_CHANGES     = "telemetry_approved_changes"
+	TABLE_TELEMETRY_TWO_CHANGES          = "telemetry_two_changes"
+	TABLE_TELEMETRY_APPROVED_TWO_CHANGES = "telemetry_approved_two_changes"
+
+	// Old tables for backwards compatibility
+	TABLE_LOGS = "Logs2"
 )
 
 var AllTables = []string{
-	TABLE_DCM_RULE,
-	TABLE_UPLOAD_REPOSITORY,
+	TABLE_DCM_RULES,
+	TABLE_UPLOAD_REPOSITORIES,
 	TABLE_LOG_UPLOAD_SETTINGS,
-	TABLE_LOG_FILE,
-	TABLE_LOG_FILE_LIST,
-	TABLE_INDEXED_LOG_FILES,
-	TABLE_LOG_FILES_GROUPS,
+	TABLE_LOG_FILES,
+	TABLE_LOG_FILE_LISTS,
 	TABLE_DEVICE_SETTINGS,
 	TABLE_VOD_SETTINGS,
 	TABLE_SETTING_PROFILES,
 	TABLE_SETTING_RULES,
-	TABLE_TELEMETRY,
+	TABLE_TELEMETRY_PROFILES,
 	TABLE_TELEMETRY_RULES,
 	TABLE_TELEMETRY_TWO_RULES,
 	TABLE_TELEMETRY_TWO_PROFILES,
-	TABLE_PERMANENT_TELEMETRY,
-	TABLE_FIRMWARE_RULE,
-	TABLE_FIRMWARE_RULE_TEMPLATE,
-	TABLE_FIRMWARE_CONFIG,
-	TABLE_SINGLETON_FILTER_VALUE,
-	TABLE_FEATURE_CONTROL_RULE,
-	TABLE_XCONF_FEATURE,
-	TABLE_XCONF_CHANGE,
-	TABLE_XCONF_APPROVED_CHANGE,
-	TABLE_XCONF_TELEMETRY_TWO_CHANGE,
-	TABLE_XCONF_APPROVED_TELEMETRY_TWO_CHANGE,
-	TABLE_ENVIRONMENT,
-	TABLE_MODEL,
-	TABLE_IP_ADDRESS_GROUP,
-	TABLE_NS_LIST,
+	TABLE_PERMANENT_TELEMETRY_PROFILES,
+	TABLE_FIRMWARE_RULES,
+	TABLE_FIRMWARE_RULE_TEMPLATES,
+	TABLE_FIRMWARE_CONFIGS,
+	TABLE_SINGLETON_FILTER_VALUES,
+	TABLE_FEATURE_CONTROL_RULES,
+	TABLE_FEATURES,
+	TABLE_TELEMETRY_CHANGES,
+	TABLE_TELEMETRY_APPROVED_CHANGES,
+	TABLE_TELEMETRY_TWO_CHANGES,
+	TABLE_TELEMETRY_APPROVED_TWO_CHANGES,
+	TABLE_ENVIRONMENTS,
+	TABLE_MODELS,
 	TABLE_GENERIC_NS_LIST,
-	TABLE_LOGS,
-	TABLE_XCONF_CHANGED_KEYS,
-	TABLE_TAG,
+	TABLE_CONFIG_CHANGE_LOGS,
+	TABLE_CHANGE_EVENTS,
 	TABLE_APPLICATION_TYPES,
 }
 
-// Two possible values for Key2FieldName
+// Two possible values for Key2FieldName that is used for list types of tables
+// (e.g. Logs2, XconfChangedKeys4) where we need to specify the column name for the second key
 const (
-	DefaultKey2FieldName     = "column1"
-	ChangedKeysKey2FieldName = "columnName"
+	Key2FieldNameForList        = "column1"
+	Key2FieldNameForChangedKeys = "columnName"
 )
 
 /*
@@ -129,8 +123,7 @@ type TableInfo struct {
 	Split           bool               // data is split into multiple chunks
 	CacheData       bool               // specifies whether to cache the data
 	TTL             int                // TTL for the data
-	Key2FieldName   string             // column name for listing table, e.g. Logs2, XconfChangedKeys4
-	DaoId           int32              // Xconf DAO ID
+	Key2FieldName   string             // column name for list types of tables, e.g. Logs2, XconfChangedKeys4
 }
 
 // tableConfig is a map of table name to TableInfo
@@ -144,8 +137,6 @@ func RegisterTableConfigSimple(tableName string, fn func() interface{}) {
 		TableName:       tableName,
 		ConstructorFunc: fn,
 		CacheData:       true,
-		Key2FieldName:   DefaultKey2FieldName,
-		DaoId:           xconfDaoIdMap[tableName],
 	}
 }
 
@@ -154,10 +145,6 @@ func RegisterTableConfigSimple(tableName string, fn func() interface{}) {
  * i.e. constructor function, compression policy, and TTL for data.
  */
 func RegisterTableConfig(tableInfo *TableInfo) {
-	if tableInfo.Key2FieldName == "" {
-		tableInfo.Key2FieldName = DefaultKey2FieldName
-	}
-	tableInfo.DaoId = xconfDaoIdMap[tableInfo.TableName]
 	tableConfig[tableInfo.TableName] = *tableInfo
 }
 
@@ -186,35 +173,4 @@ func (ti *TableInfo) IsCompressOnly() bool {
 // IsCompressAndSplit checks if data is compressed and split, i.e. CompressingDataDao
 func (ti *TableInfo) IsCompressAndSplit() bool {
 	return ti.Compress && ti.Split
-}
-
-var xconfDaoIdMap = map[string]int32{
-	TABLE_FIRMWARE_CONFIG:        1586263717,
-	TABLE_DCM_RULE:               97791402,
-	TABLE_GENERIC_NS_LIST:        834213306,
-	TABLE_TELEMETRY_RULES:        1229706247,
-	TABLE_FIRMWARE_RULE:          720917275,
-	TABLE_FIRMWARE_RULE_TEMPLATE: 1895299265,
-	TABLE_SETTING_RULES:          -1826597405,
-	TABLE_XCONF_FEATURE:          1413526283,
-	TABLE_FEATURE_CONTROL_RULE:   -638116398,
-	TABLE_IP_ADDRESS_GROUP:       505086088,
-	TABLE_LOG_FILE_LIST:          -293241179,
-	TABLE_DEVICE_SETTINGS:        803752845,
-	TABLE_LOG_UPLOAD_SETTINGS:    1872416451,
-	TABLE_LOG_FILE:               -1330571547,
-	TABLE_UPLOAD_REPOSITORY:      -1493573423,
-	TABLE_VOD_SETTINGS:           1003179471,
-	TABLE_TELEMETRY:              -270293656,
-	TABLE_PERMANENT_TELEMETRY:    1528055203,
-	TABLE_TELEMETRY_TWO_PROFILES: -865570487,
-	TABLE_TELEMETRY_TWO_RULES:    1765731811,
-	TABLE_SETTING_PROFILES:       621503215,
-	TABLE_ENVIRONMENT:            1586640622,
-	TABLE_SINGLETON_FILTER_VALUE: 235925253,
-	TABLE_MODEL:                  -795610003,
-	TABLE_LOG_FILES_GROUPS:       -867320790,
-	TABLE_NS_LIST:                1409490260,
-	TABLE_APP_SETTINGS:           1,
-	TABLE_TAG:                    1698455800,
 }

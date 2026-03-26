@@ -668,7 +668,7 @@ func GetFirmwareConfigOneDB(id string) (*FirmwareConfig, error) {
 	if len(id) == 0 {
 		return nil, errors.New("id is empty")
 	}
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_FIRMWARE_CONFIG, id)
+	inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_CONFIGS, id)
 	if err != nil {
 		return nil, err
 	}
@@ -688,15 +688,15 @@ func CreateFirmwareConfigOneDB(fc *FirmwareConfig) error {
 		fc.ID = uuid.New().String()
 	}
 	fc.Updated = util.GetTimestamp()
-	return db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	return db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 }
 
 func DeleteOneFirmwareConfig(id string) error {
-	return db.GetCachedSimpleDao().DeleteOne(db.TABLE_FIRMWARE_CONFIG, id)
+	return db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_CONFIGS, id)
 }
 
 func GetFirmwareConfigAsListDB() ([]*FirmwareConfig, error) {
-	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_CONFIG, 0)
+	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_CONFIGS, 0)
 	if err != nil {
 		return nil, err
 	}

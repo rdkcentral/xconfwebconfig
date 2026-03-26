@@ -286,12 +286,12 @@ func GetGenericNamedListSetByType(typeName string) (*util.Set, error) {
 	}
 	cm := db.GetCacheManager()
 	cacheKey := typeName
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_GENERIC_NS_LIST, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.(*util.Set), nil
 	}
 	result := util.NewSet()
-	entry, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_GENERIC_NS_LIST, 0)
+	entry, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -301,12 +301,12 @@ func GetGenericNamedListSetByType(typeName string) (*util.Set, error) {
 			result.Add(nl.Data...)
 		}
 	}
-	cm.ApplicationCacheSet(db.TABLE_GENERIC_NS_LIST, cacheKey, &result)
+	cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, cacheKey, &result)
 	return &result, nil
 }
 
 func GetGenericNamedListOneDB(id string) (*GenericNamespacedList, error) {
-	instlst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_GENERIC_NS_LIST, id)
+	instlst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, id)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +320,7 @@ func GetGenericNamedListOneDB(id string) (*GenericNamespacedList, error) {
 }
 
 func GetGenericNamedListListsDB() ([]*GenericNamespacedList, error) {
-	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_GENERIC_NS_LIST, 0)
+	list, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +342,7 @@ func GetGenericNamedListListsByTypeDB(typeName string) ([]*GenericNamespacedList
 	}
 
 	result := []*GenericNamespacedList{}
-	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_GENERIC_NS_LIST, 0)
+	list, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +357,7 @@ func GetGenericNamedListListsByTypeDB(typeName string) ([]*GenericNamespacedList
 
 func CreateGenericNamedListOneDB(newList *GenericNamespacedList) error {
 	newList.Updated = util.GetTimestamp()
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_GENERIC_NS_LIST, newList.ID, newList)
+	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, newList.ID, newList)
 	return err
 }
 
@@ -379,7 +379,7 @@ func GetGenericNamedListOneByType(id string, typeName string) (*GenericNamespace
 }
 
 func GetGenericNamedListOneByTypeNonCached(id string, typeName string) (*GenericNamespacedList, error) {
-	instlst, err := db.GetCompressingDataDao().GetOne(db.TABLE_GENERIC_NS_LIST, id)
+	instlst, err := db.GetCompressingDataDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, id)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +397,7 @@ func GetGenericNamedListOneByTypeNonCached(id string, typeName string) (*Generic
 }
 
 func DeleteOneGenericNamedList(id string) error {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_GENERIC_NS_LIST, id)
+	err := db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, id)
 	if err != nil {
 		return err
 	}

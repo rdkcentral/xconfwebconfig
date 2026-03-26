@@ -46,8 +46,8 @@ type TwoKeys struct {
 	Key2 interface{}
 }
 
-func NewTwoKeys(Key string, Key2 interface{}) *TwoKeys {
-	return &TwoKeys{Key: Key, Key2: Key2}
+func NewTwoKeys(key string, key2 interface{}) *TwoKeys {
+	return &TwoKeys{Key: key, Key2: key2}
 }
 
 func NewTwoKeysFromString(tk string) (*TwoKeys, error) {
@@ -60,7 +60,12 @@ func NewTwoKeysFromString(tk string) (*TwoKeys, error) {
 }
 
 func (tk *TwoKeys) String() string {
-	return fmt.Sprintf("%s%s%v", tk.Key, TwowKeysDelimiter, tk.Key2)
+	return GetTwoKeysAsString(tk.Key, tk.Key2)
+}
+
+// GetTwoKeysAsString returns a string representation of two keys, e.g. "key1::key2"
+func GetTwoKeysAsString(key string, key2 interface{}) string {
+	return key + TwowKeysDelimiter + fmt.Sprint(key2)
 }
 
 // RangeInfo Xconf key2 filtering
@@ -91,28 +96,28 @@ type DatabaseClient interface {
 	NewBatch(batchType int) BatchOperation
 	ExecuteBatch(batch BatchOperation) error
 
-	SetXconfData(tableName string, rowKey string, value []byte, ttl int) error
-	GetXconfData(tableName string, rowKey string) ([]byte, error)
-	GetAllXconfDataByKeys(tableName string, rowKeys []string) [][]byte
-	GetAllXconfKeys(tableName string) []string
-	GetAllXconfDataAsList(tableName string, maxResults int) [][]byte
-	GetAllXconfDataAsMap(tableName string, maxResults int) map[string][]byte
-	DeleteXconfData(tableName string, rowKey string) error
-	DeleteAllXconfData(tableName string) error
+	SetXconfData(tenantId string, tableName string, key string, value []byte, ttl int) error
+	GetXconfData(tenantId string, tableName string, key string) ([]byte, error)
+	GetAllXconfDataByKeys(tenantId string, tableName string, keys []string) [][]byte
+	GetAllXconfKeys(tenantId string, tableName string) []string
+	GetAllXconfDataAsList(tenantId string, tableName string, maxResults int) [][]byte
+	GetAllXconfDataAsMap(tenantId string, tableName string, maxResults int) map[string][]byte
+	DeleteXconfData(tenantId string, tableName string, key string) error
+	DeleteAllXconfData(tenantId string, tableName string) error
 
 	// Xconf TwoKeys
-	GetAllXconfData(tableName string, rowKey string) [][]byte
-	GetAllXconfDataTwoKeysRange(tableName string, rowKey interface{}, key2FieldName string, rangeInfo *RangeInfo) [][]byte
-	GetAllXconfDataTwoKeysAsMap(tableName string, rowKey string, key2FieldName string, key2List []interface{}) map[interface{}][]byte
-	SetXconfDataTwoKeys(tableName string, rowKey interface{}, key2FieldName string, key2 interface{}, value []byte, ttl int) error
-	GetXconfDataTwoKeys(tableName string, rowKey string, key2FieldName string, key2 interface{}) ([]byte, error)
-	DeleteXconfDataTwoKeys(tableName string, rowKey string, key2FieldName string, key2 interface{}) error
-	GetAllXconfTwoKeys(tableName string, key2FieldName string) []TwoKeys
-	GetAllXconfKey2s(tableName string, rowKey string, key2FieldName string) []interface{}
+	GetAllXconfData(tenantId string, tableName string, key string) [][]byte
+	GetAllXconfDataTwoKeysRange(tenantId string, tableName string, key interface{}, key2FieldName string, rangeInfo *RangeInfo) [][]byte
+	GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, key string, key2FieldName string, key2List []interface{}) map[interface{}][]byte
+	SetXconfDataTwoKeys(tenantId string, tableName string, key interface{}, key2FieldName string, key2 interface{}, value []byte, ttl int) error
+	GetXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 interface{}) ([]byte, error)
+	DeleteXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 interface{}) error
+	GetAllXconfTwoKeys(tenantId string, tableName string, key2FieldName string) []TwoKeys
+	GetAllXconfKey2s(tenantId string, tableName string, key string, key2FieldName string) []interface{}
 	// Xconf compressed data
-	SetXconfCompressedData(tableName string, rowKey string, values [][]byte, ttl int) error
-	GetXconfCompressedData(tableName string, rowKey string) ([]byte, error)
-	GetAllXconfCompressedDataAsMap(tableName string) map[string][]byte
+	SetXconfCompressedData(tenantId string, tableName string, key string, values [][]byte, ttl int) error
+	GetXconfCompressedData(tenantId string, tableName string, key string) ([]byte, error)
+	GetAllXconfCompressedDataAsMap(tenantId string, tableName string) map[string][]byte
 
 	// Pod table lookup estbMac from pod serialNum
 	GetEcmMacFromPodTable(string) (string, error)

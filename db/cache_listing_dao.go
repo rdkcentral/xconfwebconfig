@@ -19,7 +19,6 @@ package db
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	copy "github.com/mitchellh/copystructure"
@@ -47,14 +46,14 @@ The following code illustrates how to retrieve a specific Model from the Model t
 
 // CachedListingDao interface for ListingDao
 type CachedListingDao interface {
-	GetOne(tableName string, rowKey string, key2 interface{}) (interface{}, error)
-	SetOne(tableName string, rowKey string, key2 interface{}, entity interface{}) error
-	DeleteOne(tableName string, rowKey string, key2 interface{}) error
-	DeleteAll(tableName string, rowKey string) error
-	GetAll(tableName string, rowKey string) ([]interface{}, error)
-	GetAllAsMap(tableName string, rowKey string, key2List []interface{}) (map[interface{}]interface{}, error)
-	GetKeys(tableName string) ([]TwoKeys, error)
-	GetKey2AsList(tableName string, rowKey string) ([]interface{}, error)
+	GetOne(tenantId string, tableName string, key string, key2 interface{}) (interface{}, error)
+	SetOne(tenantId string, tableName string, key string, key2 interface{}, entity interface{}) error
+	DeleteOne(tenantId string, tableName string, key string, key2 interface{}) error
+	DeleteAll(tenantId string, tableName string, key string) error
+	GetAll(tenantId string, tableName string, key string) ([]interface{}, error)
+	GetAllAsMap(tenantId string, tableName string, key string, key2List []interface{}) (map[interface{}]interface{}, error)
+	GetKeys(tenantId string, tableName string) ([]TwoKeys, error)
+	GetKey2AsList(tenantId string, tableName string, key string) ([]interface{}, error)
 }
 
 type cachedListingDaoImpl struct{}
@@ -67,13 +66,13 @@ func GetCachedListingDao() CachedListingDao {
 }
 
 // GetOne get one Xconf record from cache
-func (cld cachedListingDaoImpl) GetOne(tableName string, rowKey string, key2 interface{}) (interface{}, error) {
-	cache, err := GetCacheManager().getCache(tableName)
+func (cld cachedListingDaoImpl) GetOne(tenantId string, tableName string, key string, key2 interface{}) (interface{}, error) {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
 
-	tkStr := NewTwoKeys(rowKey, key2).String()
+	tkStr := GetTwoKeysAsString(key, key2)
 	obj, err := cache.Get(tkStr)
 	if err != nil {
 		return nil, err
@@ -93,8 +92,8 @@ func (cld cachedListingDaoImpl) GetOne(tableName string, rowKey string, key2 int
 }
 
 // SetOne set Xconf record in DB and cache where entity param is the model/struct
-func (cld cachedListingDaoImpl) SetOne(tableName string, rowKey string, key2 interface{}, entity interface{}) error {
-	cache, err := GetCacheManager().getCache(tableName)
+func (cld cachedListingDaoImpl) SetOne(tenantId string, tableName string, key string, key2 interface{}, entity interface{}) error {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return err
 	}
@@ -105,58 +104,58 @@ func (cld cachedListingDaoImpl) SetOne(tableName string, rowKey string, key2 int
 	}
 
 	// 1st update the DB
-	err = GetListingDao().SetOne(tableName, rowKey, key2, jsonData)
+	err = GetListingDao().SetOne(tenantId, tableName, key, key2, jsonData)
 	if err == nil {
 		// Next update the cache
-		tkStr := NewTwoKeys(rowKey, key2).String()
+		tkStr := GetTwoKeysAsString(key, key2)
 		cache.Put(tkStr, entity)
 		// Write cache changed log
-		GetCacheManager().writeCacheLog(tableName, tkStr, CREATE_OPERATION, int32(cache.Size()))
+		GetCacheManager().writeCacheLog(tenantId, tableName, tkStr, CREATE_OPERATION, int32(cache.Size()))
 	}
 
 	return err
 }
 
 // DeleteOne delete Xconf record from DB and cache
-func (cld cachedListingDaoImpl) DeleteOne(tableName string, rowKey string, key2 interface{}) error {
-	cache, err := GetCacheManager().getCache(tableName)
+func (cld cachedListingDaoImpl) DeleteOne(tenantId string, tableName string, key string, key2 interface{}) error {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return err
 	}
 
 	// 1st delete from DB
-	err = GetListingDao().DeleteOne(tableName, rowKey, key2)
+	err = GetListingDao().DeleteOne(tenantId, tableName, key, key2)
 	if err == nil {
 		// Calculate cache size since removal doesn't take place immediately
 		cacheSize := int32(cache.Size() - 1)
 		// Next invalidate entry from the cache
-		tkStr := NewTwoKeys(rowKey, key2).String()
+		tkStr := GetTwoKeysAsString(key, key2)
 		cache.Invalidate(tkStr)
 		// Write cache changed log
-		GetCacheManager().writeCacheLog(tableName, tkStr, DELETE_OPERATION, cacheSize)
+		GetCacheManager().writeCacheLog(tenantId, tableName, tkStr, DELETE_OPERATION, cacheSize)
 	}
 
 	return err
 }
 
 // DeleteAll delete Xconf record from DB and cache
-func (cld cachedListingDaoImpl) DeleteAll(tableName string, rowKey string) error {
-	cache, err := GetCacheManager().getCache(tableName)
+func (cld cachedListingDaoImpl) DeleteAll(tenantId string, tableName string, key string) error {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return err
 	}
 
-	key2List, err := GetListingDao().GetKey2AsList(tableName, rowKey)
+	key2List, err := GetListingDao().GetKey2AsList(tenantId, tableName, key)
 	if err != nil {
 		return err
 	}
 
 	// 1st delete from DB
-	err = GetListingDao().DeleteAll(tableName, rowKey)
+	err = GetListingDao().DeleteAll(tenantId, tableName, key)
 	if err == nil {
 		// Next invalidate entry from the cache
 		for _, key2 := range key2List {
-			tkStr := NewTwoKeys(rowKey, key2).String()
+			tkStr := GetTwoKeysAsString(key, key2)
 			cache.Invalidate(tkStr)
 		}
 	}
@@ -164,18 +163,18 @@ func (cld cachedListingDaoImpl) DeleteAll(tableName string, rowKey string) error
 	return err
 }
 
-// GetAll get all Xconf records from fache for the specified rowKey
-func (cld cachedListingDaoImpl) GetAll(tableName string, rowKey string) ([]interface{}, error) {
-	cache, err := GetCacheManager().getCache(tableName)
+// GetAll get all Xconf records from cache for the specified key
+func (cld cachedListingDaoImpl) GetAll(tenantId string, tableName string, key string) ([]interface{}, error) {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
 
 	cloneData := GetCacheManager().settings.cloneDataEnabled
-	result := make([]interface{}, len(rowKey))
+	result := make([]interface{}, len(key))
 
-	// find all records in cache with key that has rowKey + delimiter as the prefix
-	keyPrefix := fmt.Sprintf("%s%s", rowKey, TwowKeysDelimiter)
+	// find all records in cache with key that has key + delimiter as the prefix
+	keyPrefix := key + TwowKeysDelimiter
 	objMap := cache.GetAll()
 	for key, obj := range objMap {
 		if strings.HasPrefix(key.(string), keyPrefix) {
@@ -196,8 +195,8 @@ func (cld cachedListingDaoImpl) GetAll(tableName string, rowKey string) ([]inter
 }
 
 // GetAllAsMap get a map of all Xconf records for the specified key2 list
-func (cld cachedListingDaoImpl) GetAllAsMap(tableName string, rowKey string, key2List []interface{}) (map[interface{}]interface{}, error) {
-	cache, err := GetCacheManager().getCache(tableName)
+func (cld cachedListingDaoImpl) GetAllAsMap(tenantId string, tableName string, key string, key2List []interface{}) (map[interface{}]interface{}, error) {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +205,7 @@ func (cld cachedListingDaoImpl) GetAllAsMap(tableName string, rowKey string, key
 	var result = make(map[interface{}]interface{})
 
 	for _, key2 := range key2List {
-		tkStr := NewTwoKeys(rowKey, key2).String()
+		tkStr := GetTwoKeysAsString(key, key2)
 		obj, err := cache.Get(tkStr)
 		if err != nil {
 			return nil, err
@@ -228,8 +227,8 @@ func (cld cachedListingDaoImpl) GetAllAsMap(tableName string, rowKey string, key
 }
 
 // GetKeys get all Xconf two keys from cache
-func (cld cachedListingDaoImpl) GetKeys(tableName string) ([]TwoKeys, error) {
-	cache, err := GetCacheManager().getCache(tableName)
+func (cld cachedListingDaoImpl) GetKeys(tenantId string, tableName string) ([]TwoKeys, error) {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -248,17 +247,17 @@ func (cld cachedListingDaoImpl) GetKeys(tableName string) ([]TwoKeys, error) {
 	return result, nil
 }
 
-// GetKey2AsList get a list of Xconf key2 for the specified rowKey
-func (cld cachedListingDaoImpl) GetKey2AsList(tableName string, rowKey string) ([]interface{}, error) {
-	cache, err := GetCacheManager().getCache(tableName)
+// GetKey2AsList get a list of Xconf key2 for the specified key
+func (cld cachedListingDaoImpl) GetKey2AsList(tenantId string, tableName string, key string) ([]interface{}, error) {
+	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
 
 	var result []interface{}
 
-	// find all records in cache with key that has rowKey + delimiter as the prefix
-	keyPrefix := fmt.Sprintf("%s%s", rowKey, TwowKeysDelimiter)
+	// find all records in cache with key that has key + delimiter as the prefix
+	keyPrefix := key + TwowKeysDelimiter
 	keys := cache.GetAllKeys()
 	for _, key := range keys {
 		if strings.HasPrefix(key.(string), keyPrefix) {

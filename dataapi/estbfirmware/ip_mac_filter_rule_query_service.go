@@ -85,12 +85,12 @@ func (i *IpRuleService) Save(bean *sharedef.IpRuleBean, applicationType string) 
 		return err
 	}
 
-	return db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, ipRule.ID, ipRule)
+	return db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, ipRule.ID, ipRule)
 }
 
 // Delete ...
 func (i *IpRuleService) Delete(id string) {
-	db.GetCachedSimpleDao().DeleteOne(db.TABLE_FIRMWARE_RULE, id)
+	db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, id)
 }
 
 func (i *IpRuleService) getOne(id string) *sharedef.IpRuleBean {
@@ -179,11 +179,11 @@ func (i *IpFilterService) save(filter *sharedef.IpFilter, applicationType string
 	if len(applicationType) != 0 {
 		rule.ApplicationType = applicationType
 	}
-	db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_RULE, rule.ID, rule)
+	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 }
 
 func (i *IpFilterService) delete(id string) {
-	db.GetCachedSimpleDao().DeleteOne(db.TABLE_FIRMWARE_RULE, id)
+	db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, id)
 }
 
 type PercentFilterService struct {

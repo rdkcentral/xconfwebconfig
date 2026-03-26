@@ -36,15 +36,16 @@ import (
 
 const (
 	ProtocolVersion                      = 4
-	DefaultKeyspace                      = "ApplicationsDiscoveryDataService"
-	DefaultTestKeyspace                  = "ApplicationsDiscoveryDataServiceTest"
+	DefaultKeyspace                      = "xconf"
+	DefaultTestKeyspace                  = "xconf_test"
+	DefaultLogKeyspace                   = "ApplicationsDiscoveryDataService"
+	DefaultLogTestKeyspace               = "ApplicationsDiscoveryDataServiceTest"
 	DefaultDeviceKeyspace                = "odp"
 	DefaultDeviceTestKeyspace            = "odp_test_keyspace"
 	DefaultDevicePodTableName            = "pod_cpe_account"
 	DisableInitialHostLookup             = false
 	DefaultSleepTimeInMillisecond        = 10
 	DefaultConnections                   = 2
-	DefaultColumnValue                   = "data"
 	NamedListPartColumnValue             = "NamedListData_part_"
 	NamedListCountColumnValue            = "NamedListData_parts_count"
 	DefaultXpcKeyspace                   = "xpc"
@@ -52,6 +53,9 @@ const (
 	DefaultXpcPrecookTableName           = "reference_document"
 	DefaultXconfRecookingStatusTableName = "RecookingStatus"
 	LockNameDelimiter                    = "|"
+
+	// DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING
+	ScalingFactor = 8 // number of shards (nodes) to distribute data across
 )
 
 // Interface used for connecting to Cassandra in a cloud environment
@@ -70,10 +74,11 @@ type CassandraClient struct {
 	SleepTime                     int32
 	ConcurrentQueries             chan bool
 	LocalDc                       string
-	DeviceKeyspace                string
-	DevicePodTableName            string
-	TestOnly                      bool
 	Connection_type               string
+	testOnly                      bool
+	addsKeyspace                  string
+	deviceKeyspace                string
+	devicePodTableName            string
 	xpcKeyspace                   string
 	xpcPrecookTableName           string
 	xconfRecookingStatusTableName string
@@ -208,6 +213,7 @@ func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Con
 	}
 
 	// Use the appropriate keyspace
+	var addsKeyspace string
 	var deviceKeyspace string
 	var session *gocql.Session
 
@@ -215,9 +221,11 @@ func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Con
 	if testOnly {
 		cluster.Keyspace = conf.GetString("xconfwebconfig.database.test_keyspace", DefaultTestKeyspace)
 		deviceKeyspace = conf.GetString("xconfwebconfig.database.device_test_keyspace", DefaultDeviceTestKeyspace)
+		addsKeyspace = conf.GetString("xconfwebconfig.database.test_keyspace", DefaultLogKeyspace)
 	} else {
 		cluster.Keyspace = conf.GetString("xconfwebconfig.database.keyspace", DefaultKeyspace)
 		deviceKeyspace = conf.GetString("xconfwebconfig.database.device_keyspace", DefaultDeviceKeyspace)
+		addsKeyspace = conf.GetString("xconfwebconfig.database.adds_keyspace", DefaultLogTestKeyspace)
 	}
 	log.Debug(fmt.Sprintf("Init CassandraClient with keyspace: %v", cluster.Keyspace))
 
@@ -238,10 +246,11 @@ func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Con
 		SleepTime:                     conf.GetInt32("xconfwebconfig.perftest.sleep_in_msecs", DefaultSleepTimeInMillisecond),
 		ConcurrentQueries:             make(chan bool, conf.GetInt32("xconfwebconfig.database.concurrent_queries", 500)),
 		LocalDc:                       localDc,
-		DeviceKeyspace:                deviceKeyspace,
-		DevicePodTableName:            devicePodTableName,
-		TestOnly:                      testOnly,
 		Connection_type:               ca.Connection_type,
+		testOnly:                      testOnly,
+		addsKeyspace:                  addsKeyspace,
+		deviceKeyspace:                deviceKeyspace,
+		devicePodTableName:            devicePodTableName,
 		xpcKeyspace:                   xpcKeyspace,
 		xpcPrecookTableName:           xpcPrecookTableName,
 		xconfRecookingStatusTableName: xconfRecookingStatusTableName,
@@ -309,34 +318,597 @@ func (c *CassandraClient) IsDbNotFound(err error) bool {
 }
 
 func (c *CassandraClient) IsTestOnly() bool {
-	return c.TestOnly
+	return c.testOnly
 }
 
 func (c *CassandraClient) GetDeviceKeyspace() string {
-	return c.DeviceKeyspace
+	return c.deviceKeyspace
 }
 
 func (c *CassandraClient) GetDevicePodTableName() string {
-	return c.DevicePodTableName
+	return c.devicePodTableName
+}
+
+func (c *CassandraClient) GetLogKeyspace() string {
+	return c.addsKeyspace
 }
 
 // SetXconfData Create XconfData for the specified key and value, where value is JSON data
-func (c *CassandraClient) SetXconfData(tableName string, rowKey string, value []byte, ttl int) error {
+func (c *CassandraClient) SetXconfData(tenantId string, tableName string, key string, value []byte, ttl int) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
 	var stmt string
 	if ttl > 0 {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(key, column1, value) VALUES(?,?,?) USING TTL %d`, tableName, ttl)
+		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, value) VALUES(?,?,?,?) USING TTL %d`, tableName, ttl)
 	} else {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(key, column1, value) VALUES(?,?,?)`, tableName)
+		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, value) VALUES(?,?,?,?)`, tableName)
 	}
 
-	if err := c.Query(stmt, rowKey, DefaultColumnValue, value).Exec(); err != nil {
+	if err := c.Query(stmt, tenantId, GetShardId(key), key, value).Exec(); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// GetXconfData Get one row where return value is JSON data
+func (c *CassandraClient) GetXconfData(tenantId string, tableName string, key string) ([]byte, error) {
+	start := time.Now()
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var value []byte
+
+	stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? LIMIT 1`, tableName)
+	err := c.Query(stmt, tenantId, GetShardId(key), key).Scan(&value)
+	if err != nil {
+		return value, err
+	}
+
+	log.Debug(fmt.Sprintf("CassandraClient.GetXconfData: tenantId %s table %s key %s in %v", tenantId, tableName, key, time.Since(start)))
+
+	return value, nil
+}
+
+// GetAllXconfDataByKeys Get all rows as a list of values for the specified keys, where value is JSON data
+func (c *CassandraClient) GetAllXconfDataByKeys(tenantId string, tableName string, keys []string) [][]byte {
+	start := time.Now()
+	var resultData [][]byte
+
+	for _, key := range keys {
+		// concurrency will be handled inside GetXconfData method, so no need to add concurrency here
+		data, err := c.GetXconfData(tenantId, tableName, key)
+		if err != nil {
+			if !c.IsDbNotFound(err) {
+				log.Warnf("CassandraClient.GetAllXconfDataByKeys: failed to get data for tenantId %s, table %s, key %s: %v", tenantId, tableName, key, err)
+			}
+			continue
+		}
+		resultData = append(resultData, data)
+	}
+
+	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataByKeys: tenantId %s table %s keys %v in %v", tenantId, tableName, keys, time.Since(start)))
+
+	return resultData
+}
+
+// GetAllXconfKeys Get all keys
+func (c *CassandraClient) GetAllXconfKeys(tenantId string, tableName string) []string {
+	start := time.Now()
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var resultData []string
+	stmt := fmt.Sprintf(`SELECT key FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, tableName)
+
+	forEachShard(
+		func(shardId int) error {
+			iter := c.Query(stmt, tenantId, shardId).Iter()
+			for {
+				row := make(map[string]interface{})
+				if !iter.MapScan(row) {
+					break
+				}
+				resultData = append(resultData, row["key"].(string))
+			}
+			return nil
+		})
+
+	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfKeys: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
+
+	return resultData
+}
+
+// GetAllXconfDataAsList Get all rows as a list of values, where value is JSON data
+func (c *CassandraClient) GetAllXconfDataAsList(tenantId string, tableName string, maxResults int) [][]byte {
+	start := time.Now()
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var resultData [][]byte
+	var stmt string
+	if maxResults > 0 {
+		stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? LIMIT %v`, tableName, maxResults)
+	} else {
+		stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, tableName)
+	}
+
+	forEachShard(
+		func(shardId int) error {
+			iter := c.Query(stmt, tenantId, shardId).Iter()
+			for {
+				row := make(map[string]interface{})
+				if !iter.MapScan(row) {
+					break
+				}
+				resultData = append(resultData, row["value"].([]byte))
+			}
+			return nil
+		})
+
+	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataAsList: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
+
+	return resultData
+}
+
+// GetAllXconfDataAsMap Get all rows as a map of key to value, where value is JSON data
+func (c *CassandraClient) GetAllXconfDataAsMap(tenantId string, tableName string, maxResults int) map[string][]byte {
+	start := time.Now()
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var resultData = make(map[string][]byte)
+	var stmt string
+	if maxResults > 0 {
+		stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? LIMIT %v`, tableName, maxResults)
+	} else {
+		stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, tableName)
+	}
+
+	forEachShard(
+		func(shardId int) error {
+			iter := c.Query(stmt, tenantId, shardId).Iter()
+			for {
+				row := make(map[string]interface{})
+				if !iter.MapScan(row) {
+					break
+				}
+				resultData[row["key"].(string)] = row["value"].([]byte)
+			}
+			return nil
+		})
+
+	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataAsMap: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
+
+	return resultData
+}
+
+// DeleteXconfData Delete XconfData for the specified tenant, table, and key
+func (c *CassandraClient) DeleteXconfData(tenantId string, tableName string, key string) error {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, tableName)
+	if err := c.Query(stmt, tenantId, GetShardId(key), key).Exec(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteAllXconfData Delete all XconfData for the specified tenant and table
+func (c *CassandraClient) DeleteAllXconfData(tenantId string, tableName string) error {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, tableName)
+
+	err := forEachShard(
+		func(shardId int) error {
+			return c.Query(stmt, tenantId, shardId).Exec()
+		})
+
+	return err
+}
+
+// Two keys support
+
+// GetAllXconfData Get multiple rows as a list of values, where value is JSON data
+func (c *CassandraClient) GetAllXconfData(tenantId string, tableName string, key string) [][]byte {
+	start := time.Now()
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var resultData [][]byte
+
+	stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, tableName)
+	iter := c.Query(stmt, tenantId, GetShardId(key), key).Iter()
+	for {
+		row := make(map[string]interface{})
+		if !iter.MapScan(row) {
+			break
+		}
+		resultData = append(resultData, row["value"].([]byte))
+	}
+
+	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfData: tenantId %s table %s key %s in %v", tenantId, tableName, key, time.Since(start)))
+
+	return resultData
+}
+
+// GetAllXconfDataTwoKeysRange Get multiple rows for the specified key and key2 range as list of values, where value is JSON data
+func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tenantId string, tableName string, key interface{}, key2FieldName string, rangeInfo *RangeInfo) [][]byte {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var resultData [][]byte
+	var stmt string
+	var iter *gocql.Iter
+
+	nilStartValue := true
+	nilEndValue := true
+	if rangeInfo != nil {
+		nilStartValue = rangeInfo.IsNilStartValue()
+		nilEndValue = rangeInfo.IsNilEndValue()
+	}
+
+	// TODO: support tenantId is empty for logs table
+
+	if nilStartValue && nilEndValue {
+		stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? ALLOW FILTERING`, tableName)
+		iter = c.Query(stmt, tenantId, GetShardId(key), key).Iter()
+	} else {
+		if nilStartValue {
+			if !nilEndValue {
+				stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName)
+				iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.EndValue).Iter()
+			}
+		} else {
+			if nilEndValue {
+				stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s > ? ALLOW FILTERING`, tableName, key2FieldName)
+				iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.StartValue).Iter()
+			} else {
+				stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s > ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName, key2FieldName)
+				iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.StartValue, rangeInfo.EndValue).Iter()
+			}
+		}
+	}
+
+	for {
+		row := make(map[string]interface{})
+		if !iter.MapScan(row) {
+			break
+		}
+		resultData = append(resultData, row["value"].([]byte))
+	}
+
+	return resultData
+}
+
+// GetAllXconfDataTwoKeysAsMap Get multiple rows for the specified key and key2 list as map of values, where value is JSON data
+func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, key string, key2FieldName string, key2List []interface{}) map[interface{}][]byte {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var resultData = make(map[interface{}][]byte)
+
+	stmt := fmt.Sprintf(`SELECT %s, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s IN ?`, key2FieldName, tableName, key2FieldName)
+	iter := c.Query(stmt, tenantId, GetShardId(key), key, key2List).Iter()
+	for {
+		row := make(map[string]interface{})
+		if !iter.MapScan(row) {
+			break
+		}
+		resultData[row[key2FieldName].(interface{})] = row["value"].([]byte)
+	}
+
+	return resultData
+}
+
+// SetXconfDataTwoKeys Create XconfData for the specified two keys and value, where value is JSON data
+func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string, key interface{}, key2FieldName string, key2 interface{}, value []byte, ttl int) error {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var stmt string
+	if ttl > 0 {
+		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
+	} else {
+		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, key2FieldName)
+	}
+
+	if err := c.Query(stmt, tenantId, GetShardId(key), key, key2, value).Exec(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetXconfDataTwoKeys Get one row where return value is JSON data
+func (c *CassandraClient) GetXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 interface{}) ([]byte, error) {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var value []byte
+
+	stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
+	err := c.Query(stmt, tenantId, GetShardId(key), key, key2).Scan(&value)
+	if err != nil {
+		return value, err
+	}
+
+	return value, nil
+}
+
+// DeleteXconfDataTwoKeys Delete XconfData for the specified two keys
+func (c *CassandraClient) DeleteXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 interface{}) error {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ?`, tableName, key2FieldName)
+	if err := c.Query(stmt, tenantId, GetShardId(key), key, key2).Exec(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetAllXconfTwoKeys Get all TwoKeys
+func (c *CassandraClient) GetAllXconfTwoKeys(tenantId string, tableName string, key2FieldName string) []TwoKeys {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var resultData []TwoKeys
+
+	forEachShard(
+		func(shardId int) error {
+			stmt := fmt.Sprintf(`SELECT key, "%s" FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, key2FieldName, tableName)
+			iter := c.Query(stmt, tenantId, shardId).Iter()
+			for {
+				row := make(map[string]interface{})
+				if !iter.MapScan(row) {
+					break
+				}
+
+				twoKeys := TwoKeys{
+					Key:  row["key"].(string),
+					Key2: row[key2FieldName].(interface{}),
+				}
+				resultData = append(resultData, twoKeys)
+			}
+			return nil
+		})
+
+	return resultData
+}
+
+// GetAllXconfKey2s Get a list of Xconf key2 for the specified key
+func (c *CassandraClient) GetAllXconfKey2s(tenantId string, tableName string, key string, key2FieldName string) []interface{} {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var resultData []interface{}
+
+	stmt := fmt.Sprintf(`SELECT %s FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, key2FieldName, tableName)
+	iter := c.Query(stmt, tenantId, GetShardId(key), key).Iter()
+	for {
+		row := make(map[string]interface{})
+		if !iter.MapScan(row) {
+			break
+		}
+		resultData = append(resultData, row[key2FieldName].(interface{}))
+	}
+
+	return resultData
+}
+
+// SetXconfCompressedData Create XconfData for the specified key and values, where values is compressed JSON data
+func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName string, key string, values [][]byte, ttl int) error {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	shardId := GetShardId(key)
+	batch := c.NewBatch(LoggedBatch)
+
+	// Add a record that specifies the number of compressed data chunks
+	var stmt string
+	if ttl > 0 {
+		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?)) USING TTL %d`, tableName, Key2FieldNameForList, ttl)
+	} else {
+		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?))`, tableName, Key2FieldNameForList)
+	}
+	batch.Query(stmt, tenantId, shardId, key, NamedListCountColumnValue, len(values))
+
+	for i, value := range values {
+		// Add a record for each compressed data chunk where key has the format: NamedListData_part_0, ...
+		partColumnValue := NamedListPartColumnValue + strconv.Itoa(i)
+		if ttl > 0 {
+			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, Key2FieldNameForList, ttl)
+		} else {
+			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, Key2FieldNameForList)
+		}
+		batch.Query(stmt, tenantId, shardId, key, partColumnValue, value)
+	}
+
+	if err := c.ExecuteBatch(batch); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetXconfCompressedData Get one row where return value is compressed JSON data
+func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName string, key string) ([]byte, error) {
+	start := time.Now()
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	// Get the number of compressed data chunks
+	var partsCount int
+	shardId := GetShardId(key)
+	stmt := fmt.Sprintf(`SELECT blobAsInt(value) FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ? LIMIT 1`, tableName, Key2FieldNameForList)
+	err := c.Query(stmt, tenantId, shardId, key, NamedListCountColumnValue).Scan(&partsCount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all the compressed data chunks
+	var partsMap = make(map[string][]byte)
+	stmt = fmt.Sprintf(`SELECT key, %, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, Key2FieldNameForList, tableName)
+	iter := c.Query(stmt, tenantId, shardId, key).Iter()
+	for {
+		row := make(map[string]interface{})
+		if !iter.MapScan(row) {
+			break
+		}
+
+		partName := row[Key2FieldNameForList].(string)
+		if partName != NamedListCountColumnValue {
+			partsMap[partName] = row["value"].([]byte)
+		}
+	}
+
+	// Ensure all the parts are loaded
+	if partsCount > len(partsMap) {
+		err := fmt.Errorf("Inconsistent compressed data for key '%s' from '%s': expected %d record(s) got %d",
+			key, tableName, partsCount, len(partsMap))
+		log.Error(err)
+		return nil, err
+	}
+
+	// Combine all the compressed data chunks into one
+	var chunks [][]byte
+	for i := 0; i < partsCount; i++ {
+		keyName := NamedListPartColumnValue + strconv.Itoa(i)
+		if chunk, exists := partsMap[keyName]; exists {
+			chunks = append(chunks, chunk)
+		} else {
+			err := fmt.Errorf("Inconsistent compressed data for key '%s' from '%s': missing part '%s'",
+				key, tableName, keyName)
+			log.Error(err)
+			return nil, err
+		}
+	}
+
+	resultData := bytes.Join(chunks, []byte(""))
+
+	log.Debug(fmt.Sprintf("CassandraClient.GetXconfCompressedData: tenantId %s table %s key %s in %v", tenantId, tableName, key, time.Since(start)))
+
+	return resultData, nil
+}
+
+// GetAllXconfCompressedDataAsMap Get all rows as a map of key to value, where value is compressed JSON data
+func (c *CassandraClient) GetAllXconfCompressedDataAsMap(tenantId string, tableName string) map[string][]byte {
+	start := time.Now()
+
+	var resultData = make(map[string][]byte)
+
+	rawData := c.GetXconfCompressedDataRaw(tenantId, tableName)
+	for key, partsMap := range rawData {
+		// Combine all the compressed data chunks into one
+		partsCount := len(partsMap)
+		var chunks [][]byte
+		for i := 0; i < partsCount; i++ {
+			partKey := NamedListPartColumnValue + strconv.Itoa(i)
+			chunk := partsMap[partKey]
+			chunks = append(chunks, chunk)
+		}
+		data := bytes.Join(chunks, []byte(""))
+		resultData[key] = data
+	}
+
+	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfCompressedDataAsMap: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
+
+	return resultData
+}
+
+// GetXconfCompressedDataRaw Get all rows as a map of key to another map,
+// where key specifies part number and value is compressed JSON data chunk.
+//
+// Sample data for one record in GenericXconfNamedList table:
+//
+// tenant_id | shard_id | key               | column1                   | value
+// ----------+----------+-------------------+---------------------------+-----------------------------
+// COMCAST   | 0        | Test_Mac_List     |      NamedListData_part_0 | 0x7df05a7b226964223a2241...
+// COMCAST   | 0        | Test_Mac_List     |      NamedListData_part_1 | 0x60f05f7b226964223a2231...
+// COMCAST   | 0        | Test_Mac_List     | NamedListData_parts_count |                  0x00000002
+func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName string) map[string]map[string][]byte {
+	start := time.Now()
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var resultData = make(map[string]map[string][]byte)
+	var countMap = make(map[string]int)
+
+	// Get all the count records
+	stmt := fmt.Sprintf(`SELECT key, blobAsInt(value) as count FROM "%s" where tenant_id = ? AND shard_id = ? AND %s = ? ALLOW FILTERING`, tableName, Key2FieldNameForList)
+	forEachShard(
+		func(shardId int) error {
+			iter := c.Query(stmt, tenantId, shardId, NamedListCountColumnValue).Iter()
+			for {
+				row := make(map[string]interface{})
+				if !iter.MapScan(row) {
+					break
+				}
+				countMap[row["key"].(string)] = row["count"].(int)
+			}
+			return nil
+		})
+
+	// Get all the compressed data chunks
+	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, Key2FieldNameForList, tableName)
+	forEachShard(
+		func(shardId int) error {
+			iter := c.Query(stmt, tenantId, shardId).Iter()
+			for {
+				row := make(map[string]interface{})
+				if !iter.MapScan(row) {
+					break
+				}
+
+				column1 := row[Key2FieldNameForList].(string)
+				if column1 == NamedListCountColumnValue {
+					continue // Ignored count record which has already been processed
+				} else {
+					key := row["key"].(string)
+					partsMap := resultData[key]
+					if partsMap == nil {
+						partsMap = make(map[string][]byte)
+						resultData[key] = partsMap
+					}
+					count := countMap[key]
+					if len(partsMap) >= count {
+						continue // skip extra data
+					}
+					partsMap[column1] = row["value"].([]byte)
+				}
+			}
+			return nil
+		})
+
+	// Ensure all the parts are loaded
+	for key, partsMap := range resultData {
+		partsCount := countMap[key]
+		if partsCount != len(partsMap) {
+			log.Warn(fmt.Sprintf("Inconsistent compressed data for tenantId '%s' table '%s' key '%s': expected %v record(s) got %v",
+				tenantId, tableName, key, partsCount, len(partsMap)))
+
+			// Deleting the wrong data! Need to delete partsmap[key][extra_NamedList_data_part_1,2,3..]
+			// delete(partsMap, key) // Ignored invalid record
+		}
+	}
+
+	log.Debug(fmt.Sprintf("CassandraClient.GetXconfCompressedDataRaw: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
+
+	return resultData
 }
 
 func (c *CassandraClient) QueryXconfDataRows(query string, queryParameters ...string) ([]map[string]interface{}, error) {
@@ -420,537 +992,6 @@ func (c *CassandraClient) ExecuteBatch(batch BatchOperation) error {
 		batch.Size(), time.Since(start), err))
 
 	return err
-}
-
-// GetXconfData Get one row where return value is JSON data
-func (c *CassandraClient) GetXconfData(tableName string, rowKey string) ([]byte, error) {
-	start := time.Now()
-
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var value []byte
-
-	stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? AND column1 = ? LIMIT 1`, tableName)
-	err := c.Query(stmt, rowKey, DefaultColumnValue).Scan(&value)
-	if err != nil {
-		return value, err
-	}
-
-	log.Debug(fmt.Sprintf("CassandraClient.GetXconfData: table %v rowKey %v in %v", tableName, rowKey, time.Since(start)))
-
-	return value, nil
-}
-
-// GetAllXconfDataByKeys Get all rows as a list of values for the specified keys, where value is JSON data
-func (c *CassandraClient) GetAllXconfDataByKeys(tableName string, rowKeys []string) [][]byte {
-	start := time.Now()
-
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var resultData [][]byte
-
-	stmt := fmt.Sprintf(`SELECT key, value FROM "%s" WHERE KEY IN ?`, tableName)
-	iter := c.Query(stmt, rowKeys).Iter()
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-		resultData = append(resultData, row["value"].([]byte))
-	}
-
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataByKeys: table %v rowKeys %v in %v", tableName, rowKeys, time.Since(start)))
-
-	return resultData
-}
-
-// GetAllXconfKeys Get all keys
-func (c *CassandraClient) GetAllXconfKeys(tableName string) []string {
-	start := time.Now()
-
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var resultData []string
-
-	stmt := fmt.Sprintf(`SELECT DISTINCT key FROM "%s"`, tableName)
-	iter := c.Query(stmt).Iter()
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-		resultData = append(resultData, row["key"].(string))
-	}
-
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfKeys: table %v in %v", tableName, time.Since(start)))
-
-	return resultData
-}
-
-// GetAllXconfDataAsList Get all rows as a list of values, where value is JSON data
-func (c *CassandraClient) GetAllXconfDataAsList(tableName string, maxResults int) [][]byte {
-	start := time.Now()
-
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var resultData [][]byte
-	var stmt string
-	if maxResults > 0 {
-		stmt = fmt.Sprintf(`SELECT value FROM "%s" LIMIT %v`, tableName, maxResults)
-	} else {
-		stmt = fmt.Sprintf(`SELECT value FROM "%s"`, tableName)
-	}
-
-	iter := c.Query(stmt).Iter()
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-		resultData = append(resultData, row["value"].([]byte))
-	}
-
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataAsList: table %v in %v", tableName, time.Since(start)))
-
-	return resultData
-}
-
-// GetAllXconfDataAsMap Get all rows as a map of key to value, where value is JSON data
-func (c *CassandraClient) GetAllXconfDataAsMap(tableName string, maxResults int) map[string][]byte {
-	start := time.Now()
-
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var resultData = make(map[string][]byte)
-	var stmt string
-	if maxResults > 0 {
-		stmt = fmt.Sprintf(`SELECT key, value FROM "%s" LIMIT %v`, tableName, maxResults)
-	} else {
-		stmt = fmt.Sprintf(`SELECT key, value FROM "%s"`, tableName)
-	}
-
-	iter := c.Query(stmt).Iter()
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-		resultData[row["key"].(string)] = row["value"].([]byte)
-	}
-
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataAsMap: table %v in %v", tableName, time.Since(start)))
-
-	return resultData
-}
-
-// DeleteXconfData Delete XconfData for the specified key
-func (c *CassandraClient) DeleteXconfData(tableName string, rowKey string) error {
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE key = ?`, tableName)
-	if err := c.Query(stmt, rowKey).Exec(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// DeleteAllXconfData Delete all XconfData
-func (c *CassandraClient) DeleteAllXconfData(tableName string) error {
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	stmt := fmt.Sprintf(`TRUNCATE "%s"`, tableName)
-	if err := c.Query(stmt).Exec(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Two keys support
-
-// GetAllXconfData Get multiple rows as a list of values, where value is JSON data
-func (c *CassandraClient) GetAllXconfData(tableName string, rowKey string) [][]byte {
-	start := time.Now()
-
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var resultData [][]byte
-
-	stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ?`, tableName)
-	iter := c.Query(stmt, rowKey).Iter()
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-		resultData = append(resultData, row["value"].([]byte))
-	}
-
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfData: table %v rowKey %v in %v", tableName, rowKey, time.Since(start)))
-
-	return resultData
-}
-
-// GetAllXconfDataTwoKeysRange Get multiple rows for the specified key and key2 range as list of values, where value is JSON data
-func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tableName string, rowKey interface{}, key2FieldName string, rangeInfo *RangeInfo) [][]byte {
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var resultData [][]byte
-	var stmt string
-	var iter *gocql.Iter
-
-	nilStartValue := true
-	nilEndValue := true
-	if rangeInfo != nil {
-		nilStartValue = rangeInfo.IsNilStartValue()
-		nilEndValue = rangeInfo.IsNilEndValue()
-	}
-
-	if nilStartValue && nilEndValue {
-		stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? ALLOW FILTERING`, tableName)
-		iter = c.Query(stmt, rowKey).Iter()
-	} else {
-		if nilStartValue {
-			if !nilEndValue {
-				stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName)
-				iter = c.Query(stmt, rowKey, rangeInfo.EndValue).Iter()
-			}
-		} else {
-			if nilEndValue {
-				stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? and %s > ? ALLOW FILTERING`, tableName, key2FieldName)
-				iter = c.Query(stmt, rowKey, rangeInfo.StartValue).Iter()
-			} else {
-				stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? and %s > ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName, key2FieldName)
-				iter = c.Query(stmt, rowKey, rangeInfo.StartValue, rangeInfo.EndValue).Iter()
-			}
-		}
-	}
-
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-		resultData = append(resultData, row["value"].([]byte))
-	}
-
-	return resultData
-}
-
-// GetAllXconfDataTwoKeysAsMap Get multiple rows for the specified key and key2 list as map of values, where value is JSON data
-func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tableName string, rowKey string, key2FieldName string, key2List []interface{}) map[interface{}][]byte {
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var resultData = make(map[interface{}][]byte)
-
-	stmt := fmt.Sprintf(`SELECT %s, value FROM "%s" WHERE key = ? and %s IN ?`, key2FieldName, tableName, key2FieldName)
-	iter := c.Query(stmt, rowKey, key2List).Iter()
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-		resultData[row[key2FieldName].(interface{})] = row["value"].([]byte)
-	}
-
-	return resultData
-}
-
-// SetXconfDataTwoKeys Create XconfData for the specified two keys and value, where value is JSON data
-func (c *CassandraClient) SetXconfDataTwoKeys(tableName string, rowKey interface{}, key2FieldName string, key2 interface{}, value []byte, ttl int) error {
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var stmt string
-	if ttl > 0 {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(key, %s, value) VALUES(?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
-	} else {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(key, %s, value) VALUES(?,?,?)`, tableName, key2FieldName)
-	}
-
-	if err := c.Query(stmt, rowKey, key2, value).Exec(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// GetXconfDataTwoKeys Get one row where return value is JSON data
-func (c *CassandraClient) GetXconfDataTwoKeys(tableName string, rowKey string, key2FieldName string, key2 interface{}) ([]byte, error) {
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var value []byte
-
-	stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
-	err := c.Query(stmt, rowKey, key2).Scan(&value)
-	if err != nil {
-		return value, err
-	}
-
-	return value, nil
-}
-
-// DeleteXconfDataTwoKeys Delete XconfData for the specified two keys
-func (c *CassandraClient) DeleteXconfDataTwoKeys(tableName string, rowKey string, key2FieldName string, key2 interface{}) error {
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE key = ? AND %s = ?`, tableName, key2FieldName)
-	if err := c.Query(stmt, rowKey, key2).Exec(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// GetAllXconfTwoKeys Get all TwoKeys
-func (c *CassandraClient) GetAllXconfTwoKeys(tableName string, key2FieldName string) []TwoKeys {
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var resultData []TwoKeys
-
-	stmt := fmt.Sprintf(`SELECT key, "%s" FROM "%s"`, key2FieldName, tableName)
-	iter := c.Query(stmt).Iter()
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-
-		twoKeys := TwoKeys{
-			Key:  row["key"].(string),
-			Key2: row[key2FieldName].(interface{}),
-		}
-		resultData = append(resultData, twoKeys)
-	}
-
-	return resultData
-}
-
-// GetAllXconfKey2s Get a list of Xconf key2 for the specified rowKey
-func (c *CassandraClient) GetAllXconfKey2s(tableName string, rowKey string, key2FieldName string) []interface{} {
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var resultData []interface{}
-
-	stmt := fmt.Sprintf(`SELECT %s FROM "%s" WHERE key = ?`, key2FieldName, tableName)
-	iter := c.Query(stmt, rowKey).Iter()
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-		resultData = append(resultData, row[key2FieldName].(interface{}))
-	}
-
-	return resultData
-}
-
-// SetXconfCompressedData Create XconfData for the specified key and values, where values is compressed JSON data
-func (c *CassandraClient) SetXconfCompressedData(tableName string, rowKey string, values [][]byte, ttl int) error {
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	batch := c.NewBatch(LoggedBatch)
-
-	// Add a record that specifies the number of compressed data chunks
-	var stmt string
-	if ttl > 0 {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(key, column1, value) VALUES(?,?,intAsBlob(?)) USING TTL %d`, tableName, ttl)
-	} else {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(key, column1, value) VALUES(?,?,intAsBlob(?))`, tableName)
-	}
-	batch.Query(stmt, rowKey, NamedListCountColumnValue, len(values))
-
-	for i, value := range values {
-		// Add a record for each compressed data chunk where key has the format: NamedListData_part_0, ...
-		partColumnValue := NamedListPartColumnValue + strconv.Itoa(i)
-		if ttl > 0 {
-			stmt = fmt.Sprintf(`INSERT INTO "%s"(key, column1, value) VALUES(?,?,?) USING TTL %d`, tableName, ttl)
-		} else {
-			stmt = fmt.Sprintf(`INSERT INTO "%s"(key, column1, value) VALUES(?,?,?)`, tableName)
-		}
-		batch.Query(stmt, rowKey, partColumnValue, value)
-	}
-
-	if err := c.ExecuteBatch(batch); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// GetXconfCompressedData Get one row where return value is compressed JSON data
-func (c *CassandraClient) GetXconfCompressedData(tableName string, rowKey string) ([]byte, error) {
-	start := time.Now()
-
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	// Get the number of compressed data chunks
-	var partsCount int
-	stmt := fmt.Sprintf(`SELECT blobAsInt(value) FROM "%s" WHERE key = ? AND column1 = ? LIMIT 1`, tableName)
-	err := c.Query(stmt, rowKey, NamedListCountColumnValue).Scan(&partsCount)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get all the compressed data chunks
-	var partsMap = make(map[string][]byte)
-	stmt = fmt.Sprintf(`SELECT key, column1, value FROM "%s" WHERE key = ?`, tableName)
-	iter := c.Query(stmt, rowKey).Iter()
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-
-		partName := row["column1"].(string)
-		if partName != NamedListCountColumnValue {
-			partsMap[partName] = row["value"].([]byte)
-		}
-	}
-
-	// Ensure all the parts are loaded
-	if partsCount > len(partsMap) {
-		err := fmt.Errorf("Inconsistent compressed data for key '%v' from '%v': expected %v record(s) got %v",
-			rowKey, tableName, partsCount, len(partsMap))
-		log.Error(err)
-		return nil, err
-	}
-
-	// Combine all the compressed data chunks into one
-	var chunks [][]byte
-	for i := 0; i < partsCount; i++ {
-		key := NamedListPartColumnValue + strconv.Itoa(i)
-		if chunk, exists := partsMap[key]; exists {
-			chunks = append(chunks, chunk)
-		} else {
-			err := fmt.Errorf("Inconsistent compressed data for key '%v' from '%v': missing part '%v'",
-				rowKey, tableName, key)
-			log.Error(err)
-			return nil, err
-		}
-	}
-
-	resultData := bytes.Join(chunks, []byte(""))
-
-	log.Debug(fmt.Sprintf("CassandraClient.GetXconfCompressedData: table %v rowKey %v in %v", tableName, rowKey, time.Since(start)))
-
-	return resultData, nil
-}
-
-// GetAllXconfCompressedDataAsMap Get all rows as a map of key to value, where value is compressed JSON data
-func (c *CassandraClient) GetAllXconfCompressedDataAsMap(tableName string) map[string][]byte {
-	start := time.Now()
-
-	var resultData = make(map[string][]byte)
-
-	rawData := c.GetXconfCompressedDataRaw(tableName)
-	for key, partsMap := range rawData {
-		// Combine all the compressed data chunks into one
-		partsCount := len(partsMap)
-		var chunks [][]byte
-		for i := 0; i < partsCount; i++ {
-			partKey := NamedListPartColumnValue + strconv.Itoa(i)
-			chunk := partsMap[partKey]
-			chunks = append(chunks, chunk)
-		}
-		data := bytes.Join(chunks, []byte(""))
-		resultData[key] = data
-	}
-
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfCompressedDataAsMap: table %v in %v", tableName, time.Since(start)))
-
-	return resultData
-}
-
-// GetXconfCompressedDataRaw Get all rows as a map of key to another map,
-// where key specifies part number and value is compressed JSON data chunk.
-//
-// Sample data for one record in GenericXconfNamedList table:
-//
-// key               | column1                   | value
-// -------------------+---------------------------+-----------------------------
-// Test_Mac_List     |      NamedListData_part_0 | 0x7df05a7b226964223a2241...
-// Test_Mac_List     |      NamedListData_part_1 | 0x60f05f7b226964223a2231...
-// Test_Mac_List     | NamedListData_parts_count |                  0x00000002
-func (c *CassandraClient) GetXconfCompressedDataRaw(tableName string) map[string]map[string][]byte {
-	start := time.Now()
-
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
-	var resultData = make(map[string]map[string][]byte)
-	var countMap = make(map[string]int)
-
-	// Get all the count records
-	stmt := fmt.Sprintf(`SELECT key, blobAsInt(value) as count FROM "%s" where column1 = ? ALLOW FILTERING`, tableName)
-	iter := c.Query(stmt, NamedListCountColumnValue).Iter()
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-		countMap[row["key"].(string)] = row["count"].(int)
-	}
-
-	// Get all the compressed data chunks
-	stmt = fmt.Sprintf(`SELECT key, column1, value FROM "%s"`, tableName)
-	iter = c.Query(stmt).Iter()
-	for {
-		row := make(map[string]interface{})
-		if !iter.MapScan(row) {
-			break
-		}
-
-		column1 := row["column1"].(string)
-		if column1 == NamedListCountColumnValue {
-			continue // Ignored count record which has already been processed
-		} else {
-			key := row["key"].(string)
-			partsMap := resultData[key]
-			if partsMap == nil {
-				partsMap = make(map[string][]byte)
-				resultData[key] = partsMap
-			}
-			count := countMap[key]
-			if len(partsMap) >= count {
-				continue // skip extra data
-			}
-			partsMap[column1] = row["value"].([]byte)
-		}
-	}
-
-	// Ensure all the parts are loaded
-	for key, partsMap := range resultData {
-		partsCount := countMap[key]
-		if partsCount != len(partsMap) {
-			log.Warn(fmt.Sprintf("Inconsistent compressed data for key '%v' from '%v': expected %v record(s) got %v",
-				key, tableName, partsCount, len(partsMap)))
-
-			// Deleting the wrong data! Need to delete partsmap[key][extra_NamedList_data_part_1,2,3..]
-			// delete(partsMap, key) // Ignored invalid record
-		}
-	}
-
-	log.Debug(fmt.Sprintf("CassandraClient.GetXconfCompressedDataRaw: table %v in %v", tableName, time.Since(start)))
-
-	return resultData
 }
 
 func (c *CassandraClient) AcquireLock(lockName string, lockedBy string, ttl int) error {
@@ -1171,4 +1212,15 @@ func (dl DistributedLock) UnlockRow(owner string, rowKey string) (e error) {
 	}
 
 	return
+}
+
+// forEachShard iterates through each shard and executes the provided function
+// until all shards have been processed or an error occurs
+func forEachShard(fn func(shardId int) error) error {
+	for shardId := 0; shardId < ScalingFactor; shardId++ {
+		if err := fn(shardId); err != nil {
+			return err
+		}
+	}
+	return nil
 }

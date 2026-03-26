@@ -34,7 +34,7 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
@@ -394,7 +394,7 @@ func preCreateDownlowadLocationRoundRobinFilter(ssrHttpTempl string) *estbfirmwa
 	rrFilter.Ipv6locations = []estbfirmware.Location{{"06a0:ac48:eaa2:bdf4:6943:f310:39c3:ec1b", 100.0}}
 	rrFilter.HttpFullUrlLocation = fmt.Sprintf(ssrHttpTempl, X1_SIGN_REDIRECT)
 
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_SINGLETON_FILTER_VALUE, rrFilter.ID, rrFilter)
+	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_SINGLETON_FILTER_VALUES, rrFilter.ID, rrFilter)
 	return rrFilter
 }
 
