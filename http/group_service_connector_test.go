@@ -33,12 +33,12 @@ import (
 // Test DefaultGroupService getter/setter functions
 func TestDefaultGroupService_GroupServiceHost(t *testing.T) {
 	service := &DefaultGroupService{
-		host: "https://group-service.example.com",
+		host: "https://group_service.example.com",
 	}
 
 	result := service.GroupServiceHost()
 
-	assert.Equal(t, "https://group-service.example.com", result)
+	assert.Equal(t, "https://group_service.example.com", result)
 }
 
 func TestDefaultGroupService_SetGroupServiceHost(t *testing.T) {
@@ -168,10 +168,16 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_Success(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -211,10 +217,16 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_EmptyResponse(t *testing.
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -240,10 +252,16 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_ServerError(t *testing.T)
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -357,10 +375,16 @@ func TestDefaultGroupService_GetCpeGroups_Success(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -398,10 +422,16 @@ func TestDefaultGroupService_GetCpeGroups_AllGroupsEnabled(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -438,10 +468,16 @@ func TestDefaultGroupService_GetCpeGroups_NoGroupsEnabled(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -467,10 +503,16 @@ func TestDefaultGroupService_GetCpeGroups_ServerError(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -513,10 +555,16 @@ func TestDefaultGroupService_GetRfcPrecookDetails_Success(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -549,10 +597,16 @@ func TestDefaultGroupService_GetRfcPrecookDetails_ServerError(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = "%%s/path/%%s"
+				rfc_precook_url_template    = "%%s/path/%%s"
+				feature_url_template        = "%%s/path/%%s"
+				security_token_url_template = "%%s/path/%%s"
+				accountId_template        = "%%s/path/%%s"
+				account_products_template  = "%%s/path/%%s"
 			}
 		}
 	`, mockServer.URL))

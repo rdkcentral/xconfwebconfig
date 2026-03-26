@@ -222,8 +222,10 @@ func TestDefaultAccountService_GetAccountData_Success(t *testing.T) {
 	// Create service pointing to MOCK server (not real service!)
 	config := configuration.ParseString("") // Empty config for testing
 	service := &DefaultAccountService{
-		HttpClient: NewHttpClient(config, "test-service", nil),
-		host:       mockAccountServer.URL, // Points to our FAKE server
+		HttpClient:     NewHttpClient(config, "test-service", nil),
+		host:           mockAccountServer.URL, // Points to our FAKE server
+		getAccountPath: "%s/testaccount/%s",
+		getDevicesPath: "%s/testdevices?%s=%s",
 	}
 
 	// Test GetAccountData with our MOCK server
@@ -245,8 +247,10 @@ func TestDefaultAccountService_GetAccountData_HTTPError(t *testing.T) {
 
 	config := configuration.ParseString("")
 	service := &DefaultAccountService{
-		HttpClient: NewHttpClient(config, "test-service", nil),
-		host:       mockErrorServer.URL, // Points to our FAKE error server
+		HttpClient:     NewHttpClient(config, "test-service", nil),
+		host:           mockErrorServer.URL, // Points to our FAKE error server
+		getAccountPath: "%s/testaccount/%s",
+		getDevicesPath: "%s/testdevices?%s=%s",
 	}
 
 	fields := log.Fields{"test": "field"}
@@ -266,8 +270,10 @@ func TestDefaultAccountService_GetAccountData_InvalidJSON(t *testing.T) {
 
 	config := configuration.ParseString("")
 	service := &DefaultAccountService{
-		HttpClient: NewHttpClient(config, "test-service", nil),
-		host:       mockInvalidJSONServer.URL, // Points to our FAKE server with bad JSON
+		HttpClient:     NewHttpClient(config, "test-service", nil),
+		host:           mockInvalidJSONServer.URL, // Points to our FAKE server with bad JSON
+		getAccountPath: "%s/testaccount/%s",
+		getDevicesPath: "%s/testdevices?%s=%s",
 	}
 
 	fields := log.Fields{"test": "field"}
@@ -302,8 +308,10 @@ func TestDefaultAccountService_GetDevices_Success(t *testing.T) {
 
 	config := configuration.ParseString("")
 	service := &DefaultAccountService{
-		HttpClient: NewHttpClient(config, "test-service", nil),
-		host:       mockDevicesServer.URL, // Points to our FAKE devices server
+		HttpClient:     NewHttpClient(config, "test-service", nil),
+		host:           mockDevicesServer.URL, // Points to our FAKE devices server
+		getAccountPath: "%s/testaccount/%s",
+		getDevicesPath: "%s/testdevices?%s=%s",
 	}
 
 	fields := log.Fields{"test": "field"}
@@ -324,8 +332,10 @@ func TestDefaultAccountService_GetDevices_EmptyArray(t *testing.T) {
 
 	config := configuration.ParseString("")
 	service := &DefaultAccountService{
-		HttpClient: NewHttpClient(config, "test-service", nil),
-		host:       mockEmptyDevicesServer.URL, // Points to our FAKE empty devices server
+		HttpClient:     NewHttpClient(config, "test-service", nil),
+		host:           mockEmptyDevicesServer.URL, // Points to our FAKE empty devices server
+		getAccountPath: "%s/testaccount/%s",
+		getDevicesPath: "%s/testdevices?%s=%s",
 	}
 
 	fields := log.Fields{"test": "field"}
@@ -345,8 +355,10 @@ func TestDefaultAccountService_GetDevices_HTTPError(t *testing.T) {
 
 	config := configuration.ParseString("")
 	service := &DefaultAccountService{
-		HttpClient: NewHttpClient(config, "test-service", nil),
-		host:       mockNotFoundServer.URL, // Points to our FAKE 404 server
+		HttpClient:     NewHttpClient(config, "test-service", nil),
+		host:           mockNotFoundServer.URL, // Points to our FAKE 404 server
+		getAccountPath: "%s/testaccount/%s",
+		getDevicesPath: "%s/testdevices?%s=%s",
 	}
 
 	fields := log.Fields{"test": "field"}
