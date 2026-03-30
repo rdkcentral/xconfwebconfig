@@ -41,6 +41,7 @@ const (
 	DEFAULT_OFFSET   = "UTC+2:00"
 	DTGR_PARTNER_ID  = "dt-gr"
 	GR_PREFIX        = "GR"
+	SN_PREFIX        = "sn-"
 )
 
 type PodData struct {
@@ -126,19 +127,10 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 	var xAccountId *conversion.XBOAccount
 	var err error
 	var macAddress string
-	if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
-		macAddress = contextMap[common.ESTB_MAC_ADDRESS]
-		macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC_ADDRESS])
-		xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
-	}
 
-	if xAccountId == nil && err != nil {
-		if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-			macAddress = contextMap[common.ECM_MAC_ADDRESS]
-			macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ECM_MAC_ADDRESS])
-			xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
-		}
-	}
+	snURL := SN_PREFIX + contextMap[common.SERIAL_NUM]
+	xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(snURL, fields)
+
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
 		xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
@@ -434,6 +426,8 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 			}
 			if accountServiceObject.IsEmpty() {
 				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
+			} else {
+				xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			}
 
 			if err != nil {
@@ -448,7 +442,6 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				if util.IsUnknownValue(contextMap[common.ACCOUNT_HASH]) && accountServiceObject.DeviceData.ServiceAccountUri != "" {
 					contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountServiceObject.DeviceData.ServiceAccountUri)
 				}
-				xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			}
 
 			if Xc.RfcReturnCountryCode {
