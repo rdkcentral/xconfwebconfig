@@ -41,12 +41,12 @@ type SatServiceConnector interface {
 }
 
 type DefaultSatService struct {
-	host            string
-	consumerHost    string
-	headers         map[string]string
-	name            string
-	tokenUrl        string
-	tokenPartnerUrl string
+	host                    string
+	consumerHost            string
+	headers                 map[string]string
+	name                    string
+	tokenUrlTemplate        string
+	tokenPartnerUrlTemplate string
 	*HttpClient
 }
 
@@ -106,13 +106,13 @@ func NewSatServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, e
 		tokenPartnerUrl := conf.GetString(tokenPartnerUrlKey)
 
 		return &DefaultSatService{
-			HttpClient:      NewHttpClient(conf, satServiceName, tlsConfig),
-			host:            host,
-			consumerHost:    consumerHost,
-			headers:         headers,
-			name:            satServiceName,
-			tokenUrl:        tokenUrl,
-			tokenPartnerUrl: tokenPartnerUrl,
+			HttpClient:              NewHttpClient(conf, satServiceName, tlsConfig),
+			host:                    host,
+			consumerHost:            consumerHost,
+			headers:                 headers,
+			name:                    satServiceName,
+			tokenUrlTemplate:        tokenUrl,
+			tokenPartnerUrlTemplate: tokenPartnerUrl,
 		}
 	}
 }
@@ -143,9 +143,9 @@ func (c *DefaultSatService) GetSatTokenFromSatService(fields log.Fields, vargs .
 
 	if len(vargs) > 0 {
 		partnerId := vargs[0]
-		url = fmt.Sprintf(c.tokenPartnerUrl, c.SatServiceHost(), partnerId)
+		url = fmt.Sprintf(c.tokenPartnerUrlTemplate, c.SatServiceHost(), partnerId)
 	} else {
-		url = fmt.Sprintf(c.tokenUrl, c.SatServiceHost())
+		url = fmt.Sprintf(c.tokenUrlTemplate, c.SatServiceHost())
 	}
 	rbytes, err := c.DoWithRetries("POST", url, c.headers, nil, fields, satServiceName)
 	if err != nil {
