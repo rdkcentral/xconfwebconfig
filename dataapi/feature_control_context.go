@@ -126,13 +126,12 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 
 	var xAccountId *conversion.XBOAccount
 	var err error
-	var macAddress string
 
 	snURL := SN_PREFIX + contextMap[common.SERIAL_NUM]
 	xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(snURL, fields)
 
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
+		log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for serialNum=%s", contextMap[common.SERIAL_NUM])
 		xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
 		return nil, nil
 	}
@@ -350,7 +349,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 			}
 
 			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for Mac=%s", macAddress)
 				xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
 			} else {
 				if xAccountId != nil && xAccountId.GetAccountId() != "" {
