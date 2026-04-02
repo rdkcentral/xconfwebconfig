@@ -37,6 +37,8 @@ type SatServiceConnector interface {
 	ConsumerHost() string
 	SetSatServiceName(name string)
 	SetSatServiceHost(host string)
+	SetTokenUrlTemplate(template string)
+	SetTokenPartnerUrlTemplate(template string)
 	GetSatTokenFromSatService(fields log.Fields, vargs ...string) (*SatServiceResponse, error)
 }
 
@@ -137,15 +139,31 @@ func (c *DefaultSatService) SetSatServiceHost(host string) {
 	c.host = host
 }
 
+func (c *DefaultSatService) SetTokenUrlTemplate(template string) {
+	c.tokenUrlTemplate = template
+}
+
+func (c *DefaultSatService) SetTokenPartnerUrlTemplate(template string) {
+	c.tokenPartnerUrlTemplate = template
+}
+
 func (c *DefaultSatService) GetSatTokenFromSatService(fields log.Fields, vargs ...string) (*SatServiceResponse, error) {
 	var cb2Res *SatServiceResponse
 	var url string
 
 	if len(vargs) > 0 {
 		partnerId := vargs[0]
-		url = fmt.Sprintf(c.tokenPartnerUrlTemplate, c.SatServiceHost(), partnerId)
+		if util.IsBlank(c.tokenPartnerUrlTemplate) {
+			url = ""
+		} else {
+			url = fmt.Sprintf(c.tokenPartnerUrlTemplate, c.SatServiceHost(), partnerId)
+		}
 	} else {
-		url = fmt.Sprintf(c.tokenUrlTemplate, c.SatServiceHost())
+		if util.IsBlank(c.tokenUrlTemplate) {
+			url = ""
+		} else {
+			url = fmt.Sprintf(c.tokenUrlTemplate, c.SatServiceHost())
+		}
 	}
 	rbytes, err := c.DoWithRetries("POST", url, c.headers, nil, fields, satServiceName)
 	if err != nil {
