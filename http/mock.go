@@ -49,6 +49,9 @@ func (server *XconfServer) mockSatService() {
 			w.Write(mockResponse)
 		}))
 	server.SetSatServiceHost(mockServer.URL)
+	// Set templates for mock - if config has empty templates, mock provides working ones for test
+	server.SatServiceConnector.SetTokenUrlTemplate("")
+	server.SatServiceConnector.SetTokenPartnerUrlTemplate("")
 }
 
 func (server *XconfServer) mockDeviceService() {
