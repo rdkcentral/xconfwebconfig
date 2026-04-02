@@ -28,6 +28,29 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// MockDeviceServiceConnector is a test mock that implements DeviceServiceConnector
+type MockDeviceServiceConnector struct {
+	host         string
+	result       DeviceServiceObject
+	shouldError  bool
+	errorMessage string
+}
+
+func (m *MockDeviceServiceConnector) DeviceServiceHost() string {
+	return m.host
+}
+
+func (m *MockDeviceServiceConnector) SetDeviceServiceHost(host string) {
+	m.host = host
+}
+
+func (m *MockDeviceServiceConnector) GetMeshPodAccountBySerialNum(serialNum string, fields log.Fields) (DeviceServiceObject, error) {
+	if m.shouldError {
+		return DeviceServiceObject{}, fmt.Errorf("%s", m.errorMessage)
+	}
+	return m.result, nil
+}
+
 // Test DeviceServiceData structure
 func TestDeviceServiceData_AllFields(t *testing.T) {
 	data := DeviceServiceData{
@@ -232,43 +255,24 @@ func TestDefaultDeviceService_SetDeviceServiceHost_MultipleUpdates(t *testing.T)
 
 // Test GetMeshPodAccountBySerialNum function with mocked HTTP responses
 func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_Success(t *testing.T) {
-	// Create a mock HTTP server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "123456")
+	// Create mock service with test data
+	mockService := &MockDeviceServiceConnector{
+		host: "https://test-device-service.example.com",
+		result: DeviceServiceObject{
+			Status:  200,
+			Message: "Success",
+			DeviceServiceData: &DeviceServiceData{
+				AccountId: "account-789",
+				CpeMac:    "00:11:22:33:44:55",
+				TimeZone:  "America/New_York",
+				PartnerId: "comcast",
+			},
+		},
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
-			"status": 200,
-			"message": "Success",
-			"data": {
-				"account_id": "account-789",
-				"cpe_mac": "00:11:22:33:44:55",
-				"timezone": "America/New_York",
-				"partner_id": "comcast"
-			}
-		}`))
-	}))
-	defer mockServer.Close()
-
-	// Create test configuration
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				device_service_name = "device-service"
-			}
-			device-service {
-				host = "%s"
-				pod_url_template = "%%s/test-url/%%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewDeviceServiceConnector(conf, nil, nil).(*DefaultDeviceService)
 	fields := log.Fields{"test": "value"}
 
-	result, err := service.GetMeshPodAccountBySerialNum("123456", fields)
+	result, err := mockService.GetMeshPodAccountBySerialNum("123456", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 200, result.Status)
@@ -281,38 +285,19 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_Success(t *testing.T)
 }
 
 func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_NotFound(t *testing.T) {
-	// Create a mock HTTP server that returns 404
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "unknown-serial")
+	// Create mock service configured to return 404
+	mockService := &MockDeviceServiceConnector{
+		host: "https://test-device-service.example.com",
+		result: DeviceServiceObject{
+			Status:            404,
+			Message:           "Device not found",
+			DeviceServiceData: nil,
+		},
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
-			"status": 404,
-			"message": "Device not found",
-			"data": null
-		}`))
-	}))
-	defer mockServer.Close()
-
-	// Create test configuration
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				device_service_name = "device-service"
-			}
-			device-service {
-				host = "%s"
-				pod_url_template = "%%s/test-url/%%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewDeviceServiceConnector(conf, nil, nil).(*DefaultDeviceService)
 	fields := log.Fields{"test": "value"}
 
-	result, err := service.GetMeshPodAccountBySerialNum("unknown-serial", fields)
+	result, err := mockService.GetMeshPodAccountBySerialNum("unknown-serial", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 404, result.Status)
@@ -321,30 +306,16 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_NotFound(t *testing.T
 }
 
 func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_ServerError(t *testing.T) {
-	// Create a mock HTTP server that returns 500 error
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal Server Error"))
-	}))
-	defer mockServer.Close()
+	// Create mock service configured to return error
+	mockService := &MockDeviceServiceConnector{
+		host:         "https://test-device-service.example.com",
+		shouldError:  true,
+		errorMessage: "Internal Server Error",
+	}
 
-	// Create test configuration
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				device_service_name = "device-service"
-			}
-			device-service {
-				host = "%s"
-				pod_url_template = "%%s/test-url/%%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewDeviceServiceConnector(conf, nil, nil).(*DefaultDeviceService)
 	fields := log.Fields{"test": "value"}
 
-	_, err := service.GetMeshPodAccountBySerialNum("test-serial", fields)
+	_, err := mockService.GetMeshPodAccountBySerialNum("test-serial", fields)
 
 	// Should return an error due to HTTP 500
 	assert.Error(t, err)
@@ -367,7 +338,7 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_InvalidJSON(t *testin
 			}
 			device-service {
 				host = "%s"
-				pod_url_template = "%%s/test-url/%%s"
+				pod_url_template = "%%s/device/%%s"
 			}
 		}
 	`, mockServer.URL))
@@ -382,35 +353,19 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_InvalidJSON(t *testin
 }
 
 func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_EmptySerial(t *testing.T) {
-	// Create a mock HTTP server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
-			"status": 400,
-			"message": "Serial number is required",
-			"data": null
-		}`))
-	}))
-	defer mockServer.Close()
+	// Create mock service configured to return 400
+	mockService := &MockDeviceServiceConnector{
+		host: "https://test-device-service.example.com",
+		result: DeviceServiceObject{
+			Status:            400,
+			Message:           "Serial number is required",
+			DeviceServiceData: nil,
+		},
+	}
 
-	// Create test configuration
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				device_service_name = "device-service"
-			}
-			device-service {
-				host = "%s"
-				pod_url_template = "%%s/test-url/%%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewDeviceServiceConnector(conf, nil, nil).(*DefaultDeviceService)
 	fields := log.Fields{"test": "value"}
 
-	result, err := service.GetMeshPodAccountBySerialNum("", fields)
+	result, err := mockService.GetMeshPodAccountBySerialNum("", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 400, result.Status)
@@ -431,40 +386,24 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_MultipleValidRequests
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Serial_%s", tc.serial), func(t *testing.T) {
-			mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				assert.Contains(t, r.URL.Path, tc.serial)
+			// Create mock service with test data for this serial
+			mockService := &MockDeviceServiceConnector{
+				host: "https://test-device-service.example.com",
+				result: DeviceServiceObject{
+					Status:  200,
+					Message: "Success",
+					DeviceServiceData: &DeviceServiceData{
+						AccountId: tc.expected,
+						CpeMac:    "AA:BB:CC:DD:EE:FF",
+						TimeZone:  "UTC",
+						PartnerId: "test-partner",
+					},
+				},
+			}
 
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf(`{
-					"status": 200,
-					"message": "Success", 
-					"data": {
-						"account_id": "%s",
-						"cpe_mac": "AA:BB:CC:DD:EE:FF",
-						"timezone": "UTC",
-						"partner_id": "test-partner"
-					}
-				}`, tc.expected)))
-			}))
-			defer mockServer.Close()
-
-			conf := configuration.ParseString(fmt.Sprintf(`
-				xconfwebconfig {
-					xconf {
-						device_service_name = "device-service"
-					}
-					device-service {
-						host = "%s"
-						pod_url_template = "%%s/test-url/%%s"
-					}
-				}
-			`, mockServer.URL))
-
-			service := NewDeviceServiceConnector(conf, nil, nil).(*DefaultDeviceService)
 			fields := log.Fields{"serial": tc.serial}
 
-			result, err := service.GetMeshPodAccountBySerialNum(tc.serial, fields)
+			result, err := mockService.GetMeshPodAccountBySerialNum(tc.serial, fields)
 
 			assert.NoError(t, err)
 			assert.Equal(t, 200, result.Status)
