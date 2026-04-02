@@ -265,7 +265,7 @@ func GetCacheManager() *CacheManager {
 			cacheManager.tableCaches[tenantId] = tableCaches
 
 			for tableName, tableInfo := range tableConfig {
-				if !tableInfo.CacheData {
+				if !tableInfo.Cached {
 					continue // No caching for this table
 				}
 
@@ -438,7 +438,7 @@ func (cm CacheManager) initiatePrecaching() {
 				defer wg.Done()
 
 				tableInfo := tableConfig[tableName]
-				if tableInfo.CacheData {
+				if tableInfo.Cached {
 					log.WithFields(fields).Debugf("precaching for table %s...", tableName)
 				} else {
 					log.WithFields(fields).Debugf("skipped precaching table %s", tableName)
@@ -448,7 +448,7 @@ func (cm CacheManager) initiatePrecaching() {
 				start := time.Now()
 				var entries map[string]interface{}
 				var err error
-				if tableInfo.IsCompressAndSplit() {
+				if tableInfo.IsCompressedAndSplit() {
 					entries, err = GetCompressingDataDao().GetAllAsMap(tenantId, tableName, true)
 				} else {
 					entries, err = GetSimpleDao().GetAllAsMap(tenantId, tableName, 0)
@@ -494,7 +494,7 @@ func (cm CacheManager) RefreshAll(tenantId string) []string {
 	for _, tableInfo := range tableConfig {
 		var err error
 		var start = time.Now()
-		if tableInfo.CacheData {
+		if tableInfo.Cached {
 			err = GetCachedSimpleDao().RefreshAll(tenantId, tableInfo.TableName)
 		} else {
 			continue // Skip since data is not cache
@@ -525,7 +525,7 @@ func (cm CacheManager) Refresh(tenantId string, tableName string) error {
 		return err
 	}
 
-	if tableInfo.CacheData {
+	if tableInfo.Cached {
 		err = GetCachedSimpleDao().RefreshAll(tenantId, tableInfo.TableName)
 		if err != nil {
 			log.WithFields(log.Fields{"tenantId": tenantId}).Errorf("failed to refresh cache for table %s: %v", tableInfo.TableName, err)
@@ -739,7 +739,7 @@ func (cm CacheManager) writeCacheLog(tenantId string, tableName string, changedK
 		if err == nil {
 			log.WithFields(log.Fields{"tenantId": tenantId}).Debugf("write cache changed log for table %s: %v %v %v", tableName, operation, key, changedData.ValidCacheSize)
 			// TODO: ensure SetOne support empty tenantId
-			err = GetListingDao().SetOne("", TABLE_CHANGE_EVENTS, key, changedData.ColumnName, jsonData)
+			err = GetListingDao().SetOne(tenantId, TABLE_CHANGE_EVENTS, key, changedData.ColumnName, jsonData)
 		}
 
 		if err != nil {
@@ -764,10 +764,10 @@ func generateLoadFunction(tenantId string, tableName string) func(k cache.Key) (
 		}
 
 		// Use the appropriate DAO based on compression policy
-		if tableInfo.IsCompressAndSplit() {
+		if tableInfo.IsCompressedAndSplit() {
 			ret, err := GetCompressingDataDao().GetOne(tenantId, tableName, k.(string))
 			return ret, err
-		} else if tableInfo.IsCompressOnly() {
+		} else if tableInfo.IsCompressedOnly() {
 			twoKeys, err := NewTwoKeysFromString(k.(string))
 			if err != nil {
 				return nil, err

@@ -57,7 +57,7 @@ type RuleInfo struct {
 	Blocking bool   `json:"blocking,omitempty"`
 }
 
-// ConfigChangeLog Logs2 table
+// ConfigChangeLog config_change_logs table (old name: Logs2)
 type ConfigChangeLog struct {
 	ID                 string                `json:"id,omitempty"`
 	Updated            int64                 `json:"updated,omitempty"`
@@ -150,7 +150,7 @@ func NewConfigChangeLog(convertedContext *ConvertedContext, explanation string, 
 
 func GetLastConfigLog(mac string) *ConfigChangeLog {
 	var lastConfigLog *ConfigChangeLog
-	data, err := db.GetListingDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, mac, LAST_CONFIG_LOG_ID)
+	data, err := db.GetListingDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, mac, LAST_CONFIG_LOG_ID)
 	if err == nil {
 		config, ok := data.(*ConfigChangeLog)
 		if ok {
@@ -162,7 +162,7 @@ func GetLastConfigLog(mac string) *ConfigChangeLog {
 
 func GetConfigChangeLogsOnly(mac string) []*ConfigChangeLog {
 	configChangeLogs := make([]*ConfigChangeLog, 0)
-	data, err := db.GetListingDao().GetAll(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, mac)
+	data, err := db.GetListingDao().GetAll(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, mac)
 	if err == nil {
 		configLogs := []*ConfigChangeLog{}
 		for _, log := range data {
@@ -185,7 +185,7 @@ func SetLastConfigLog(mac string, configChangeLog *ConfigChangeLog) error {
 	if err != nil {
 		return err
 	}
-	return db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, mac, LAST_CONFIG_LOG_ID, []byte(jsonData))
+	return db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, mac, LAST_CONFIG_LOG_ID, []byte(jsonData))
 }
 
 func SetConfigChangeLog(mac string, configChangeLog *ConfigChangeLog) error {
@@ -194,7 +194,7 @@ func SetConfigChangeLog(mac string, configChangeLog *ConfigChangeLog) error {
 		configChangeLog.ID = id
 		jsonData, err := json.Marshal(configChangeLog)
 		if err == nil {
-			return db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, mac, id, []byte(jsonData))
+			return db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, mac, id, []byte(jsonData))
 		}
 	}
 	return err
@@ -206,7 +206,7 @@ func GetCurrentId(mac string) (string, error) {
 		StartValue: numberToColumnName(0),
 		EndValue:   numberToColumnName(BOUNDS + 1),
 	}
-	data, err := db.GetListingDao().GetRange(db.DEFAULT_TENANT_ID, db.TABLE_LOGS, mac, rangeInfo)
+	data, err := db.GetListingDao().GetRange(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, mac, rangeInfo)
 	if err != nil {
 		return "", err
 	}

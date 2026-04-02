@@ -26,7 +26,7 @@ func TestGetShardIdSupportsIntAndStringTypes(t *testing.T) {
 	int32Key := int32(12345)
 	int64Key := int64(12345)
 	intKey := int(12345)
-	stringKey := "12345"
+	stringKey := "hello, world 12345678901234567890 abccdefghijklmnopqrstuvwxyz"
 
 	if got, want := GetShardId(int32Key), GetShardId(int64Key); got != want {
 		t.Fatalf("int32 and int64 shard IDs should match, got=%d want=%d", got, want)
@@ -54,5 +54,19 @@ func TestGetShardIdForInt64MatchesComputeShardId(t *testing.T) {
 
 	if got, want := getShardIdForInt64(key), ComputeShardId(data[:], ScalingFactor); got != want {
 		t.Fatalf("unexpected shard ID for int64 key, got=%d want=%d", got, want)
+	}
+}
+
+func TestGetShardIds(t *testing.T) {
+	ids := GetShardIds()
+
+	if got, want := len(ids), ScalingFactor; got != want {
+		t.Fatalf("expected length %d, got %d", want, got)
+	}
+
+	for i, id := range ids {
+		if id != i {
+			t.Fatalf("expected ids[%d] = %d, got %d", i, i, id)
+		}
 	}
 }

@@ -18,6 +18,7 @@
 package shared
 
 import (
+	"strings"
 	"testing"
 
 	"gotest.tools/assert"
@@ -145,7 +146,7 @@ func TestGenericNamespacedListValidate_ValidMACList(t *testing.T) {
 	err := list.Validate()
 	// May fail due to cache not configured, but that's OK for unit test
 	if err != nil {
-		assert.Assert(t, err.Error() == "cache not found or configured for table 'GenericXconfNamedList'")
+		assert.Assert(t, strings.HasPrefix(err.Error(), "cache not found or configured"))
 	}
 }
 

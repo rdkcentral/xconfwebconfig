@@ -33,7 +33,7 @@ func TestCloneFunctionExists(t *testing.T) {
 
 	// Make sure Clone() function is defined for cached DAO object
 	for _, table := range tables {
-		if table.CacheData {
+		if table.Cached {
 			obj := table.ConstructorFunc()
 			assert.Assert(t, obj != nil)
 			value := reflect.ValueOf(obj)

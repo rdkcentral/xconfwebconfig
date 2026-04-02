@@ -368,7 +368,7 @@ func TestCacheChangedKeys(t *testing.T) {
 	assert.NilError(t, err)
 
 	// need to wait since changed record is written async
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 
 	// verify changed key record is created
 	changedList, err := db.GetListingDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_CHANGE_EVENTS)

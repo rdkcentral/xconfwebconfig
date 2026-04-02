@@ -69,6 +69,8 @@ const (
 	TABLE_TELEMETRY_APPROVED_TWO_CHANGES = "telemetry_approved_two_changes"
 
 	// Old tables for backwards compatibility
+	// i.e. dual writing to old and new tables and reading from new tables
+	// (to be deleted in the future when old tables are no longer needed)
 	TABLE_LOGS = "Logs2"
 )
 
@@ -106,7 +108,7 @@ var AllTables = []string{
 }
 
 // Two possible values for Key2FieldName that is used for list types of tables
-// (e.g. Logs2, XconfChangedKeys4) where we need to specify the column name for the second key
+// (e.g. config_change_logs, change_events) where we need to specify the column name for the second key
 const (
 	Key2FieldNameForList        = "column1"
 	Key2FieldNameForChangedKeys = "columnName"
@@ -118,12 +120,13 @@ const (
 
 type TableInfo struct {
 	TableName       string
-	ConstructorFunc func() interface{} // model/struct constructor function
-	Compress        bool               // data is compressed
-	Split           bool               // data is split into multiple chunks
-	CacheData       bool               // specifies whether to cache the data
-	TTL             int                // TTL for the data
-	Key2FieldName   string             // column name for list types of tables, e.g. Logs2, XconfChangedKeys4
+	ConstructorFunc func() any // model/struct constructor function
+	Compressed      bool       // data is compressed
+	Split           bool       // data is split into multiple chunks
+	Cached          bool       // specifies whether to cache the data
+	TenantAgnostic  bool       // tenantId is not part of the partition key
+	TTL             int        // TTL for the data
+	Key2FieldName   string     // column name for list types of tables, e.g. config_change_logs, change_events
 }
 
 // tableConfig is a map of table name to TableInfo
@@ -132,11 +135,11 @@ var tableConfig = make(map[string]TableInfo)
 /*
  * RegisterTableConfigSimple registers constructor function for a table.
  */
-func RegisterTableConfigSimple(tableName string, fn func() interface{}) {
+func RegisterTableConfigSimple(tableName string, fn func() any) {
 	tableConfig[tableName] = TableInfo{
 		TableName:       tableName,
 		ConstructorFunc: fn,
-		CacheData:       true,
+		Cached:          true,
 	}
 }
 
@@ -165,12 +168,12 @@ func GetAllTableInfo() []TableInfo {
 	return result
 }
 
-// IsCompressOnly checks if data is compressed, i.e. ListingDao
-func (ti *TableInfo) IsCompressOnly() bool {
-	return ti.Compress && !ti.Split
+// IsCompressedOnly checks if data is compressed, i.e. ListingDao
+func (ti *TableInfo) IsCompressedOnly() bool {
+	return ti.Compressed && !ti.Split
 }
 
-// IsCompressAndSplit checks if data is compressed and split, i.e. CompressingDataDao
-func (ti *TableInfo) IsCompressAndSplit() bool {
-	return ti.Compress && ti.Split
+// IsCompressedAndSplit checks if data is compressed and split, i.e. CompressingDataDao
+func (ti *TableInfo) IsCompressedAndSplit() bool {
+	return ti.Compressed && ti.Split
 }

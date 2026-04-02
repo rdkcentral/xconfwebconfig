@@ -43,10 +43,10 @@ const TwowKeysDelimiter = "::"
 
 type TwoKeys struct {
 	Key  string
-	Key2 interface{}
+	Key2 any
 }
 
-func NewTwoKeys(key string, key2 interface{}) *TwoKeys {
+func NewTwoKeys(key string, key2 any) *TwoKeys {
 	return &TwoKeys{Key: key, Key2: key2}
 }
 
@@ -64,14 +64,14 @@ func (tk *TwoKeys) String() string {
 }
 
 // GetTwoKeysAsString returns a string representation of two keys, e.g. "key1::key2"
-func GetTwoKeysAsString(key string, key2 interface{}) string {
+func GetTwoKeysAsString(key string, key2 any) string {
 	return key + TwowKeysDelimiter + fmt.Sprint(key2)
 }
 
 // RangeInfo Xconf key2 filtering
 type RangeInfo struct {
-	StartValue interface{}
-	EndValue   interface{}
+	StartValue any
+	EndValue   any
 }
 
 func (ri *RangeInfo) IsNilStartValue() bool {
@@ -89,7 +89,7 @@ type DatabaseClient interface {
 	Sleep()
 
 	// Xconf
-	QueryXconfDataRows(query string, queryParams ...string) ([]map[string]interface{}, error)
+	QueryXconfDataRows(query string, queryParams ...string) ([]map[string]any, error)
 	ModifyXconfData(query string, queryParameters ...string) error
 
 	// Batch operations
@@ -107,13 +107,14 @@ type DatabaseClient interface {
 
 	// Xconf TwoKeys
 	GetAllXconfData(tenantId string, tableName string, key string) [][]byte
-	GetAllXconfDataTwoKeysRange(tenantId string, tableName string, key interface{}, key2FieldName string, rangeInfo *RangeInfo) [][]byte
-	GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, key string, key2FieldName string, key2List []interface{}) map[interface{}][]byte
-	SetXconfDataTwoKeys(tenantId string, tableName string, key interface{}, key2FieldName string, key2 interface{}, value []byte, ttl int) error
-	GetXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 interface{}) ([]byte, error)
-	DeleteXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 interface{}) error
+	GetAllXconfDataTwoKeysRange(tenantId string, tableName string, key any, key2FieldName string, rangeInfo *RangeInfo) [][]byte
+	GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, key string, key2FieldName string, key2List []any) map[any][]byte
+	SetXconfDataTwoKeys(tenantId string, tableName string, key any, key2FieldName string, key2 any, value []byte, ttl int) error
+	GetXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 any) ([]byte, error)
+	DeleteXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 any) error
 	GetAllXconfTwoKeys(tenantId string, tableName string, key2FieldName string) []TwoKeys
-	GetAllXconfKey2s(tenantId string, tableName string, key string, key2FieldName string) []interface{}
+	GetAllXconfKey2s(tenantId string, tableName string, key string, key2FieldName string) []any
+
 	// Xconf compressed data
 	SetXconfCompressedData(tenantId string, tableName string, key string, values [][]byte, ttl int) error
 	GetXconfCompressedData(tenantId string, tableName string, key string) ([]byte, error)
@@ -126,7 +127,7 @@ type DatabaseClient interface {
 	IsDbNotFound(error) bool
 
 	// Penetration Metrics
-	GetPenetrationMetrics(macAddress string) (map[string]interface{}, error)
+	GetPenetrationMetrics(macAddress string) (map[string]any, error)
 	SetPenetrationMetrics(penetrationmetrics *PenetrationMetrics) error
 	SetFwPenetrationMetrics(*FwPenetrationMetrics) error
 	GetFwPenetrationMetrics(string) (*FwPenetrationMetrics, error)
@@ -144,14 +145,14 @@ type DatabaseClient interface {
 	GetPrecookDataFromXPC(RfcPrecookHash string) ([]byte, string, error)
 
 	// Locks
-	AcquireLock(lockName string, lockedBy string, ttlSeconds int) error
-	ReleaseLock(lockName string, lockedBy string) error
-	GetLockInfo(lockName string) (map[string]interface{}, error)
+	AcquireLock(tenantId string, lockName string, lockedBy string, ttlSeconds int) error
+	ReleaseLock(tenantId string, lockName string, lockedBy string) error
+	GetLockInfo(tenantId string, lockName string) (map[string]any, error)
 }
 
 // BatchOperation interface for database batch operations
 type BatchOperation interface {
-	Query(stmt string, args ...interface{})
+	Query(stmt string, args ...any)
 	Size() int
 }
 

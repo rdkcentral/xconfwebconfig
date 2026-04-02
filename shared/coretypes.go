@@ -42,9 +42,9 @@ const (
 
 // AppSettings table object
 type AppSetting struct {
-	ID      string      `json:"id"`
-	Updated int64       `json:"updated"`
-	Value   interface{} `json:"value"`
+	ID      string `json:"id"`
+	Updated int64  `json:"updated"`
+	Value   any    `json:"value"`
 }
 
 // ApplicationType table object
@@ -89,13 +89,10 @@ const (
 )
 
 const (
-	StbContextTime      = "time"
-	StbContextModel     = "model"
-	MacList             = "MAC_LIST"
-	IpList              = "IP_LIST"
-	TableGenericNSList  = "GenericXconfNamedList"
-	TableFirmwareConfig = "FirmwareConfig"
-	TableFirmwareRule   = "FirmwareRule4"
+	StbContextTime  = "time"
+	StbContextModel = "model"
+	MacList         = "MAC_LIST"
+	IpList          = "IP_LIST"
 )
 
 const (
@@ -135,12 +132,12 @@ func (obj *Environment) Validate() error {
 
 	return errors.New("Id is invalid")
 }
-func NewApplicationTypeInf() interface{} {
+func NewApplicationTypeInf() any {
 	return &ApplicationType{}
 }
 
 // NewEnvironmentInf constructor
-func NewEnvironmentInf() interface{} {
+func NewEnvironmentInf() any {
 	return &Environment{}
 }
 
@@ -235,7 +232,7 @@ func (obj *Model) Validate() error {
 }
 
 // NewModelInf constructor
-func NewModelInf() interface{} {
+func NewModelInf() any {
 	return &Model{}
 }
 
@@ -327,7 +324,7 @@ func (obj *AppSetting) Clone() (*AppSetting, error) {
 }
 
 // NewAppSettingInf constructor
-func NewAppSettingInf() interface{} {
+func NewAppSettingInf() any {
 	return &AppSetting{}
 }
 
@@ -361,7 +358,7 @@ func GetIntAppSetting(key string, vargs ...int) int {
 
 	setting := inst.(*AppSetting)
 
-	// Note: json.Unmarshal numbers into float64 when target type is of type interface{}
+	// Note: json.Unmarshal numbers into float64 when target type is of type any
 	if val, ok := setting.Value.(float64); ok {
 		return int(val)
 	} else {
@@ -423,8 +420,8 @@ func GetStringAppSetting(key string, vargs ...string) string {
 	return setting.Value.(string)
 }
 
-func GetAppSettings() (map[string]interface{}, error) {
-	settings := make(map[string]interface{})
+func GetAppSettings() (map[string]any, error) {
+	settings := make(map[string]any)
 
 	list, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_APP_SETTINGS, 0)
 	if err != nil {
@@ -437,7 +434,7 @@ func GetAppSettings() (map[string]interface{}, error) {
 	return settings, nil
 }
 
-func SetAppSetting(key string, value interface{}) (*AppSetting, error) {
+func SetAppSetting(key string, value any) (*AppSetting, error) {
 	setting := AppSetting{
 		ID:      key,
 		Updated: util.GetTimestamp(time.Now()),

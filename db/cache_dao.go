@@ -105,7 +105,7 @@ func (csd cachedSimpleDaoImpl) RefreshOne(tenantId string, tableName string, key
 	cache.Invalidate(key)
 
 	var entry interface{}
-	if tableInfo.IsCompressAndSplit() {
+	if tableInfo.IsCompressedAndSplit() {
 		entry, err = GetCompressingDataDao().GetOne(tenantId, tableName, key)
 	} else {
 		entry, err = GetSimpleDao().GetOne(tenantId, tableName, key)
@@ -176,7 +176,7 @@ func (csd cachedSimpleDaoImpl) SetOne(tenantId string, tableName string, key str
 	}
 
 	// 1st update data the DB as Json Data
-	if tableInfo.IsCompressAndSplit() {
+	if tableInfo.IsCompressedAndSplit() {
 		err = GetCompressingDataDao().SetOne(tenantId, tableName, key, jsonData)
 	} else {
 		err = GetSimpleDao().SetOne(tenantId, tableName, key, jsonData)
@@ -326,7 +326,7 @@ func (csd cachedSimpleDaoImpl) RefreshAll(tenantId string, tableName string) err
 	cache.InvalidateAll()
 
 	var entries map[string]interface{}
-	if tableInfo.IsCompressAndSplit() {
+	if tableInfo.IsCompressedAndSplit() {
 		entries, err = GetCompressingDataDao().GetAllAsMap(tenantId, tableName, true)
 	} else {
 		entries, err = GetSimpleDao().GetAllAsMap(tenantId, tableName, 0)

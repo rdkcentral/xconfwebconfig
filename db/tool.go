@@ -93,3 +93,12 @@ func ComputeShardId(data []byte, n int) int {
 	// Standard modulo: results in 0 to N-1
 	return int(hash % uint32(n))
 }
+
+// GetShardIds returns a slice of all shard IDs from 0 up to ScalingFactor (exclusive)
+func GetShardIds() []int {
+	ids := make([]int, ScalingFactor)
+	for i := range ids {
+		ids[i] = i
+	}
+	return ids
+}

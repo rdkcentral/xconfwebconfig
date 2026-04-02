@@ -247,9 +247,9 @@ func TestTelemetryTwoHandlerMac(t *testing.T) {
 		"11:11:22:22:33:07",
 	}
 	srcGnl := shared.NewGenericNamespacedList(namedlistKey, shared.MacList, macList1)
-	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, shared.TableGenericNSList, srcGnl.ID, srcGnl)
+	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, srcGnl.ID, srcGnl)
 	assert.NilError(t, err)
-	itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, shared.TableGenericNSList, srcGnl.ID)
+	itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, srcGnl.ID)
 	assert.NilError(t, err)
 	readGnl, ok := itf.(*shared.GenericNamespacedList)
 	assert.Assert(t, ok)
@@ -364,9 +364,9 @@ func TestTelemetryTwoHandlerIpRange(t *testing.T) {
 		"33.44.55.66/20",
 	}
 	srcGnl := shared.NewGenericNamespacedList(namedlistKey, shared.IpList, ipList1)
-	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, shared.TableGenericNSList, srcGnl.ID, srcGnl)
+	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, srcGnl.ID, srcGnl)
 	assert.NilError(t, err)
-	itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, shared.TableGenericNSList, srcGnl.ID)
+	itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, srcGnl.ID)
 	assert.NilError(t, err)
 	readGnl, ok := itf.(*shared.GenericNamespacedList)
 	assert.Assert(t, ok)

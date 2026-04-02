@@ -112,7 +112,7 @@ func TestAddGroupServiceFTContext_DatabasePath(t *testing.T) {
 	result := AddGroupServiceFTContextWithDAO(mockDAO, "estbMac", contextMap, false, log.Fields{})
 
 	// Verify database interaction occurred
-	mockDAO.AssertCalled(t, "GetGroupServiceFeatureTags", "COMCAST")
+	mockDAO.AssertCalled(t, "GetGroupServiceFeatureTags", db.DEFAULT_TENANT_ID, "COMCAST")
 
 	// Verify database data was processed correctly
 	assert.Contains(t, result, "feature_enabled#true")
@@ -135,7 +135,7 @@ func TestAddGroupServiceFTContext_EmptyDatabase(t *testing.T) {
 	defer func() { Xc = originalXc }()
 
 	mockDAO := &MockGroupServiceCacheDao{}
-	mockDAO.On("GetGroupServiceFeatureTags", "EMPTY_PARTNER").Return(map[string]string{})
+	mockDAO.On("GetGroupServiceFeatureTags", db.DEFAULT_TENANT_ID, "EMPTY_PARTNER").Return(map[string]string{})
 
 	partnerTagsSet := util.NewSet()
 	partnerTagsSet.Add("TEST_MODEL")
@@ -156,7 +156,7 @@ func TestAddGroupServiceFTContext_EmptyDatabase(t *testing.T) {
 	result := AddGroupServiceFTContextWithDAO(mockDAO, "estbMac", contextMap, false, log.Fields{})
 
 	// Verify database was called even with empty result
-	mockDAO.AssertCalled(t, "GetGroupServiceFeatureTags", "EMPTY_PARTNER")
+	mockDAO.AssertCalled(t, "GetGroupServiceFeatureTags", db.DEFAULT_TENANT_ID, "EMPTY_PARTNER")
 
 	// Verify empty result handling
 	assert.Empty(t, result, "Should return empty tags for empty database response")
@@ -185,7 +185,7 @@ func TestAddGroupServiceFTContext_DatabaseDisabled(t *testing.T) {
 	result := AddGroupServiceFTContextWithDAO(mockDAO, "estbMac", contextMap, false, log.Fields{})
 
 	// Verify database was NOT called when disabled
-	mockDAO.AssertNotCalled(t, "GetGroupServiceFeatureTags")
+	mockDAO.AssertNotCalled(t, "GetGroupServiceFeatureTags", db.DEFAULT_TENANT_ID, "TEST_PARTNER")
 
 	// Should return empty since database path is disabled
 	assert.Empty(t, result, "Should return empty when database is disabled")

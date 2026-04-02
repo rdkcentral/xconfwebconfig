@@ -58,6 +58,8 @@ const (
 	ScalingFactor = 8 // number of shards (nodes) to distribute data across
 )
 
+var shardIds = GetShardIds() // parameter value for IN clause to query across all shards
+
 // Interface used for connecting to Cassandra in a cloud environment
 type CassandraConnector interface {
 	NewCassandraClient(conf *configuration.Config, testOnly bool) (*CassandraClient, error)
@@ -401,25 +403,20 @@ func (c *CassandraClient) GetAllXconfKeys(tenantId string, tableName string) []s
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
-	var resultData []string
-	stmt := fmt.Sprintf(`SELECT key FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, tableName)
-
-	forEachShard(
-		func(shardId int) error {
-			iter := c.Query(stmt, tenantId, shardId).Iter()
-			for {
-				row := make(map[string]interface{})
-				if !iter.MapScan(row) {
-					break
-				}
-				resultData = append(resultData, row["key"].(string))
-			}
-			return nil
-		})
+	resultData := util.Set{}
+	stmt := fmt.Sprintf(`SELECT key FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
+	iter := c.Query(stmt, tenantId, shardIds).Iter()
+	for {
+		row := make(map[string]any)
+		if !iter.MapScan(row) {
+			break
+		}
+		resultData.Add(row["key"].(string))
+	}
 
 	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfKeys: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
 
-	return resultData
+	return resultData.ToSlice()
 }
 
 // GetAllXconfDataAsList Get all rows as a list of values, where value is JSON data
@@ -431,24 +428,32 @@ func (c *CassandraClient) GetAllXconfDataAsList(tenantId string, tableName strin
 
 	var resultData [][]byte
 	var stmt string
-	if maxResults > 0 {
-		stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? LIMIT %v`, tableName, maxResults)
+	var iter *gocql.Iter
+
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		if maxResults > 0 {
+			stmt = fmt.Sprintf(`SELECT value FROM "%s" LIMIT %v`, tableName, maxResults)
+		} else {
+			stmt = fmt.Sprintf(`SELECT value FROM "%s"`, tableName)
+		}
+		iter = c.Query(stmt).Iter()
 	} else {
-		stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, tableName)
+		if maxResults > 0 {
+			stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id IN ? LIMIT %v`, tableName, maxResults)
+		} else {
+			stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
+		}
+		iter = c.Query(stmt, tenantId, shardIds).Iter()
 	}
 
-	forEachShard(
-		func(shardId int) error {
-			iter := c.Query(stmt, tenantId, shardId).Iter()
-			for {
-				row := make(map[string]interface{})
-				if !iter.MapScan(row) {
-					break
-				}
-				resultData = append(resultData, row["value"].([]byte))
-			}
-			return nil
-		})
+	for {
+		row := make(map[string]any)
+		if !iter.MapScan(row) {
+			break
+		}
+		resultData = append(resultData, row["value"].([]byte))
+	}
 
 	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataAsList: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
 
@@ -465,23 +470,19 @@ func (c *CassandraClient) GetAllXconfDataAsMap(tenantId string, tableName string
 	var resultData = make(map[string][]byte)
 	var stmt string
 	if maxResults > 0 {
-		stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? LIMIT %v`, tableName, maxResults)
+		stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ? LIMIT %v`, tableName, maxResults)
 	} else {
-		stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, tableName)
+		stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
 	}
 
-	forEachShard(
-		func(shardId int) error {
-			iter := c.Query(stmt, tenantId, shardId).Iter()
-			for {
-				row := make(map[string]interface{})
-				if !iter.MapScan(row) {
-					break
-				}
-				resultData[row["key"].(string)] = row["value"].([]byte)
-			}
-			return nil
-		})
+	iter := c.Query(stmt, tenantId, shardIds).Iter()
+	for {
+		row := make(map[string]interface{})
+		if !iter.MapScan(row) {
+			break
+		}
+		resultData[row["key"].(string)] = row["value"].([]byte)
+	}
 
 	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataAsMap: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
 
@@ -506,14 +507,8 @@ func (c *CassandraClient) DeleteAllXconfData(tenantId string, tableName string) 
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
-	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, tableName)
-
-	err := forEachShard(
-		func(shardId int) error {
-			return c.Query(stmt, tenantId, shardId).Exec()
-		})
-
-	return err
+	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
+	return c.Query(stmt, tenantId, shardIds).Exec()
 }
 
 // Two keys support
@@ -526,11 +521,19 @@ func (c *CassandraClient) GetAllXconfData(tenantId string, tableName string, key
 	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData [][]byte
+	var iter *gocql.Iter
 
-	stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, tableName)
-	iter := c.Query(stmt, tenantId, GetShardId(key), key).Iter()
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ?`, tableName)
+		iter = c.Query(stmt, key).Iter()
+	} else {
+		stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, tableName)
+		iter = c.Query(stmt, tenantId, GetShardId(key), key).Iter()
+	}
+
 	for {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 		if !iter.MapScan(row) {
 			break
 		}
@@ -558,30 +561,51 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tenantId string, tableName
 		nilEndValue = rangeInfo.IsNilEndValue()
 	}
 
-	// TODO: support tenantId is empty for logs table
-
-	if nilStartValue && nilEndValue {
-		stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? ALLOW FILTERING`, tableName)
-		iter = c.Query(stmt, tenantId, GetShardId(key), key).Iter()
-	} else {
-		if nilStartValue {
-			if !nilEndValue {
-				stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName)
-				iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.EndValue).Iter()
-			}
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		if nilStartValue && nilEndValue {
+			stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? ALLOW FILTERING`, tableName)
+			iter = c.Query(stmt, key).Iter()
 		} else {
-			if nilEndValue {
-				stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s > ? ALLOW FILTERING`, tableName, key2FieldName)
-				iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.StartValue).Iter()
+			if nilStartValue {
+				if !nilEndValue {
+					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName)
+					iter = c.Query(stmt, key, rangeInfo.EndValue).Iter()
+				}
 			} else {
-				stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s > ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName, key2FieldName)
-				iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.StartValue, rangeInfo.EndValue).Iter()
+				if nilEndValue {
+					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? and %s > ? ALLOW FILTERING`, tableName, key2FieldName)
+					iter = c.Query(stmt, key, rangeInfo.StartValue).Iter()
+				} else {
+					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? and %s > ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName, key2FieldName)
+					iter = c.Query(stmt, key, rangeInfo.StartValue, rangeInfo.EndValue).Iter()
+				}
+			}
+		}
+	} else {
+		if nilStartValue && nilEndValue {
+			stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? ALLOW FILTERING`, tableName)
+			iter = c.Query(stmt, tenantId, GetShardId(key), key).Iter()
+		} else {
+			if nilStartValue {
+				if !nilEndValue {
+					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName)
+					iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.EndValue).Iter()
+				}
+			} else {
+				if nilEndValue {
+					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s > ? ALLOW FILTERING`, tableName, key2FieldName)
+					iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.StartValue).Iter()
+				} else {
+					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s > ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName, key2FieldName)
+					iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.StartValue, rangeInfo.EndValue).Iter()
+				}
 			}
 		}
 	}
 
 	for {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 		if !iter.MapScan(row) {
 			break
 		}
@@ -597,15 +621,23 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tenantId string, tableName
 	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData = make(map[interface{}][]byte)
+	var iter *gocql.Iter
 
-	stmt := fmt.Sprintf(`SELECT %s, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s IN ?`, key2FieldName, tableName, key2FieldName)
-	iter := c.Query(stmt, tenantId, GetShardId(key), key, key2List).Iter()
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		stmt := fmt.Sprintf(`SELECT %s, value FROM "%s" WHERE key = ? and %s IN ?`, key2FieldName, tableName, key2FieldName)
+		iter = c.Query(stmt, key, key2List).Iter()
+	} else {
+		stmt := fmt.Sprintf(`SELECT %s, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s IN ?`, key2FieldName, tableName, key2FieldName)
+		iter = c.Query(stmt, tenantId, GetShardId(key), key, key2List).Iter()
+	}
+
 	for {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 		if !iter.MapScan(row) {
 			break
 		}
-		resultData[row[key2FieldName].(interface{})] = row["value"].([]byte)
+		resultData[row[key2FieldName]] = row["value"].([]byte)
 	}
 
 	return resultData
@@ -617,17 +649,25 @@ func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string,
 	defer func() { <-c.ConcurrentQueries }()
 
 	var stmt string
-	if ttl > 0 {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
+
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		if ttl > 0 {
+			stmt = fmt.Sprintf(`INSERT INTO "%s"(key, %s, value) VALUES(?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
+		} else {
+			stmt = fmt.Sprintf(`INSERT INTO "%s"(key, %s, value) VALUES(?,?,?)`, tableName, key2FieldName)
+		}
+
+		return c.Query(stmt, key, key2, value).Exec()
 	} else {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, key2FieldName)
-	}
+		if ttl > 0 {
+			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
+		} else {
+			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, key2FieldName)
+		}
 
-	if err := c.Query(stmt, tenantId, GetShardId(key), key, key2, value).Exec(); err != nil {
-		return err
+		return c.Query(stmt, tenantId, GetShardId(key), key, key2, value).Exec()
 	}
-
-	return nil
 }
 
 // GetXconfDataTwoKeys Get one row where return value is JSON data
@@ -636,14 +676,18 @@ func (c *CassandraClient) GetXconfDataTwoKeys(tenantId string, tableName string,
 	defer func() { <-c.ConcurrentQueries }()
 
 	var value []byte
+	var err error
 
-	stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
-	err := c.Query(stmt, tenantId, GetShardId(key), key, key2).Scan(&value)
-	if err != nil {
-		return value, err
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
+		err = c.Query(stmt, key, key2).Scan(&value)
+	} else {
+		stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
+		err = c.Query(stmt, tenantId, GetShardId(key), key, key2).Scan(&value)
 	}
 
-	return value, nil
+	return value, err
 }
 
 // DeleteXconfDataTwoKeys Delete XconfData for the specified two keys
@@ -651,12 +695,14 @@ func (c *CassandraClient) DeleteXconfDataTwoKeys(tenantId string, tableName stri
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
-	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ?`, tableName, key2FieldName)
-	if err := c.Query(stmt, tenantId, GetShardId(key), key, key2).Exec(); err != nil {
-		return err
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE key = ? AND %s = ?`, tableName, key2FieldName)
+		return c.Query(stmt, key, key2).Exec()
+	} else {
+		stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ?`, tableName, key2FieldName)
+		return c.Query(stmt, tenantId, GetShardId(key), key, key2).Exec()
 	}
-
-	return nil
 }
 
 // GetAllXconfTwoKeys Get all TwoKeys
@@ -665,25 +711,29 @@ func (c *CassandraClient) GetAllXconfTwoKeys(tenantId string, tableName string, 
 	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData []TwoKeys
+	var iter *gocql.Iter
 
-	forEachShard(
-		func(shardId int) error {
-			stmt := fmt.Sprintf(`SELECT key, "%s" FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, key2FieldName, tableName)
-			iter := c.Query(stmt, tenantId, shardId).Iter()
-			for {
-				row := make(map[string]interface{})
-				if !iter.MapScan(row) {
-					break
-				}
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		stmt := fmt.Sprintf(`SELECT key, "%s" FROM "%s"`, key2FieldName, tableName)
+		iter = c.Query(stmt).Iter()
+	} else {
+		stmt := fmt.Sprintf(`SELECT key, "%s" FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, key2FieldName, tableName)
+		iter = c.Query(stmt, tenantId, shardIds).Iter()
+	}
 
-				twoKeys := TwoKeys{
-					Key:  row["key"].(string),
-					Key2: row[key2FieldName].(interface{}),
-				}
-				resultData = append(resultData, twoKeys)
-			}
-			return nil
-		})
+	for {
+		row := make(map[string]interface{})
+		if !iter.MapScan(row) {
+			break
+		}
+
+		twoKeys := TwoKeys{
+			Key:  row["key"].(string),
+			Key2: row[key2FieldName],
+		}
+		resultData = append(resultData, twoKeys)
+	}
 
 	return resultData
 }
@@ -694,15 +744,23 @@ func (c *CassandraClient) GetAllXconfKey2s(tenantId string, tableName string, ke
 	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData []interface{}
+	var iter *gocql.Iter
 
-	stmt := fmt.Sprintf(`SELECT %s FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, key2FieldName, tableName)
-	iter := c.Query(stmt, tenantId, GetShardId(key), key).Iter()
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		stmt := fmt.Sprintf(`SELECT %s FROM "%s" WHERE key = ?`, key2FieldName, tableName)
+		iter = c.Query(stmt, key).Iter()
+	} else {
+		stmt := fmt.Sprintf(`SELECT %s FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, key2FieldName, tableName)
+		iter = c.Query(stmt, tenantId, GetShardId(key), key).Iter()
+	}
+
 	for {
 		row := make(map[string]interface{})
 		if !iter.MapScan(row) {
 			break
 		}
-		resultData = append(resultData, row[key2FieldName].(interface{}))
+		resultData = append(resultData, row[key2FieldName])
 	}
 
 	return resultData
@@ -761,7 +819,7 @@ func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName stri
 
 	// Get all the compressed data chunks
 	var partsMap = make(map[string][]byte)
-	stmt = fmt.Sprintf(`SELECT key, %, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, Key2FieldNameForList, tableName)
+	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, Key2FieldNameForList, tableName)
 	iter := c.Query(stmt, tenantId, shardId, key).Iter()
 	for {
 		row := make(map[string]interface{})
@@ -849,50 +907,43 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName s
 	var countMap = make(map[string]int)
 
 	// Get all the count records
-	stmt := fmt.Sprintf(`SELECT key, blobAsInt(value) as count FROM "%s" where tenant_id = ? AND shard_id = ? AND %s = ? ALLOW FILTERING`, tableName, Key2FieldNameForList)
-	forEachShard(
-		func(shardId int) error {
-			iter := c.Query(stmt, tenantId, shardId, NamedListCountColumnValue).Iter()
-			for {
-				row := make(map[string]interface{})
-				if !iter.MapScan(row) {
-					break
-				}
-				countMap[row["key"].(string)] = row["count"].(int)
-			}
-			return nil
-		})
+	stmt := fmt.Sprintf(`SELECT key, blobAsInt(value) as count FROM "%s" where tenant_id = ? AND shard_id IN ? AND %s = ? ALLOW FILTERING`, tableName, Key2FieldNameForList)
+
+	iter := c.Query(stmt, tenantId, shardIds, NamedListCountColumnValue).Iter()
+	for {
+		row := make(map[string]interface{})
+		if !iter.MapScan(row) {
+			break
+		}
+		countMap[row["key"].(string)] = row["count"].(int)
+	}
 
 	// Get all the compressed data chunks
-	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id = ?`, Key2FieldNameForList, tableName)
-	forEachShard(
-		func(shardId int) error {
-			iter := c.Query(stmt, tenantId, shardId).Iter()
-			for {
-				row := make(map[string]interface{})
-				if !iter.MapScan(row) {
-					break
-				}
+	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, Key2FieldNameForList, tableName)
+	iter = c.Query(stmt, tenantId, shardIds).Iter()
+	for {
+		row := make(map[string]interface{})
+		if !iter.MapScan(row) {
+			break
+		}
 
-				column1 := row[Key2FieldNameForList].(string)
-				if column1 == NamedListCountColumnValue {
-					continue // Ignored count record which has already been processed
-				} else {
-					key := row["key"].(string)
-					partsMap := resultData[key]
-					if partsMap == nil {
-						partsMap = make(map[string][]byte)
-						resultData[key] = partsMap
-					}
-					count := countMap[key]
-					if len(partsMap) >= count {
-						continue // skip extra data
-					}
-					partsMap[column1] = row["value"].([]byte)
-				}
+		column1 := row[Key2FieldNameForList].(string)
+		if column1 == NamedListCountColumnValue {
+			continue // Ignored count record which has already been processed
+		} else {
+			key := row["key"].(string)
+			partsMap := resultData[key]
+			if partsMap == nil {
+				partsMap = make(map[string][]byte)
+				resultData[key] = partsMap
 			}
-			return nil
-		})
+			count := countMap[key]
+			if len(partsMap) >= count {
+				continue // skip extra data
+			}
+			partsMap[column1] = row["value"].([]byte)
+		}
+	}
 
 	// Ensure all the parts are loaded
 	for key, partsMap := range resultData {
@@ -994,7 +1045,7 @@ func (c *CassandraClient) ExecuteBatch(batch BatchOperation) error {
 	return err
 }
 
-func (c *CassandraClient) AcquireLock(lockName string, lockedBy string, ttl int) error {
+func (c *CassandraClient) AcquireLock(tenantId string, lockName string, lockedBy string, ttl int) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
@@ -1003,13 +1054,13 @@ func (c *CassandraClient) AcquireLock(lockName string, lockedBy string, ttl int)
 
 	// First, try to insert a new lock (if no lock exists)
 	existingLock := make(map[string]interface{})
-	stmt := fmt.Sprintf(`INSERT INTO "%s"(name, locked_by, locked_at, expires_at) VALUES(?,?,?,?) IF NOT EXISTS`, TABLE_LOCKS)
-	applied, err := c.Query(stmt, lockName, lockedBy, lockedAt, expiresAt).MapScanCAS(existingLock)
+	stmt := fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, name, locked_by, locked_at, expires_at) VALUES(?,?,?,?,?,?) IF NOT EXISTS`, TABLE_LOCKS)
+	applied, err := c.Query(stmt, tenantId, GetShardId(lockName), lockName, lockedBy, lockedAt, expiresAt).MapScanCAS(existingLock)
 	if err != nil {
 		return fmt.Errorf("failed to acquire lock '%s': %w", lockName, err)
 	}
 	if applied {
-		log.Debug(fmt.Sprintf("Lock '%s' acquired by '%s'", lockName, lockedBy))
+		log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("Lock '%s' acquired by '%s'", lockName, lockedBy))
 		return nil
 	}
 
@@ -1020,8 +1071,8 @@ func (c *CassandraClient) AcquireLock(lockName string, lockedBy string, ttl int)
 		}
 	}
 
-	stmt = fmt.Sprintf(`UPDATE "%s" SET locked_by = ?, locked_at = ?, expires_at = ? WHERE name = ? IF expires_at < ?`, TABLE_LOCKS)
-	applied, err = c.Query(stmt, lockedBy, lockedAt, expiresAt, lockName, lockedAt).MapScanCAS(existingLock)
+	stmt = fmt.Sprintf(`UPDATE "%s" SET locked_by = ?, locked_at = ?, expires_at = ? WHERE tenant_id = ? AND shard_id = ? AND name = ? IF expires_at < ?`, TABLE_LOCKS)
+	applied, err = c.Query(stmt, lockedBy, lockedAt, expiresAt, tenantId, GetShardId(lockName), lockName, lockedAt).MapScanCAS(existingLock)
 	if err != nil {
 		return fmt.Errorf("failed to acquire expired lock '%s': %w", lockName, err)
 	}
@@ -1029,18 +1080,18 @@ func (c *CassandraClient) AcquireLock(lockName string, lockedBy string, ttl int)
 		return fmt.Errorf("failed to acquire expired lock '%s' held by '%s'", lockName, existingLock["locked_by"])
 	}
 
-	log.Debug(fmt.Sprintf("Lock '%s' acquired by '%s'", lockName, lockedBy))
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("Lock '%s' acquired by '%s'", lockName, lockedBy))
 	return nil
 }
 
-func (c *CassandraClient) ReleaseLock(lockName string, lockedBy string) error {
+func (c *CassandraClient) ReleaseLock(tenantId string, lockName string, lockedBy string) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
 	// Try to release the lock by deleting the record only if it is held by the specified lockHolder
 	existingLock := make(map[string]interface{})
-	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE name = ? IF locked_by = ?`, TABLE_LOCKS)
-	applied, err := c.Query(stmt, lockName, lockedBy).MapScanCAS(existingLock)
+	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND name = ? IF locked_by = ?`, TABLE_LOCKS)
+	applied, err := c.Query(stmt, tenantId, GetShardId(lockName), lockName, lockedBy).MapScanCAS(existingLock)
 	if err != nil {
 		return fmt.Errorf("failed to release lock '%s': %w", lockName, err)
 	}
@@ -1048,17 +1099,17 @@ func (c *CassandraClient) ReleaseLock(lockName string, lockedBy string) error {
 		return fmt.Errorf("failed to release lock '%s' held by '%s'", lockName, existingLock["locked_by"])
 	}
 
-	log.Debug(fmt.Sprintf("Lock '%s' released by '%s'", lockName, lockedBy))
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("Lock '%s' released by '%s'", lockName, lockedBy))
 	return nil
 }
 
-func (c *CassandraClient) GetLockInfo(lockName string) (map[string]interface{}, error) {
+func (c *CassandraClient) GetLockInfo(tenantId string, lockName string) (map[string]interface{}, error) {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
 	dict := util.Dict{}
-	stmt := fmt.Sprintf(`SELECT * FROM "%s" WHERE name=?`, TABLE_LOCKS)
-	qry := c.Query(stmt, lockName)
+	stmt := fmt.Sprintf(`SELECT * FROM "%s" WHERE tenant_id = ? and shard_id = ? AND name=?`, TABLE_LOCKS)
+	qry := c.Query(stmt, tenantId, GetShardId(lockName), lockName)
 	err := qry.MapScan(dict)
 	if err != nil {
 		return dict, fmt.Errorf("failed to retrieve lock '%s': %w", lockName, err)
@@ -1112,7 +1163,11 @@ func (dl *DistributedLock) SetRetryInMsecs(retryInMsecs int) {
 	dl.retryInMsecs = retryInMsecs
 }
 
-func (dl DistributedLock) Lock(owner string) (e error) {
+func (dl DistributedLock) Lock(tenantId string, owner string) (e error) {
+	if util.IsBlank(tenantId) {
+		e = fmt.Errorf("tenantId is required to lock '%s' table", dl.name)
+		return
+	}
 	if util.IsBlank(owner) {
 		e = fmt.Errorf("owner is required to lock '%s' table", dl.name)
 		return
@@ -1126,7 +1181,7 @@ func (dl DistributedLock) Lock(owner string) (e error) {
 		if attempt > 0 {
 			time.Sleep(retryWaitTime)
 		}
-		err = GetDatabaseClient().AcquireLock(dl.name, owner, dl.ttl)
+		err = GetDatabaseClient().AcquireLock(tenantId, dl.name, owner, dl.ttl)
 		if err == nil {
 			return
 		}
@@ -1137,40 +1192,48 @@ func (dl DistributedLock) Lock(owner string) (e error) {
 	} else {
 		e = fmt.Errorf("unable to lock table '%s': %w", dl.name, err)
 	}
-	log.Error(e)
+	log.WithFields(log.Fields{"tenantId": tenantId}).Error(e)
 
 	return
 }
 
-func (dl DistributedLock) Unlock(owner string) (e error) {
+func (dl DistributedLock) Unlock(tenantId string, owner string) (e error) {
+	if util.IsBlank(tenantId) {
+		e = fmt.Errorf("tenantId is required to unlock table '%s'", dl.name)
+		return
+	}
 	if util.IsBlank(owner) {
 		e = fmt.Errorf("owner is required to unlock table '%s'", dl.name)
 		return
 	}
 
-	if err := GetDatabaseClient().ReleaseLock(dl.name, owner); err != nil {
+	if err := GetDatabaseClient().ReleaseLock(tenantId, dl.name, owner); err != nil {
 		e = fmt.Errorf("unable to unlock table '%s': %w", dl.name, err)
-		log.Error(e)
+		log.WithFields(log.Fields{"tenantId": tenantId}).Error(e)
 	}
 
 	return
 }
 
-// LockRow locks a specific row in the table identified by rowKey.
-// The lock name is constructed as "<tableName>|<rowKey>".
+// LockRow locks a specific row in the table identified by key.
+// The lock name is constructed as "<tableName>|<key>".
 // This allows for row-level locking within the same table using the existing locking mechanism.
 // For a given resource either resource-level or sub-resource-level locks can be used, but not both.
-func (dl DistributedLock) LockRow(owner string, rowKey string) (e error) {
+func (dl DistributedLock) LockRow(tenantId string, owner string, key string) (e error) {
+	if util.IsBlank(tenantId) {
+		e = fmt.Errorf("tenantId is required to lock '%s' table", dl.name)
+		return
+	}
 	if util.IsBlank(owner) {
 		e = fmt.Errorf("owner is required to lock '%s' table", dl.name)
 		return
 	}
-	if util.IsBlank(rowKey) {
+	if util.IsBlank(key) {
 		e = fmt.Errorf("rowKey is required to lock '%s' table", dl.name)
 		return
 	}
 
-	lockName := dl.name + LockNameDelimiter + rowKey
+	lockName := dl.name + LockNameDelimiter + key
 	retryWaitTime := time.Duration(dl.retryInMsecs) * time.Millisecond
 
 	var err error
@@ -1179,36 +1242,40 @@ func (dl DistributedLock) LockRow(owner string, rowKey string) (e error) {
 		if attempt > 0 {
 			time.Sleep(retryWaitTime)
 		}
-		err = GetDatabaseClient().AcquireLock(lockName, owner, dl.ttl)
+		err = GetDatabaseClient().AcquireLock(tenantId, lockName, owner, dl.ttl)
 		if err == nil {
 			return
 		}
 	}
 
 	if dl.retries > 0 {
-		e = fmt.Errorf("unable to lock table '%s' row '%s' after %d attempts: %w", dl.name, rowKey, attempt+1, err)
+		e = fmt.Errorf("unable to lock table '%s' row '%s' after %d attempts: %w", dl.name, key, attempt+1, err)
 	} else {
-		e = fmt.Errorf("unable to lock table '%s' row '%s': %w", dl.name, rowKey, err)
+		e = fmt.Errorf("unable to lock table '%s' row '%s': %w", dl.name, key, err)
 	}
-	log.Error(e)
+	log.WithFields(log.Fields{"tenantId": tenantId}).Error(e)
 
 	return
 }
 
-func (dl DistributedLock) UnlockRow(owner string, rowKey string) (e error) {
+func (dl DistributedLock) UnlockRow(tenantId string, owner string, key string) (e error) {
+	if util.IsBlank(tenantId) {
+		e = fmt.Errorf("tenantId is required to unlock table '%s'", dl.name)
+		return
+	}
 	if util.IsBlank(owner) {
 		e = fmt.Errorf("owner is required to unlock table '%s'", dl.name)
 		return
 	}
-	if util.IsBlank(rowKey) {
-		e = fmt.Errorf("rowKey is required to unlock table '%s'", dl.name)
+	if util.IsBlank(key) {
+		e = fmt.Errorf("key is required to unlock table '%s'", dl.name)
 		return
 	}
 
-	lockName := dl.name + LockNameDelimiter + rowKey
-	if err := GetDatabaseClient().ReleaseLock(lockName, owner); err != nil {
-		e = fmt.Errorf("unable to unlock table '%s' row '%s': %w", dl.name, rowKey, err)
-		log.Error(e)
+	lockName := dl.name + LockNameDelimiter + key
+	if err := GetDatabaseClient().ReleaseLock(tenantId, lockName, owner); err != nil {
+		e = fmt.Errorf("unable to unlock table '%s' row '%s': %w", dl.name, key, err)
+		log.WithFields(log.Fields{"tenantId": tenantId}).Error(e)
 	}
 
 	return

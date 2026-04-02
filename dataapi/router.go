@@ -125,23 +125,23 @@ func RegisterTables() {
 		db.RegisterTableConfig(&db.TableInfo{
 			TableName:       db.TABLE_GENERIC_NS_LIST,
 			ConstructorFunc: shared.NewGenericNamespacedListInf,
-			Compress:        true,
+			Compressed:      true,
 			Split:           true,
-			CacheData:       true,
+			Cached:          true,
 			Key2FieldName:   db.Key2FieldNameForList,
 		})
 
 		db.RegisterTableConfig(&db.TableInfo{
 			TableName:       db.TABLE_TELEMETRY_CHANGES,
 			ConstructorFunc: change.NewChangeInf,
-			CacheData:       false,
+			Cached:          false,
 		})
 
 		db.RegisterTableConfig(&db.TableInfo{
 			TableName:       db.TABLE_TELEMETRY_APPROVED_CHANGES,
 			ConstructorFunc: change.NewApprovedChangeInf,
 			TTL:             432000,
-			CacheData:       false,
+			Cached:          false,
 		})
 
 		db.RegisterTableConfig(&db.TableInfo{
@@ -158,7 +158,7 @@ func RegisterTables() {
 		db.RegisterTableConfig(&db.TableInfo{
 			TableName:       db.TABLE_CONFIG_CHANGE_LOGS,
 			ConstructorFunc: sharedef.NewConfigChangeLogInf,
-			Compress:        true,
+			Compressed:      true,
 			Key2FieldName:   db.Key2FieldNameForList,
 			TTL:             90 * 24 * 60 * 60,
 		})
@@ -166,6 +166,7 @@ func RegisterTables() {
 		db.RegisterTableConfig(&db.TableInfo{
 			TableName:       db.TABLE_CHANGE_EVENTS,
 			ConstructorFunc: db.NewChangedDataInf,
+			TenantAgnostic:  true,
 			Key2FieldName:   db.Key2FieldNameForChangedKeys,
 			TTL:             86400 * 7, // one week
 		})
@@ -173,7 +174,8 @@ func RegisterTables() {
 		db.RegisterTableConfig(&db.TableInfo{
 			TableName:       db.TABLE_LOGS,
 			ConstructorFunc: sharedef.NewConfigChangeLogInf,
-			Compress:        true,
+			Compressed:      true,
+			TenantAgnostic:  true,
 			Key2FieldName:   db.Key2FieldNameForList,
 			TTL:             90 * 24 * 60 * 60,
 		})

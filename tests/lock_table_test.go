@@ -43,41 +43,41 @@ func TestAcquireLock(t *testing.T) {
 	ttlSeconds := 10
 
 	// Acquire a new lock
-	err := dbClient.AcquireLock(lockName, lockUser1, ttlSeconds)
+	err := dbClient.AcquireLock(db.DEFAULT_TENANT_ID, lockName, lockUser1, ttlSeconds)
 	assert.NilError(t, err)
 
 	// Verify lock info
-	lockInfo, err := dbClient.GetLockInfo(lockName)
+	lockInfo, err := dbClient.GetLockInfo(db.DEFAULT_TENANT_ID, lockName)
 	assert.NilError(t, err)
 	assert.Equal(t, lockInfo["locked_by"], lockUser1)
 
 	// Fail to acquire an existing lock
-	err = dbClient.AcquireLock(lockName, lockUser2, ttlSeconds)
+	err = dbClient.AcquireLock(db.DEFAULT_TENANT_ID, lockName, lockUser2, ttlSeconds)
 	assert.ErrorContains(t, err, "failed to acquire lock")
 
 	// Fail to release a lock not owned by the user
-	err = dbClient.ReleaseLock(lockName, lockUser2)
+	err = dbClient.ReleaseLock(db.DEFAULT_TENANT_ID, lockName, lockUser2)
 	assert.ErrorContains(t, err, "failed to release lock")
 
 	// Release the lock
-	err = dbClient.ReleaseLock(lockName, lockUser1)
+	err = dbClient.ReleaseLock(db.DEFAULT_TENANT_ID, lockName, lockUser1)
 	assert.NilError(t, err)
 
 	// Verify lock is gone
-	lockInfo, err = dbClient.GetLockInfo(lockName)
+	lockInfo, err = dbClient.GetLockInfo(db.DEFAULT_TENANT_ID, lockName)
 	assert.Assert(t, errors.Is(err, gocql.ErrNotFound), "lock should not be found after release")
 	assert.Assert(t, len(lockInfo) == 0, "lock info should be empty after release")
 
 	// Acquire an expired lock (acquire lock with a short TTL)
 	shortTtl := 1
-	err = dbClient.AcquireLock(lockName, lockUser1, shortTtl)
+	err = dbClient.AcquireLock(db.DEFAULT_TENANT_ID, lockName, lockUser1, shortTtl)
 	assert.NilError(t, err)
 
 	// Wait for it to expire
 	time.Sleep(time.Duration(shortTtl+1) * time.Second)
 
 	// Acquire the now-expired lock
-	err = dbClient.AcquireLock(lockName, lockUser2, ttlSeconds)
+	err = dbClient.AcquireLock(db.DEFAULT_TENANT_ID, lockName, lockUser2, ttlSeconds)
 	assert.NilError(t, err)
 }
 
@@ -101,19 +101,19 @@ func TestLockTable(t *testing.T) {
 	assert.Equal(t, modelTableLock.TTL(), 2)
 
 	// Acquire a new lock
-	err := modelTableLock.Lock(lockUser1)
+	err := modelTableLock.Lock(db.DEFAULT_TENANT_ID, lockUser1)
 	assert.NilError(t, err)
 
 	// Fail to acquire an existing lock
-	err = modelTableLock.Lock(lockUser2)
+	err = modelTableLock.Lock(db.DEFAULT_TENANT_ID, lockUser2)
 	assert.ErrorContains(t, err, "failed to acquire lock")
 
 	// Fail to release a lock not owned by the user
-	err = modelTableLock.Unlock(lockUser2)
+	err = modelTableLock.Unlock(db.DEFAULT_TENANT_ID, lockUser2)
 	assert.ErrorContains(t, err, "failed to release lock")
 
 	// Release the lock
-	err = modelTableLock.Unlock(lockUser1)
+	err = modelTableLock.Unlock(db.DEFAULT_TENANT_ID, lockUser1)
 	assert.NilError(t, err)
 
 	// Acquire expired lock
@@ -123,19 +123,19 @@ func TestLockTable(t *testing.T) {
 	// Acquire a new lock
 	envLockTable.SetRetries(2)
 	envLockTable.SetRetryInMsecs(100)
-	err = envLockTable.Lock(lockUser1)
+	err = envLockTable.Lock(db.DEFAULT_TENANT_ID, lockUser1)
 	assert.NilError(t, err)
 
 	time.Sleep(1 * time.Second)
 
 	// Acquire the now-expired lock
-	err = envLockTable.Lock(lockUser2)
+	err = envLockTable.Lock(db.DEFAULT_TENANT_ID, lockUser2)
 	assert.NilError(t, err)
 
 	// Acquire a new lock with retries
 	envLockTable.SetRetries(6)
 	envLockTable.SetRetryInMsecs(200)
-	err = envLockTable.Lock(lockUser1)
+	err = envLockTable.Lock(db.DEFAULT_TENANT_ID, lockUser1)
 	assert.NilError(t, err)
 }
 
@@ -154,27 +154,27 @@ func TestTableRowLock(t *testing.T) {
 	// Acquire a new lock
 	modelTableLock.SetRetries(2)
 	modelTableLock.SetRetryInMsecs(100)
-	err := modelTableLock.LockRow(lockUser1, "key1")
+	err := modelTableLock.LockRow(db.DEFAULT_TENANT_ID, lockUser1, "key1")
 	assert.NilError(t, err)
 
-	err = modelTableLock.LockRow(lockUser2, "key2")
+	err = modelTableLock.LockRow(db.DEFAULT_TENANT_ID, lockUser2, "key2")
 	assert.NilError(t, err)
 
 	// Fail to acquire an existing lock on the same row
-	err = modelTableLock.LockRow(lockUser1, "key2")
+	err = modelTableLock.LockRow(db.DEFAULT_TENANT_ID, lockUser1, "key2")
 	assert.ErrorContains(t, err, "failed to acquire lock")
 
 	// Release lock for key2
-	err = modelTableLock.UnlockRow(lockUser2, "key2")
+	err = modelTableLock.UnlockRow(db.DEFAULT_TENANT_ID, lockUser2, "key2")
 	assert.NilError(t, err)
 
 	// Acquire lock for key2 again for lockUser1
-	err = modelTableLock.LockRow(lockUser1, "key2")
+	err = modelTableLock.LockRow(db.DEFAULT_TENANT_ID, lockUser1, "key2")
 	assert.NilError(t, err)
 
 	time.Sleep(1 * time.Second)
 
 	// Acquire the now-expired lock
-	err = modelTableLock.LockRow(lockUser2, "key1")
+	err = modelTableLock.LockRow(db.DEFAULT_TENANT_ID, lockUser2, "key1")
 	assert.NilError(t, err)
 }

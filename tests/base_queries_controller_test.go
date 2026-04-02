@@ -93,7 +93,7 @@ func DeleteAllEntities() {
 		db.TABLE_TELEMETRY_TWO_RULES,
 		db.TABLE_FEATURES,
 		db.TABLE_FEATURE_CONTROL_RULES,
-		db.TABLE_LOGS,
+		db.TABLE_CONFIG_CHANGE_LOGS,
 		db.TABLE_GENERIC_NS_LIST,
 	}
 	for _, table := range cachedTableList {
