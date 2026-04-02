@@ -44,6 +44,7 @@ func TestExtractConfigFromAction(t *testing.T) {
 	contextMap := map[string]string{}
 	contextMap["eStbMac"] = mac1
 	contextMap["eCMMac"] = mac3
+	contextMap["tenantId"] = db.DEFAULT_TENANT_ID
 	contextMap["partnerId"] = "comcast"
 	contextMap["ipAddress"] = IpAddress3
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"
@@ -76,6 +77,7 @@ func TestIsInWhitelist(t *testing.T) {
 	contextMap := map[string]string{}
 	contextMap["eStbMac"] = mac1
 	contextMap["eCMMac"] = mac3
+	contextMap["tenantId"] = db.DEFAULT_TENANT_ID
 	contextMap["partnerId"] = "comcast"
 	contextMap["ipAddress"] = IpAddress3
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"
@@ -101,6 +103,7 @@ func TestFindMatchedRules(t *testing.T) {
 	contextMap := map[string]string{}
 	contextMap["eStbMac"] = mac1
 	contextMap["eCMMac"] = mac2
+	contextMap["tenantId"] = db.DEFAULT_TENANT_ID
 	contextMap["partnerId"] = "comcast"
 	contextMap["ipAddress"] = IpAddress3
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"
@@ -162,6 +165,7 @@ func TestDoFilters(t *testing.T) {
 	contextMap := map[string]string{}
 	contextMap["eStbMac"] = "00:0a:95:9d:68:16"
 	contextMap["eCMMac"] = "00:0a:95:9d:68:17"
+	contextMap["tenantId"] = db.DEFAULT_TENANT_ID
 	contextMap["partnerId"] = "comcast"
 	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"
@@ -238,6 +242,7 @@ func TestEvalEmpty(t *testing.T) {
 	contextMap := map[string]string{}
 	contextMap["eStbMac"] = "00:0a:95:9d:68:16"
 	contextMap["eCMMac"] = "00:0a:95:9d:68:17"
+	contextMap["tenantId"] = db.DEFAULT_TENANT_ID
 	contextMap["partnerId"] = "comcast"
 	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"
@@ -277,6 +282,7 @@ func TestEval(t *testing.T) {
 	contextMap := map[string]string{}
 	contextMap["eStbMac"] = "00:0a:95:9d:68:16"
 	contextMap["eCMMac"] = "00:0a:95:9d:68:17"
+	contextMap["tenantId"] = db.DEFAULT_TENANT_ID
 	contextMap["partnerId"] = "comcast"
 	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"
@@ -492,6 +498,7 @@ func TestHasMinimumFirmware(t *testing.T) {
 	contextMap := map[string]string{}
 	contextMap["eStbMac"] = "00:0a:95:9d:68:16"
 	contextMap["eCMMac"] = "00:0a:95:9d:68:17"
+	contextMap["tenantId"] = db.DEFAULT_TENANT_ID
 	contextMap["partnerId"] = "comcast"
 	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"
@@ -516,6 +523,7 @@ func TestGetBoundConfigId(t *testing.T) {
 	contextMap := map[string]string{}
 	contextMap["eStbMac"] = "00:0a:95:9d:68:16"
 	contextMap["eCMMac"] = "00:0a:95:9d:68:17"
+	contextMap["tenantId"] = db.DEFAULT_TENANT_ID
 	contextMap["partnerId"] = "comcast"
 	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
 	contextMap["bypassFilters"] = "someFilter,bypassFilters,PercentFilter"

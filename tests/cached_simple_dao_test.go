@@ -403,7 +403,7 @@ func TestCacheChangeNotifier(t *testing.T) {
 	// Wait for the notification on the channel, with a timeout
 	select {
 	case msg := <-testNotifier.ch:
-		assert.Assert(t, strings.HasPrefix(msg, fmt.Sprintf("%s: tableName=Model,", common.ServerOriginId())))
+		assert.Assert(t, strings.HasPrefix(msg, fmt.Sprintf("%s: tenantId=COMCAST, tableName=models,", common.ServerOriginId())))
 	case <-time.After(2 * time.Second):
 		t.Fatal("timed out waiting for cache notification")
 	}

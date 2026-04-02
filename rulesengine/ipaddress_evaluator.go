@@ -18,14 +18,11 @@
 package rulesengine
 
 import (
+	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	ipListTableName = "GenericXconfNamedList"
 )
 
 type IpAddressEvaluator struct {
@@ -79,7 +76,7 @@ func (e *IpAddressEvaluator) Evaluate(condition *Condition, context map[string]s
 		GetOneFunc = e.nsListDao.GetOneFromCacheOnly
 	}
 
-	nsListItf, err := GetOneFunc(db.DEFAULT_TENANT_ID, ipListTableName, fixedArgValue)
+	nsListItf, err := GetOneFunc(context[common.TENANT_ID], db.TABLE_GENERIC_NS_LIST, fixedArgValue)
 	if err != nil {
 		log.Debugf("NsListInEvaluator  Can't evaluate rule because NsList doesn't exist. ID: %v", fixedArgValue)
 		return false

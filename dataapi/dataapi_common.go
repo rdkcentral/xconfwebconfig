@@ -128,6 +128,10 @@ func NormalizeCommonContext(contextMap map[string]string, estbMacKey string, ecm
 	if partnerId != "" {
 		contextMap[common.PARTNER_ID] = strings.ToUpper(partnerId)
 	}
+	tenantId := contextMap[common.TENANT_ID]
+	if tenantId != "" {
+		contextMap[common.TENANT_ID] = strings.ToUpper(tenantId)
+	}
 }
 
 func AddContextFromTaggingService(ws *xhttp.XconfServer, contextMap map[string]string, satToken string, configSetHash string, isRfcApi bool, vargs ...log.Fields) []string {

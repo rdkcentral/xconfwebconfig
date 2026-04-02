@@ -26,6 +26,7 @@ import (
 	dcmlogupload "github.com/rdkcentral/xconfwebconfig/dataapi/dcm/logupload"
 	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/settings"
 	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/telemetry"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -91,6 +92,7 @@ func GetContextMapAndSettingTypes(r *http.Request) (map[string]string, []string)
 	}
 	contextMap := make(map[string]string)
 	contextMap[common.APPLICATION_TYPE] = applicationType
+	contextMap[common.TENANT_ID] = db.DEFAULT_TENANT_ID // TODO - get tenantId from request when multi-tenancy is supported
 	var settingTypes []string
 	if len(queryParams) > 0 {
 		for k, v := range queryParams {

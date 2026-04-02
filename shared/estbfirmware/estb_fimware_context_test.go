@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
+	"github.com/rdkcentral/xconfwebconfig/db"
 
 	"gotest.tools/assert"
 )
@@ -32,6 +33,7 @@ func TestContextConvertedGet(t *testing.T) {
 	contextMap := map[string]string{}
 	contextMap["eStbMac"] = "00:0a:95:9d:68:16"
 	contextMap["eCMMac"] = "00:0a:95:9d:68:17"
+	contextMap["tenantId"] = db.DEFAULT_TENANT_ID
 	contextMap["partnerId"] = "comcast"
 	contextMap["ipAddress"] = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
 	contextMap["bypassFilters"] = "locationfilter1,bypassFilter2,PercentFilter3"
@@ -91,4 +93,3 @@ func TestOffsetToTimeZone(t *testing.T) {
 	tmoffset := offsetToTimeZone("11:00")
 	assert.Assert(t, tmoffset != time.UTC)
 }
-

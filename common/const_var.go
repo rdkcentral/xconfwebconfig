@@ -95,6 +95,7 @@ const (
 	MODEL_ID                   = "modelId"
 	ACCOUNT_MGMT               = "accountMgmt"
 	SERIAL_NUM                 = "serialNum"
+	TENANT_ID                  = "tenantId"
 	PARTNER_ID                 = "partnerId"
 	PASSED_PARTNER_ID          = "passedPartnerId"
 	FIRMWARE_VERSION           = "firmwareVersion"
