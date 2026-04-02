@@ -153,17 +153,9 @@ func (c *DefaultSatService) GetSatTokenFromSatService(fields log.Fields, vargs .
 
 	if len(vargs) > 0 {
 		partnerId := vargs[0]
-		if util.IsBlank(c.tokenPartnerUrlTemplate) {
-			url = ""
-		} else {
-			url = fmt.Sprintf(c.tokenPartnerUrlTemplate, c.SatServiceHost(), partnerId)
-		}
+		url = fmt.Sprintf(c.tokenPartnerUrlTemplate, c.SatServiceHost(), partnerId)
 	} else {
-		if util.IsBlank(c.tokenUrlTemplate) {
-			url = ""
-		} else {
-			url = fmt.Sprintf(c.tokenUrlTemplate, c.SatServiceHost())
-		}
+		url = fmt.Sprintf(c.tokenUrlTemplate, c.SatServiceHost())
 	}
 	rbytes, err := c.DoWithRetries("POST", url, c.headers, nil, fields, satServiceName)
 	if err != nil {
