@@ -56,6 +56,7 @@ func GetLogUploaderTelemetryProfilesHandler(w http.ResponseWriter, r *http.Reque
 
 	contextMap, _ := GetContextMapAndSettingTypes(r)
 	fields[common.ESTB_MAC_ADDRESS] = contextMap[common.ESTB_MAC_ADDRESS]
+	fields[common.TENANT_ID] = contextMap[common.TENANT_ID]
 	coastTags, _ := AddLogUploaderContext(Ws, r, contextMap, false, fields)
 	xconfTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, true, fields)
 	CompareTaggingSources(contextMap, coastTags, xconfTags, fields)

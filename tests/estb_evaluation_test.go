@@ -23,6 +23,7 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -149,6 +150,7 @@ func createAndNullifyFirmwareConfigFacade(firmwareConfig *coreef.FirmwareConfig)
 func performAndVerifyRequest(firmwareConfigForRequest *coreef.FirmwareConfig, expectedConfig *coreef.FirmwareConfigFacade, t *testing.T) {
 	contextMap := make(map[string]string)
 	contextMap["applicationType"] = "stb"
+	contextMap[common.TENANT_ID] = db.DEFAULT_TENANT_ID
 	contextMap["eStbMac"] = macListPercentFilterTestCase.Data[0]
 	contextMap["env"] = environmentPercentFilterTestCase.ID
 	contextMap["model"] = modelPercentFilterTestCase.ID

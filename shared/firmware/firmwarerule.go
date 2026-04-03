@@ -535,7 +535,7 @@ func GetFirmwareRuleAllAsListDB() ([]*FirmwareRule, error) {
 		rulereflst = append(rulereflst, frule)
 	}
 
-	//cm.ApplicationCacheSet(db.TABLE_FIRMWARE_RULE, cacheKey, rulereflst)
+	cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, cacheKey, rulereflst)
 
 	return rulereflst, nil
 }
