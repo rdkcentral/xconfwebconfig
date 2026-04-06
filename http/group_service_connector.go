@@ -40,7 +40,6 @@ type GroupServiceConnector interface {
 	GetCpeGroups(cpeMac string, fields log.Fields) ([]string, error)
 	CreateListFromGroupServiceProto(cpeGroup *conversion.CpeGroup) []string
 	GetFeatureTagsHashedItems(name string, fields log.Fields) (map[string]string, error)
-	GetSecurityTokenInfo(securityIdentifier string, fields log.Fields) (map[string]string, error)
 	GetAccountIdData(mac string, fields log.Fields) (*conversion.XBOAccount, error)
 	GetAccountProducts(accountId string, fields log.Fields) (map[string]string, error)
 }
@@ -52,7 +51,6 @@ type DefaultGroupService struct {
 	getCpeGroupsUrlTemplate       string
 	getRfcPrecookUrlTemplate      string
 	getHashesUrlTemplate          string
-	getSecurityTokenUrlTemplate   string
 	getAccountIdUrlTemplate       string
 	getAccountProductsUrlTemplate string
 }
@@ -81,9 +79,6 @@ func NewGroupServiceConnector(conf *configuration.Config, tlsConfig *tls.Config,
 		getHashesUrlKey := fmt.Sprintf("xconfwebconfig.%v.feature_url_template", groupServiceName)
 		getHashesUrlTemplate := conf.GetString(getHashesUrlKey)
 
-		getSecurityTokenUrlKey := fmt.Sprintf("xconfwebconfig.%v.security_token_url_template", groupServiceName)
-		getSecurityTokenUrlTemplate := conf.GetString(getSecurityTokenUrlKey)
-
 		getAccountIdUrlKey := fmt.Sprintf("xconfwebconfig.%v.account_id_url_template", groupServiceName)
 		getAccountIdUrlTemplate := conf.GetString(getAccountIdUrlKey)
 
@@ -97,7 +92,6 @@ func NewGroupServiceConnector(conf *configuration.Config, tlsConfig *tls.Config,
 			getCpeGroupsUrlTemplate:       getCpeGroupsUrlTemplate,
 			getRfcPrecookUrlTemplate:      getRfcPrecookUrlTemplate,
 			getHashesUrlTemplate:          getHashesUrlTemplate,
-			getSecurityTokenUrlTemplate:   getSecurityTokenUrlTemplate,
 			getAccountIdUrlTemplate:       getAccountIdUrlTemplate,
 			getAccountProductsUrlTemplate: getAccountProductsUrlTemplate,
 		}
@@ -172,21 +166,6 @@ func (c *DefaultGroupService) CreateListFromGroupServiceProto(cpeGroup *conversi
 
 func (c *DefaultGroupService) GetFeatureTagsHashedItems(name string, fields log.Fields) (map[string]string, error) {
 	url := fmt.Sprintf(c.getHashesUrlTemplate, c.GroupServiceHost(), name)
-	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, groupServiceName)
-	if err != nil {
-		return nil, err
-	}
-	message := conversion.XdasHashes{}
-	message.ProtoMessage()
-	err = proto.Unmarshal(rbytes, &message)
-	if err != nil {
-		return nil, err
-	}
-	return message.Fields, nil
-}
-
-func (c *DefaultGroupService) GetSecurityTokenInfo(securityIdentifier string, fields log.Fields) (map[string]string, error) {
-	url := fmt.Sprintf(c.getSecurityTokenUrlTemplate, c.GroupServiceHost(), securityIdentifier)
 	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
