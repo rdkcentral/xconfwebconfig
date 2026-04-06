@@ -49,7 +49,7 @@ func GetFirmwareRuleTemplate(i int) *corefw.FirmwareRuleTemplate {
 
 func GetSetDaoGenericNamespacedList() (*shared.GenericNamespacedList, error) {
 	newList := shared.NewGenericNamespacedList(NamespaceIPListKey, shared.IpList, NamespaceIPList)
-	err := shared.CreateGenericNamedListOneDB(db.GetDefaultTenantId(), newList)
+	err := shared.CreateGenericNamedListOneDB(db.DEFAULT_TENANT_ID, newList)
 	return newList, err
 }
 

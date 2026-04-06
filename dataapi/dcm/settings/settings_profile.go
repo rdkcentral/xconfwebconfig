@@ -91,8 +91,7 @@ func GetMaxRule(tenantId string, settingsRules []logupload.SettingRule) *loguplo
 	return nil
 }
 
-func GetSettingsRuleByTypeForContext(settingType string, contextMap map[string]string) *logupload.SettingRule {
-	tenantId := contextMap[common.TENANT_ID]
+func GetSettingsRuleByTypeForContext(tenantId string, settingType string, contextMap map[string]string) *logupload.SettingRule {
 	settingRules := GetSettingRulesBySettingType(tenantId, settingType)
 	var rules []logupload.SettingRule
 	for _, rule := range settingRules {

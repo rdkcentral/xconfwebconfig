@@ -134,17 +134,17 @@ func TestNewConfigChangeLog(t *testing.T) {
 }
 
 func TestGetLastConfigLog(t *testing.T) {
-	lastConfigLog := GetLastConfigLog(db.GetDefaultTenantId(), "testMac")
+	lastConfigLog := GetLastConfigLog(db.DEFAULT_TENANT_ID, "testMac")
 	assert.Equal(t, lastConfigLog == nil, true)
 }
 
 func TestGetChangeLogsOnly(t *testing.T) {
-	lastConfigLogs := GetConfigChangeLogsOnly(db.GetDefaultTenantId(), "testMac")
+	lastConfigLogs := GetConfigChangeLogsOnly(db.DEFAULT_TENANT_ID, "testMac")
 	assert.Equal(t, len(lastConfigLogs), 0)
 }
 
-func TestGetCurrentChangeLogId(t *testing.T) {
-	id, err := GetCurrentChangeLogId(db.GetDefaultTenantId(), db.TABLE_CONFIG_CHANGE_LOGS, "testMac")
+func TestGetCurrentId(t *testing.T) {
+	id, err := GetCurrentId(db.DEFAULT_TENANT_ID, "testMac")
 	assert.Equal(t, id, "")
 	assert.Equal(t, err != nil, true)
 }

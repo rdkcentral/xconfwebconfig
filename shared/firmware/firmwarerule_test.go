@@ -221,7 +221,7 @@ func TestFirmwareRule_ConfigId(t *testing.T) {
 
 func TestGetFirmwareRuleAllAsListDB(t *testing.T) {
 	// Note: This test depends on database setup and might need mocking
-	rules, err := GetFirmwareRuleAllAsListDB(db.GetDefaultTenantId())
+	rules, err := GetFirmwareRuleAllAsListDB(db.DEFAULT_TENANT_ID)
 
 	// We don't expect errors in normal operation
 	if err != nil {

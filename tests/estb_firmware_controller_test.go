@@ -113,7 +113,7 @@ func TestFirmwareConfigParametersCanNotBeOverriddenByDefinePropertiesRule(t *tes
 	percentageBean := CreatePercentageBean("test percentage bean", defaultEnvironmentId, definePropertiesModelId, "", "", defaultFirmwareVersion, "stb")
 	percentageBean.LastKnownGood = firmwareConfig.ID
 	percentageBean.FirmwareVersions = append(percentageBean.FirmwareVersions, firmwareConfig.FirmwareVersion)
-	err = SavePercentageBean(db.GetDefaultTenantId(), percentageBean)
+	err = SavePercentageBean(db.DEFAULT_TENANT_ID, percentageBean)
 	assert.NilError(t, err)
 
 	defineProperties := map[string]string{}
@@ -435,7 +435,7 @@ func createAndSaveUseAccountPercentageBean(lkgConfig *estbfirmware.FirmwareConfi
 	firmwareVersions := useAccountBean.FirmwareVersions
 	firmwareVersions = append(firmwareVersions, lkgConfig.FirmwareVersion)
 	useAccountBean.FirmwareVersions = firmwareVersions
-	err := SavePercentageBean(db.GetDefaultTenantId(), useAccountBean)
+	err := SavePercentageBean(db.DEFAULT_TENANT_ID, useAccountBean)
 	return useAccountBean, err
 }
 
