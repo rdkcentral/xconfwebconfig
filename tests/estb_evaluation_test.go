@@ -89,13 +89,13 @@ func initPercentConditions(t *testing.T) {
 	assert.Assert(t, envModelFirmwareRulePercentFilterTestCase != nil)
 
 	// test rule tempte or run in db
-	dbTemplaeRule, err := corefw.GetFirmwareRuleTemplateOneDBWithId(envModelRuleTemplatePercentFilterTestCase.ID)
+	dbTemplaeRule, err := corefw.GetFirmwareRuleTemplateOneDBWithId(db.DEFAULT_TENANT_ID, envModelRuleTemplatePercentFilterTestCase.ID)
 	assert.NilError(t, err)
 	assert.Assert(t, dbTemplaeRule != nil)
 	assert.Assert(t, dbTemplaeRule.ApplicableAction != nil)
 	assert.Equal(t, dbTemplaeRule.ApplicableAction.ActionType, corefw.RULE_TEMPLATE, fmt.Sprintf("Rule Template actioneType %v", dbTemplaeRule.ApplicableAction.ActionType))
 
-	dbPercRule, err1 := corefw.GetFirmwareRuleOneDB(envModelFirmwareRulePercentFilterTestCase.ID)
+	dbPercRule, err1 := corefw.GetFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, envModelFirmwareRulePercentFilterTestCase.ID)
 	assert.NilError(t, err1)
 	assert.Assert(t, dbPercRule != nil)
 	assert.Assert(t, dbPercRule.ApplicableAction != nil)

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,7 +42,7 @@ func TestGetLogFileList(t *testing.T) {
 
 	t.Run("GetLogFileListWithValidData", func(t *testing.T) {
 		// Mock the database call
-		GetOneLogFileListFunc = func(id string) (*logupload.LogFileList, error) {
+		GetOneLogFileListFunc = func(tenantId string, id string) (*logupload.LogFileList, error) {
 			return &logupload.LogFileList{
 				Data: []*logupload.LogFile{
 					{Name: "logfile1.log"},
@@ -51,7 +52,7 @@ func TestGetLogFileList(t *testing.T) {
 			}, nil
 		}
 
-		logFiles, err := getLogFileList("test-id", 100)
+		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 100)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, logFiles)
@@ -63,7 +64,7 @@ func TestGetLogFileList(t *testing.T) {
 
 	t.Run("GetLogFileListWithMaxResultsLimit", func(t *testing.T) {
 		// Mock the database call with more files than maxResults
-		GetOneLogFileListFunc = func(id string) (*logupload.LogFileList, error) {
+		GetOneLogFileListFunc = func(tenantId string, id string) (*logupload.LogFileList, error) {
 			return &logupload.LogFileList{
 				Data: []*logupload.LogFile{
 					{Name: "file1.log"},
@@ -76,7 +77,7 @@ func TestGetLogFileList(t *testing.T) {
 		}
 
 		// Request only 3 files (maxResults = 3)
-		logFiles, err := getLogFileList("test-id", 3)
+		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 3)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, logFiles)
@@ -88,11 +89,11 @@ func TestGetLogFileList(t *testing.T) {
 
 	t.Run("GetLogFileListWithNilResponse", func(t *testing.T) {
 		// Mock the database call to return nil
-		GetOneLogFileListFunc = func(id string) (*logupload.LogFileList, error) {
+		GetOneLogFileListFunc = func(tenantId string, id string) (*logupload.LogFileList, error) {
 			return nil, nil
 		}
 
-		logFiles, err := getLogFileList("test-id", 100)
+		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 100)
 
 		assert.NoError(t, err)
 		assert.Nil(t, logFiles)
@@ -100,13 +101,13 @@ func TestGetLogFileList(t *testing.T) {
 
 	t.Run("GetLogFileListWithEmptyData", func(t *testing.T) {
 		// Mock the database call with empty data
-		GetOneLogFileListFunc = func(id string) (*logupload.LogFileList, error) {
+		GetOneLogFileListFunc = func(tenantId string, id string) (*logupload.LogFileList, error) {
 			return &logupload.LogFileList{
 				Data: []*logupload.LogFile{},
 			}, nil
 		}
 
-		logFiles, err := getLogFileList("test-id", 100)
+		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 100)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, logFiles)
@@ -115,7 +116,7 @@ func TestGetLogFileList(t *testing.T) {
 
 	t.Run("GetLogFileListWithExactlyMaxResults", func(t *testing.T) {
 		// Mock the database call with exactly maxResults items
-		GetOneLogFileListFunc = func(id string) (*logupload.LogFileList, error) {
+		GetOneLogFileListFunc = func(tenantId string, id string) (*logupload.LogFileList, error) {
 			return &logupload.LogFileList{
 				Data: []*logupload.LogFile{
 					{Name: "file1.log"},
@@ -126,7 +127,7 @@ func TestGetLogFileList(t *testing.T) {
 		}
 
 		// maxResults = 3, same as data length
-		logFiles, err := getLogFileList("test-id", 3)
+		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 3)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, logFiles)
@@ -136,7 +137,7 @@ func TestGetLogFileList(t *testing.T) {
 
 	t.Run("GetLogFileListWithFewerThanMaxResults", func(t *testing.T) {
 		// Mock the database call with fewer items than maxResults
-		GetOneLogFileListFunc = func(id string) (*logupload.LogFileList, error) {
+		GetOneLogFileListFunc = func(tenantId string, id string) (*logupload.LogFileList, error) {
 			return &logupload.LogFileList{
 				Data: []*logupload.LogFile{
 					{Name: "file1.log"},
@@ -146,7 +147,7 @@ func TestGetLogFileList(t *testing.T) {
 		}
 
 		// maxResults = 10, but only 2 files available
-		logFiles, err := getLogFileList("test-id", 10)
+		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 10)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, logFiles)
@@ -175,14 +176,14 @@ func TestGetSettings(t *testing.T) {
 
 	t.Run("GetSettingsWithNoData", func(t *testing.T) {
 		// Mock all database calls to return nil
-		GetOneDeviceSettingsFunc = func(id string) *logupload.DeviceSettings { return nil }
-		GetOneLogUploadSettingsFunc = func(id string) *logupload.LogUploadSettings { return nil }
-		GetOneUploadRepositoryFunc = func(id string) *logupload.UploadRepository { return nil }
-		GetLogFileListFunc = func(maxResults int) []*logupload.LogFile { return nil }
-		GetOneVodSettingsFunc = func(id string) *logupload.VodSettings { return nil }
+		GetOneDeviceSettingsFunc = func(tenantId string, id string) *logupload.DeviceSettings { return nil }
+		GetOneLogUploadSettingsFunc = func(tenantId string, id string) *logupload.LogUploadSettings { return nil }
+		GetOneUploadRepositoryFunc = func(tenantId string, id string) *logupload.UploadRepository { return nil }
+		GetLogFileListFunc = func(tenantId string, maxResults int) []*logupload.LogFile { return nil }
+		GetOneVodSettingsFunc = func(tenantId string, id string) *logupload.VodSettings { return nil }
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings("test-id")
+		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
 
 		assert.NotNil(t, settings)
 		// Should have empty/default values
@@ -193,26 +194,26 @@ func TestGetSettings(t *testing.T) {
 
 	t.Run("GetSettingsWithInactiveDeviceSettings", func(t *testing.T) {
 		// Mock device settings as inactive
-		GetOneDeviceSettingsFunc = func(id string) *logupload.DeviceSettings {
+		GetOneDeviceSettingsFunc = func(tenantId string, id string) *logupload.DeviceSettings {
 			return &logupload.DeviceSettings{
 				ID:                id,
 				Name:              "Test Device",
 				SettingsAreActive: false, // Inactive
 			}
 		}
-		GetOneLogUploadSettingsFunc = func(id string) *logupload.LogUploadSettings {
+		GetOneLogUploadSettingsFunc = func(tenantId string, id string) *logupload.LogUploadSettings {
 			return &logupload.LogUploadSettings{
 				ID:                id,
 				Name:              "Test Log Upload",
 				AreSettingsActive: true,
 			}
 		}
-		GetOneUploadRepositoryFunc = func(id string) *logupload.UploadRepository { return nil }
-		GetLogFileListFunc = func(maxResults int) []*logupload.LogFile { return nil }
-		GetOneVodSettingsFunc = func(id string) *logupload.VodSettings { return nil }
+		GetOneUploadRepositoryFunc = func(tenantId string, id string) *logupload.UploadRepository { return nil }
+		GetLogFileListFunc = func(tenantId string, maxResults int) []*logupload.LogFile { return nil }
+		GetOneVodSettingsFunc = func(tenantId string, id string) *logupload.VodSettings { return nil }
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings("test-id")
+		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
 
 		assert.NotNil(t, settings)
 		// Should not populate GroupName since device settings are inactive
@@ -221,26 +222,26 @@ func TestGetSettings(t *testing.T) {
 
 	t.Run("GetSettingsWithInactiveLogUploadSettings", func(t *testing.T) {
 		// Mock log upload settings as inactive
-		GetOneDeviceSettingsFunc = func(id string) *logupload.DeviceSettings {
+		GetOneDeviceSettingsFunc = func(tenantId string, id string) *logupload.DeviceSettings {
 			return &logupload.DeviceSettings{
 				ID:                id,
 				Name:              "Test Device",
 				SettingsAreActive: true,
 			}
 		}
-		GetOneLogUploadSettingsFunc = func(id string) *logupload.LogUploadSettings {
+		GetOneLogUploadSettingsFunc = func(tenantId string, id string) *logupload.LogUploadSettings {
 			return &logupload.LogUploadSettings{
 				ID:                id,
 				Name:              "Test Log Upload",
 				AreSettingsActive: false, // Inactive
 			}
 		}
-		GetOneUploadRepositoryFunc = func(id string) *logupload.UploadRepository { return nil }
-		GetLogFileListFunc = func(maxResults int) []*logupload.LogFile { return nil }
-		GetOneVodSettingsFunc = func(id string) *logupload.VodSettings { return nil }
+		GetOneUploadRepositoryFunc = func(tenantId string, id string) *logupload.UploadRepository { return nil }
+		GetLogFileListFunc = func(tenantId string, maxResults int) []*logupload.LogFile { return nil }
+		GetOneVodSettingsFunc = func(tenantId string, id string) *logupload.VodSettings { return nil }
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings("test-id")
+		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
 
 		assert.NotNil(t, settings)
 		// Should not populate LusName since log upload settings are inactive
@@ -249,11 +250,11 @@ func TestGetSettings(t *testing.T) {
 
 	t.Run("GetSettingsWithVodSettingsOnly", func(t *testing.T) {
 		// Mock only VOD settings
-		GetOneDeviceSettingsFunc = func(id string) *logupload.DeviceSettings { return nil }
-		GetOneLogUploadSettingsFunc = func(id string) *logupload.LogUploadSettings { return nil }
-		GetOneUploadRepositoryFunc = func(id string) *logupload.UploadRepository { return nil }
-		GetLogFileListFunc = func(maxResults int) []*logupload.LogFile { return nil }
-		GetOneVodSettingsFunc = func(id string) *logupload.VodSettings {
+		GetOneDeviceSettingsFunc = func(tenantId string, id string) *logupload.DeviceSettings { return nil }
+		GetOneLogUploadSettingsFunc = func(tenantId string, id string) *logupload.LogUploadSettings { return nil }
+		GetOneUploadRepositoryFunc = func(tenantId string, id string) *logupload.UploadRepository { return nil }
+		GetLogFileListFunc = func(tenantId string, maxResults int) []*logupload.LogFile { return nil }
+		GetOneVodSettingsFunc = func(tenantId string, id string) *logupload.VodSettings {
 			return &logupload.VodSettings{
 				ID:           id,
 				Name:         "Test VOD",
@@ -263,7 +264,7 @@ func TestGetSettings(t *testing.T) {
 		}
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings("test-id")
+		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
 
 		assert.NotNil(t, settings)
 		assert.Equal(t, "Test VOD", settings.VodSettingsName)
@@ -275,7 +276,7 @@ func TestGetSettings(t *testing.T) {
 
 	t.Run("GetSettingsWithAllActiveSettings", func(t *testing.T) {
 		// Mock all settings as active with valid data
-		GetOneDeviceSettingsFunc = func(id string) *logupload.DeviceSettings {
+		GetOneDeviceSettingsFunc = func(tenantId string, id string) *logupload.DeviceSettings {
 			return &logupload.DeviceSettings{
 				ID:                id,
 				Name:              "Test Device Group",
@@ -292,7 +293,7 @@ func TestGetSettings(t *testing.T) {
 				},
 			}
 		}
-		GetOneLogUploadSettingsFunc = func(id string) *logupload.LogUploadSettings {
+		GetOneLogUploadSettingsFunc = func(tenantId string, id string) *logupload.LogUploadSettings {
 			return &logupload.LogUploadSettings{
 				ID:                 id,
 				Name:               "Test Log Upload",
@@ -311,7 +312,7 @@ func TestGetSettings(t *testing.T) {
 				},
 			}
 		}
-		GetOneUploadRepositoryFunc = func(id string) *logupload.UploadRepository {
+		GetOneUploadRepositoryFunc = func(tenantId string, id string) *logupload.UploadRepository {
 			return &logupload.UploadRepository{
 				ID:       id,
 				Name:     "Test Repo",
@@ -319,11 +320,11 @@ func TestGetSettings(t *testing.T) {
 				Protocol: "HTTPS",
 			}
 		}
-		GetLogFileListFunc = func(maxResults int) []*logupload.LogFile { return nil }
-		GetOneVodSettingsFunc = func(id string) *logupload.VodSettings { return nil }
+		GetLogFileListFunc = func(tenantId string, maxResults int) []*logupload.LogFile { return nil }
+		GetOneVodSettingsFunc = func(tenantId string, id string) *logupload.VodSettings { return nil }
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings("test-id")
+		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
 
 		assert.NotNil(t, settings)
 
@@ -355,7 +356,7 @@ func TestGetSettings(t *testing.T) {
 
 	t.Run("GetSettingsWithUploadRepositoryContainingProtocol", func(t *testing.T) {
 		// Test URL that already contains protocol
-		GetOneDeviceSettingsFunc = func(id string) *logupload.DeviceSettings {
+		GetOneDeviceSettingsFunc = func(tenantId string, id string) *logupload.DeviceSettings {
 			return &logupload.DeviceSettings{
 				ID:                id,
 				Name:              "Device",
@@ -367,7 +368,7 @@ func TestGetSettings(t *testing.T) {
 				},
 			}
 		}
-		GetOneLogUploadSettingsFunc = func(id string) *logupload.LogUploadSettings {
+		GetOneLogUploadSettingsFunc = func(tenantId string, id string) *logupload.LogUploadSettings {
 			return &logupload.LogUploadSettings{
 				ID:                 id,
 				Name:               "Log Upload",
@@ -380,7 +381,7 @@ func TestGetSettings(t *testing.T) {
 				},
 			}
 		}
-		GetOneUploadRepositoryFunc = func(id string) *logupload.UploadRepository {
+		GetOneUploadRepositoryFunc = func(tenantId string, id string) *logupload.UploadRepository {
 			return &logupload.UploadRepository{
 				ID:       id,
 				Name:     "Repo",
@@ -388,11 +389,11 @@ func TestGetSettings(t *testing.T) {
 				Protocol: "HTTPS",
 			}
 		}
-		GetLogFileListFunc = func(maxResults int) []*logupload.LogFile { return nil }
-		GetOneVodSettingsFunc = func(id string) *logupload.VodSettings { return nil }
+		GetLogFileListFunc = func(tenantId string, maxResults int) []*logupload.LogFile { return nil }
+		GetOneVodSettingsFunc = func(tenantId string, id string) *logupload.VodSettings { return nil }
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings("test-id")
+		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
 
 		assert.NotNil(t, settings)
 		// URL already contains "://", should use as-is

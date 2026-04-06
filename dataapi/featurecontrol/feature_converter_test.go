@@ -21,6 +21,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 	"github.com/stretchr/testify/assert"
@@ -38,7 +39,7 @@ func TestToRfcResponse_NotWhitelisted(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(feature)
+	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
 
 	// Should return feature unchanged
 	assert.Equal(t, feature, result)
@@ -53,7 +54,7 @@ func TestToRfcResponse_WithValidWhitelistProperty(t *testing.T) {
 	defer func() { GetGenericNamedListOneByTypeFunc = originalFunc }()
 
 	// Mock the GetGenericNamedListOneByTypeFunc
-	GetGenericNamedListOneByTypeFunc = func(id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
+	GetGenericNamedListOneByTypeFunc = func(tenantID string, id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
 		return &shared.GenericNamespacedList{
 			ID:       "list123",
 			TypeName: "MAC_LIST",
@@ -77,7 +78,7 @@ func TestToRfcResponse_WithValidWhitelistProperty(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(feature)
+	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
 
 	// Should populate Properties with namespaced list data
 	assert.NotNil(t, result)
@@ -94,7 +95,7 @@ func TestToRfcResponse_GetGenericNamedListError(t *testing.T) {
 	defer func() { GetGenericNamedListOneByTypeFunc = originalFunc }()
 
 	// Mock the function to return error
-	GetGenericNamedListOneByTypeFunc = func(id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
+	GetGenericNamedListOneByTypeFunc = func(tenantID string, id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
 		return nil, errors.New("database error")
 	}
 
@@ -111,7 +112,7 @@ func TestToRfcResponse_GetGenericNamedListError(t *testing.T) {
 		ConfigData: map[string]string{},
 	}
 
-	result := ToRfcResponse(feature)
+	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
 
 	// Should still return the feature even on error
 	assert.NotNil(t, result)
@@ -126,7 +127,7 @@ func TestToRfcResponse_GetGenericNamedListReturnsNil(t *testing.T) {
 	defer func() { GetGenericNamedListOneByTypeFunc = originalFunc }()
 
 	// Mock the function to return nil
-	GetGenericNamedListOneByTypeFunc = func(id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
+	GetGenericNamedListOneByTypeFunc = func(tenantID string, id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
 		return nil, nil
 	}
 
@@ -141,7 +142,7 @@ func TestToRfcResponse_GetGenericNamedListReturnsNil(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(feature)
+	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
 
 	// Should return feature but Properties should not be set
 	assert.NotNil(t, result)
@@ -159,7 +160,7 @@ func TestToRfcResponse_NilWhitelistProperty(t *testing.T) {
 		WhitelistProperty: nil,
 	}
 
-	result := ToRfcResponse(feature)
+	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
 
 	// Should return feature unchanged
 	assert.NotNil(t, result)
@@ -180,7 +181,7 @@ func TestToRfcResponse_EmptyWhitelistPropertyValue(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(feature)
+	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
 
 	// Should trigger warning log and return feature unchanged
 	assert.NotNil(t, result)
@@ -200,7 +201,7 @@ func TestToRfcResponse_EmptyNamespacedListType(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(feature)
+	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
 
 	// Should trigger warning log and return feature unchanged
 	assert.NotNil(t, result)
@@ -213,7 +214,7 @@ func TestToRfcResponse_WithEmptyDataList(t *testing.T) {
 	defer func() { GetGenericNamedListOneByTypeFunc = originalFunc }()
 
 	// Mock the function to return empty data list
-	GetGenericNamedListOneByTypeFunc = func(id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
+	GetGenericNamedListOneByTypeFunc = func(tenantID string, id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
 		return &shared.GenericNamespacedList{
 			ID:       "empty_list",
 			TypeName: "MAC_LIST",
@@ -232,7 +233,7 @@ func TestToRfcResponse_WithEmptyDataList(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(feature)
+	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
 
 	// Should set Properties with empty list
 	assert.NotNil(t, result)
@@ -253,7 +254,7 @@ func TestToRfcResponse_WithLargeDataList(t *testing.T) {
 		largeData[i] = "item" + string(rune(i))
 	}
 
-	GetGenericNamedListOneByTypeFunc = func(id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
+	GetGenericNamedListOneByTypeFunc = func(tenantID string, id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
 		return &shared.GenericNamespacedList{
 			ID:       "large_list",
 			TypeName: "ITEM_LIST",
@@ -272,7 +273,7 @@ func TestToRfcResponse_WithLargeDataList(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(feature)
+	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
 
 	assert.NotNil(t, result)
 	assert.NotNil(t, result.Properties)
@@ -285,7 +286,7 @@ func TestToRfcResponse_PreservesExistingProperties(t *testing.T) {
 	originalFunc := GetGenericNamedListOneByTypeFunc
 	defer func() { GetGenericNamedListOneByTypeFunc = originalFunc }()
 
-	GetGenericNamedListOneByTypeFunc = func(id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
+	GetGenericNamedListOneByTypeFunc = func(tenantID string, id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
 		return &shared.GenericNamespacedList{
 			ID:       "list123",
 			TypeName: "MAC_LIST",
@@ -311,7 +312,7 @@ func TestToRfcResponse_PreservesExistingProperties(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(feature)
+	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
 
 	// Should preserve all original properties
 	assert.Equal(t, "feat123", result.ID)
@@ -361,7 +362,7 @@ func TestToRfcResponse_DifferentListTypes(t *testing.T) {
 			originalFunc := GetGenericNamedListOneByTypeFunc
 			defer func() { GetGenericNamedListOneByTypeFunc = originalFunc }()
 
-			GetGenericNamedListOneByTypeFunc = func(id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
+			GetGenericNamedListOneByTypeFunc = func(tenantID string, id string, namespacedListType string) (*shared.GenericNamespacedList, error) {
 				return &shared.GenericNamespacedList{
 					ID:       "list_" + tc.listType,
 					TypeName: tc.listType,
@@ -380,7 +381,7 @@ func TestToRfcResponse_DifferentListTypes(t *testing.T) {
 				},
 			}
 
-			result := ToRfcResponse(feature)
+			result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
 
 			assert.Equal(t, tc.expectedListType, result.ListType)
 			assert.Equal(t, len(tc.data), result.ListSize)

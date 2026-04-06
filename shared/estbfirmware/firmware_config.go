@@ -183,7 +183,7 @@ func (obj *FirmwareConfig) Clone() (*FirmwareConfig, error) {
 	return cloneObj.(*FirmwareConfig), nil
 }
 
-func (obj *FirmwareConfig) Validate() error {
+func (obj *FirmwareConfig) Validate(tenantId string) error {
 	if obj == nil {
 		return errors.New("Firmware config is not present")
 	}
@@ -201,7 +201,7 @@ func (obj *FirmwareConfig) Validate() error {
 	}
 
 	for _, modelId := range obj.SupportedModelIds {
-		if !shared.IsExistModel(modelId) {
+		if !shared.IsExistModel(tenantId, modelId) {
 			return fmt.Errorf("Model: %s does not exist", modelId)
 		}
 	}
@@ -234,8 +234,8 @@ func (obj *FirmwareConfig) Validate() error {
 	return nil
 }
 
-func (obj *FirmwareConfig) ValidateName() error {
-	list, err := GetFirmwareConfigAsListDB()
+func (obj *FirmwareConfig) ValidateName(tenantId string) error {
+	list, err := GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func (obj *FirmwareConfig) ValidateName() error {
 		if config == nil || obj.ID == config.ID || obj.ApplicationType != config.ApplicationType {
 			continue
 		}
-		if strings.ToUpper(config.Description) == strings.ToUpper(obj.Description) {
+		if strings.EqualFold(config.Description, obj.Description) {
 			return errors.New("This description is already used in " + config.ID)
 		}
 	}
@@ -664,11 +664,11 @@ func (ff *FirmwareConfigFacade) PutAll(nmap map[string]interface{}) {
 	}
 }
 
-func GetFirmwareConfigOneDB(id string) (*FirmwareConfig, error) {
+func GetFirmwareConfigOneDB(tenantId string, id string) (*FirmwareConfig, error) {
 	if len(id) == 0 {
 		return nil, errors.New("id is empty")
 	}
-	inst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_CONFIGS, id)
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_FIRMWARE_CONFIGS, id)
 	if err != nil {
 		return nil, err
 	}
@@ -682,21 +682,21 @@ func GetFirmwareConfigOneDB(id string) (*FirmwareConfig, error) {
 	return fc, nil
 }
 
-func CreateFirmwareConfigOneDB(fc *FirmwareConfig) error {
+func CreateFirmwareConfigOneDB(tenantId string, fc *FirmwareConfig) error {
 	// create record in DB
 	if util.IsBlank(fc.ID) {
 		fc.ID = uuid.New().String()
 	}
 	fc.Updated = util.GetTimestamp()
-	return db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
+	return db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 }
 
-func DeleteOneFirmwareConfig(id string) error {
-	return db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_CONFIGS, id)
+func DeleteOneFirmwareConfig(tenantId string, id string) error {
+	return db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_FIRMWARE_CONFIGS, id)
 }
 
-func GetFirmwareConfigAsListDB() ([]*FirmwareConfig, error) {
-	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_CONFIGS, 0)
+func GetFirmwareConfigAsListDB(tenantId string) ([]*FirmwareConfig, error) {
+	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FIRMWARE_CONFIGS, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -714,8 +714,8 @@ func GetFirmwareConfigAsListDB() ([]*FirmwareConfig, error) {
 	return lst, nil
 }
 
-func GetFirmwareVersion(id string) string {
-	fc, err := GetFirmwareConfigOneDB(id)
+func GetFirmwareVersion(tenantId string, id string) string {
+	fc, err := GetFirmwareConfigOneDB(tenantId, id)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareVersion: %v", err))
 		return ""

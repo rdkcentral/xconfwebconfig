@@ -499,7 +499,7 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	}
 
 	contextMap[common.PASSED_PARTNER_ID] = contextMap[common.PARTNER_ID]
-
+	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r, contextMap[common.PARTNER_ID])
 	// getting local sat token
 	localToken, err := xhttp.GetLocalSatToken(fields)
 	if err != nil {

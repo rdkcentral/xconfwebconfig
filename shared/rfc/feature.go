@@ -302,8 +302,8 @@ func NewFeatureControl() *FeatureControl {
 	return &FeatureControl{}
 }
 
-func GetOneFeature(featureId string) *Feature {
-	cftinst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_FEATURES, featureId)
+func GetOneFeature(tenantId string, featureId string) *Feature {
+	cftinst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_FEATURES, featureId)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no feature found for featureId: %s", featureId))
 		return nil
@@ -312,23 +312,23 @@ func GetOneFeature(featureId string) *Feature {
 	return feature
 }
 
-func SetFeatureRule(id string, featureRule *FeatureRule) error {
-	if err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FEATURE_CONTROL_RULES, id, featureRule); err != nil {
+func SetFeatureRule(tenantId string, id string, featureRule *FeatureRule) error {
+	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FEATURE_CONTROL_RULES, id, featureRule); err != nil {
 		log.Error("cannot save featureRule to DB")
 		return err
 	}
 	return nil
 }
 
-func GetFeatureList() []*Feature {
+func GetFeatureList(tenantId string) []*Feature {
 	cm := db.GetCacheManager()
 	cacheKey := "FeatureList"
-	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_FEATURES, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(tenantId, db.TABLE_FEATURES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*Feature)
 	}
 
-	featureList, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_FEATURES, 0)
+	featureList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FEATURES, 0)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no feature found"))
 		return nil
@@ -342,14 +342,14 @@ func GetFeatureList() []*Feature {
 	}
 
 	if len(all) > 0 {
-		cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_FEATURES, cacheKey, all)
+		cm.ApplicationCacheSet(tenantId, db.TABLE_FEATURES, cacheKey, all)
 	}
 	return all
 }
 
-func GetFeatureListForAS() []*Feature {
+func GetFeatureListForAS(tenantId string) []*Feature {
 	all := []*Feature{}
-	featureList, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_FEATURES, 0)
+	featureList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FEATURES, 0)
 	if err != nil {
 		log.Warn("no feature found")
 		return nil
@@ -482,15 +482,15 @@ func (featureEntity *FeatureEntity) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func GetFeatureRuleList() []*FeatureRule {
+func GetFeatureRuleList(tenantId string) []*FeatureRule {
 	cm := db.GetCacheManager()
 	cacheKey := "FeatureRuleList"
-	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_FEATURE_CONTROL_RULES, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(tenantId, db.TABLE_FEATURE_CONTROL_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*FeatureRule)
 	}
 
-	featureRuleList, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_FEATURE_CONTROL_RULES, 0)
+	featureRuleList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FEATURE_CONTROL_RULES, 0)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no featureRule found"))
 		return nil
@@ -504,14 +504,14 @@ func GetFeatureRuleList() []*FeatureRule {
 	}
 
 	if len(all) > 0 {
-		cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_FEATURE_CONTROL_RULES, cacheKey, all)
+		cm.ApplicationCacheSet(tenantId, db.TABLE_FEATURE_CONTROL_RULES, cacheKey, all)
 	}
 	return all
 }
 
-func GetFeatureRuleListForAS() []*FeatureRule {
+func GetFeatureRuleListForAS(tenantId string) []*FeatureRule {
 	all := []*FeatureRule{}
-	featureRuleList, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_FEATURE_CONTROL_RULES, 0)
+	featureRuleList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FEATURE_CONTROL_RULES, 0)
 	if err != nil {
 		log.Warn("no featureRule found")
 		return nil
@@ -526,15 +526,15 @@ func GetFeatureRuleListForAS() []*FeatureRule {
 var GetFeatureListFunc = GetFeatureRuleListForAS
 
 // GetFeatureControl returns FeatureRule sorted by Priority
-func GetSortedFeatureRules() []*FeatureRule {
+func GetSortedFeatureRules(tenantId string) []*FeatureRule {
 	cm := db.GetCacheManager()
 	cacheKey := "FeatureRuleListSorted"
-	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_FEATURE_CONTROL_RULES, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(tenantId, db.TABLE_FEATURE_CONTROL_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*FeatureRule)
 	}
 
-	all := GetFeatureListFunc()
+	all := GetFeatureListFunc(tenantId)
 
 	if len(all) <= 1 {
 		return all
@@ -546,7 +546,7 @@ func GetSortedFeatureRules() []*FeatureRule {
 	sort.SliceStable(sortedList, func(i, j int) bool {
 		return sortedList[i].Priority < sortedList[j].Priority
 	})
-	cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_FEATURE_CONTROL_RULES, cacheKey, sortedList)
+	cm.ApplicationCacheSet(tenantId, db.TABLE_FEATURE_CONTROL_RULES, cacheKey, sortedList)
 
 	return sortedList
 }

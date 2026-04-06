@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -44,10 +45,10 @@ func TestConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(t *testing.T) {
 	assert.Assert(t, firmwareConfig1.ID != "")
 
 	// store into DB
-	err := corefw.CreateFirmwareRuleOneDB(firmwareRule4)
+	err := corefw.CreateFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, firmwareRule4)
 	assert.NilError(t, err)
 
-	err = coreef.CreateFirmwareConfigOneDB(firmwareConfig1)
+	err = coreef.CreateFirmwareConfigOneDB(db.DEFAULT_TENANT_ID, firmwareConfig1)
 	assert.NilError(t, err)
 
 	// name list to create IP groups in the DB
@@ -55,14 +56,14 @@ func TestConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(t *testing.T) {
 	assert.NilError(t, err1)
 	assert.Assert(t, genlist != nil)
 
-	ipRuleBean := coreef.ConvertFirmwareRuleToIpRuleBean(firmwareRule4)
+	ipRuleBean := coreef.ConvertFirmwareRuleToIpRuleBean(db.DEFAULT_TENANT_ID, firmwareRule4)
 	assert.Assert(t, ipRuleBean.IpAddressGroup != nil)
 	assert.Equal(t, ipRuleBean.IpAddressGroup.Id, NamespaceIPListKey)
 	assert.Assert(t, len(ipRuleBean.IpAddressGroup.IpAddresses) == 3)
 	assert.Assert(t, strings.EqualFold(ipRuleBean.IpAddressGroup.IpAddresses[0].GetAddress(), IpAddress4))
 	assert.Assert(t, ipRuleBean.IpAddressGroup.IsInRange(IpAddress4))
 
-	ipRuleBean, err = coreef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule4)
+	ipRuleBean, err = coreef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(db.DEFAULT_TENANT_ID, firmwareRule4)
 	assert.NilError(t, err1)
 	firmwareConfig := ipRuleBean.FirmwareConfig
 	assert.Assert(t, ipRuleBean.IpAddressGroup != nil)
@@ -86,7 +87,7 @@ func TestConvertToIpAddressGroup(t *testing.T) {
 func TestConvertFirmwareRuleToIpFilter(t *testing.T) {
 	firmwareRule := GetFirmwareRule1()
 	assert.Assert(t, firmwareRule.ID != "")
-	ipFilter := coreef.ConvertFirmwareRuleToIpFilter(firmwareRule)
+	ipFilter := coreef.ConvertFirmwareRuleToIpFilter(db.DEFAULT_TENANT_ID, firmwareRule)
 	assert.Assert(t, ipFilter != nil)
 	assert.Assert(t, ipFilter.Id != "")
 	assert.Assert(t, ipFilter.Name != "")
@@ -94,7 +95,7 @@ func TestConvertFirmwareRuleToIpFilter(t *testing.T) {
 
 	firmwareRule = GetFirmwareRule2()
 	assert.Assert(t, firmwareRule.ID != "")
-	ipFilter = coreef.ConvertFirmwareRuleToIpFilter(firmwareRule)
+	ipFilter = coreef.ConvertFirmwareRuleToIpFilter(db.DEFAULT_TENANT_ID, firmwareRule)
 	assert.Assert(t, ipFilter != nil)
 	assert.Assert(t, ipFilter.Id != "")
 	assert.Assert(t, ipFilter.Name != "")
@@ -102,7 +103,7 @@ func TestConvertFirmwareRuleToIpFilter(t *testing.T) {
 
 	firmwareRule = GetFirmwareRule3()
 	assert.Assert(t, firmwareRule.ID != "")
-	ipFilter = coreef.ConvertFirmwareRuleToIpFilter(firmwareRule)
+	ipFilter = coreef.ConvertFirmwareRuleToIpFilter(db.DEFAULT_TENANT_ID, firmwareRule)
 	assert.Assert(t, ipFilter != nil)
 	assert.Assert(t, ipFilter.Id != "")
 	assert.Assert(t, ipFilter.Name != "")
@@ -139,7 +140,7 @@ func TestDownloadLocationFilterConverterConvertFilterWithTftpConditions(t *testi
 
 func TestIpFilterConverterConvertFirmwareRuleToIpFilterByMultipleRuleConditions(t *testing.T) {
 	ipListPtr := CreateGenericNamespacedList(ipListName, shared.IpList, ipAddress)
-	err := shared.CreateGenericNamedListOneDB(ipListPtr)
+	err := shared.CreateGenericNamedListOneDB(db.DEFAULT_TENANT_ID, ipListPtr)
 	assert.NilError(t, err)
 
 	firmwareRule := createIpRule()
@@ -157,7 +158,7 @@ func TestIpFilterConverterConvertFirmwareRuleToIpFilterByMultipleRuleConditions(
 	assert.Assert(t, conds[1].GetFreeArg().Equals(coreef.RuleFactoryMAC))
 
 	// convert to IPFilter
-	ipFilter := coreef.ConvertFirmwareRuleToIpFilter(firmwareRule)
+	ipFilter := coreef.ConvertFirmwareRuleToIpFilter(db.DEFAULT_TENANT_ID, firmwareRule)
 
 	assert.Equal(t, firmwareRule.ID, ipFilter.Id)
 	assert.Equal(t, firmwareRule.Name, ipFilter.Name)
@@ -175,7 +176,7 @@ func TestIpFilterConverterConvertFirmwareRuleToIpFilterByMultipleRuleConditions(
 	//assert.Assert(t, firmwareRuleConverted.Rule.Equals(&firmwareRule.Rule))
 	// assert.Assert(t, firmwareRuleConverted.Equals(firmwareRule))
 	// compare the firmareRule vs firmwareRuleConverted
-	converted := coreef.ConvertFirmwareRuleToIpFilter(firmwareRuleConverted)
+	converted := coreef.ConvertFirmwareRuleToIpFilter(db.DEFAULT_TENANT_ID, firmwareRuleConverted)
 
 	//todo
 	if 1 == 0 {

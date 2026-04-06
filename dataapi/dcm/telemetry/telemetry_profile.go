@@ -24,7 +24,6 @@ import (
 	"time"
 
 	common "github.com/rdkcentral/xconfwebconfig/common"
-	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 
@@ -59,9 +58,9 @@ func (t *TelemetryProfileService) ConvertToProfileDescriptor(profile logupload.T
 	return profileDescriptor
 }
 
-func (t *TelemetryProfileService) ExpireTemporaryTelemetryRules() {
+func (t *TelemetryProfileService) ExpireTemporaryTelemetryRules(tenantId string) {
 	job := func() {
-		logupload.DeleteExpiredTelemetryProfile(db.DEFAULT_TENANT_ID, common.CacheUpdateWindowSize)
+		logupload.DeleteExpiredTelemetryProfile(tenantId, common.CacheUpdateWindowSize)
 	}
 	windowSize := common.CacheUpdateWindowSize / 60000
 	scheduler.Every(int(windowSize)).Minutes().Run(job)
@@ -78,10 +77,10 @@ func (t *TelemetryProfileService) CreateRuleForAttribute(contextAttribute string
 
 var SetTelemetryProfileFunc = logupload.SetTelemetryProfile
 
-func (t *TelemetryProfileService) CreateTelemetryProfile(contextAttribute string, expectedValue string, telemetry logupload.TelemetryProfile) *logupload.TimestampedRule {
+func (t *TelemetryProfileService) CreateTelemetryProfile(tenantId string, contextAttribute string, expectedValue string, telemetry logupload.TelemetryProfile) *logupload.TimestampedRule {
 	telemetryRule := t.CreateRuleForAttribute(contextAttribute, expectedValue)
 	telemetryRuleBytes, _ := json.Marshal(telemetryRule)
-	SetTelemetryProfileFunc(db.DEFAULT_TENANT_ID, string(telemetryRuleBytes), telemetry)
+	SetTelemetryProfileFunc(tenantId, string(telemetryRuleBytes), telemetry)
 	return telemetryRule
 }
 
@@ -89,11 +88,11 @@ var GetTelemetryProfileMapFunc = logupload.GetTelemetryProfileMap
 
 var DeleteTelemetryProfileFunc = logupload.DeleteTelemetryProfile
 
-func (t *TelemetryProfileService) DropTelemetryFor(contextAttribute string, expectedValue string) *[]logupload.TelemetryProfile {
+func (t *TelemetryProfileService) DropTelemetryFor(tenantId string, contextAttribute string, expectedValue string) *[]logupload.TelemetryProfile {
 	context := make(map[string]string)
 	context[contextAttribute] = expectedValue
 	//telemetryProfileMap type of *map[string]TelemetryProfile
-	telemetryProfileMap := GetTelemetryProfileMapFunc(db.DEFAULT_TENANT_ID)
+	telemetryProfileMap := GetTelemetryProfileMapFunc(tenantId)
 	if telemetryProfileMap == nil {
 		log.Warn(fmt.Sprintf("no TimestampedRule found"))
 		return nil
@@ -117,7 +116,7 @@ func (t *TelemetryProfileService) DropTelemetryFor(contextAttribute string, expe
 				telemetryProfile := telemetryListAll[j]
 				telemetryList = append(telemetryList, telemetryProfile)
 				log.Debug("removing temporary rule: {}", rule)
-				DeleteTelemetryProfileFunc(db.DEFAULT_TENANT_ID, rule.String())
+				DeleteTelemetryProfileFunc(tenantId, rule.String())
 			}
 		}
 	}
@@ -129,7 +128,7 @@ var GetTimestampedRulesFunc = logupload.GetTimestampedRules
 
 func (t *TelemetryProfileService) GetTemporaryProfileForContext(context map[string]string) *logupload.TelemetryProfile {
 	//tRules type of []logupload.TimestampedRule{}
-	tRules := GetTimestampedRulesFunc(db.DEFAULT_TENANT_ID)
+	tRules := GetTimestampedRulesFunc(context[common.TENANT_ID])
 	sort.Slice(tRules, func(i, j int) bool { return tRules[i].Timestamp < tRules[j].Timestamp })
 	ruleProcessorFactory := NewRuleProcessorFactoryFunc()
 	processor := ruleProcessorFactory.Processor
@@ -145,7 +144,7 @@ func (t *TelemetryProfileService) GetTemporaryProfileForContext(context map[stri
 	}
 	var telemetry *logupload.TelemetryProfile
 	for _, tRule := range matched {
-		telemetry = GetOneTelemetryProfileFunc(db.DEFAULT_TENANT_ID, tRule.ToString())
+		telemetry = GetOneTelemetryProfileFunc(context[common.TENANT_ID], tRule.ToString())
 		if telemetry == nil {
 			continue
 		}
@@ -154,14 +153,14 @@ func (t *TelemetryProfileService) GetTemporaryProfileForContext(context map[stri
 		}
 	}
 	for _, tRule := range matched {
-		DeleteTelemetryProfileFunc(db.DEFAULT_TENANT_ID, tRule.ToString())
+		DeleteTelemetryProfileFunc(context[common.TENANT_ID], tRule.ToString())
 	}
 	return telemetry
 }
 
 func (t *TelemetryProfileService) GetTelemetryRuleForContext(context map[string]string) *logupload.TelemetryRule {
 	//all type of []*TelemetryRule
-	all := logupload.GetTelemetryRuleList(db.DEFAULT_TENANT_ID)
+	all := logupload.GetTelemetryRuleList(context[common.TENANT_ID])
 	rules := t.ProcessEntityRules(all, context)
 	return t.GetMaxRule(rules)
 }
@@ -187,9 +186,9 @@ func (t *TelemetryProfileService) GetMaxRule(tRules []*logupload.TelemetryRule) 
 	return tRules[0]
 }
 
-func (t *TelemetryProfileService) GetPermanentProfileByTelemetryRule(telemetryRule *logupload.TelemetryRule) *logupload.PermanentTelemetryProfile {
+func (t *TelemetryProfileService) GetPermanentProfileByTelemetryRule(tenantId string, telemetryRule *logupload.TelemetryRule) *logupload.PermanentTelemetryProfile {
 	if telemetryRule != nil && len(telemetryRule.BoundTelemetryID) > 0 {
-		telemetry := logupload.GetOnePermanentTelemetryProfile(db.DEFAULT_TENANT_ID, telemetryRule.BoundTelemetryID)
+		telemetry := logupload.GetOnePermanentTelemetryProfile(tenantId, telemetryRule.BoundTelemetryID)
 		return telemetry
 	}
 	return nil
@@ -197,7 +196,7 @@ func (t *TelemetryProfileService) GetPermanentProfileByTelemetryRule(telemetryRu
 
 func (t *TelemetryProfileService) GetPermanentProfileForContext(context map[string]string) *logupload.PermanentTelemetryProfile {
 	telemetryRule := t.GetTelemetryRuleForContext(context)
-	return t.GetPermanentProfileByTelemetryRule(telemetryRule)
+	return t.GetPermanentProfileByTelemetryRule(context[common.TENANT_ID], telemetryRule)
 }
 
 func (t *TelemetryProfileService) GetTelemetryForContext(context map[string]string) *logupload.TelemetryProfile {
@@ -205,10 +204,10 @@ func (t *TelemetryProfileService) GetTelemetryForContext(context map[string]stri
 	return telemetryProfile
 }
 
-func (t *TelemetryProfileService) GetAvailableDescriptors(applicationType string) []*logupload.PermanentTelemetryRuleDescriptor {
+func (t *TelemetryProfileService) GetAvailableDescriptors(tenantId string, applicationType string) []*logupload.PermanentTelemetryRuleDescriptor {
 	var descriptors []*logupload.PermanentTelemetryRuleDescriptor
 	//all type of []*TelemetryRule
-	all := logupload.GetTelemetryRuleList(db.DEFAULT_TENANT_ID)
+	all := logupload.GetTelemetryRuleList(tenantId)
 	for _, rule := range all {
 		if rule.ApplicationType == applicationType {
 			telemetryRuleDescriptor := logupload.NewPermanentTelemetryRuleDescriptor()
@@ -220,10 +219,10 @@ func (t *TelemetryProfileService) GetAvailableDescriptors(applicationType string
 	return descriptors
 }
 
-func (t *TelemetryProfileService) GetAvailableProfileDescriptors(applicationType string) []*logupload.TelemetryProfileDescriptor {
+func (t *TelemetryProfileService) GetAvailableProfileDescriptors(tenantId string, applicationType string) []*logupload.TelemetryProfileDescriptor {
 	var descriptors []*logupload.TelemetryProfileDescriptor
 	//all type of []*PermanentTelemetryProfile
-	all := logupload.GetPermanentTelemetryProfileList(db.DEFAULT_TENANT_ID)
+	all := logupload.GetPermanentTelemetryProfileList(tenantId)
 	for _, profile := range all {
 		if profile.ApplicationType == applicationType {
 			telemetryProfileDescriptor := logupload.NewTelemetryProfileDescriptor()
@@ -237,7 +236,7 @@ func (t *TelemetryProfileService) GetAvailableProfileDescriptors(applicationType
 
 func (t *TelemetryProfileService) ProcessTelemetryTwoRules(context map[string]string) []*logupload.TelemetryTwoRule {
 	//all type of []*TelemetryTwoRule
-	all := logupload.GetTelemetryTwoRuleList(db.DEFAULT_TENANT_ID)
+	all := logupload.GetTelemetryTwoRuleList(context[common.TENANT_ID])
 	if all == nil {
 		return nil
 	}
@@ -254,7 +253,7 @@ func (t *TelemetryProfileService) ProcessTelemetryTwoRules(context map[string]st
 
 func (t *TelemetryProfileService) ProcessTelemetryTwoRulesForAS(context map[string]string) []*logupload.TelemetryTwoRule {
 	//all type of []*TelemetryTwoRule
-	all := logupload.GetTelemetryTwoRuleListForAS(db.DEFAULT_TENANT_ID)
+	all := logupload.GetTelemetryTwoRuleListForAS(context[common.TENANT_ID])
 	if all == nil {
 		return nil
 	}
@@ -271,7 +270,7 @@ func (t *TelemetryProfileService) ProcessTelemetryTwoRulesForAS(context map[stri
 
 var GetOneTelemetryTwoProfileFunc = logupload.GetOneTelemetryTwoProfile
 
-func (t *TelemetryProfileService) GetTelemetryTwoProfileByTelemetryRules(telemetryTwoRules []*logupload.TelemetryTwoRule, fields log.Fields) []*logupload.TelemetryTwoProfile {
+func (t *TelemetryProfileService) GetTelemetryTwoProfileByTelemetryRules(tenantId string, telemetryTwoRules []*logupload.TelemetryTwoRule, fields log.Fields) []*logupload.TelemetryTwoProfile {
 	telemetryTwoProfiles := make([]*logupload.TelemetryTwoProfile, 0, len(telemetryTwoRules))
 	telemetryRuleNames := make([]string, 0, len(telemetryTwoRules))
 	for _, telemetryTwoRule := range telemetryTwoRules {
@@ -284,7 +283,7 @@ func (t *TelemetryProfileService) GetTelemetryTwoProfileByTelemetryRules(telemet
 					continue
 				}
 				//telemetryTwoProfile type of *TelemetryTwoProfile
-				telemetryTwoProfile := GetOneTelemetryTwoProfileFunc(db.DEFAULT_TENANT_ID, boundTelemetryId)
+				telemetryTwoProfile := GetOneTelemetryTwoProfileFunc(tenantId, boundTelemetryId)
 				if telemetryTwoProfile != nil {
 					telemetryTwoProfiles = append(telemetryTwoProfiles, telemetryTwoProfile)
 				}

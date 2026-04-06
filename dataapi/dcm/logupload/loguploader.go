@@ -43,10 +43,10 @@ func NewLogUploadRuleBase() *LogUploadRuleBase {
 
 func (l *LogUploadRuleBase) Eval(context map[string]string, fields log.Fields) *logupload.Settings {
 	settings := logupload.NewSettings(1)
-	rules := l.getSortedDcmRules()
+	rules := l.getSortedDcmRules(context[common.TENANT_ID])
 	for _, rule := range rules {
 		if string(rule.ApplicationType) == context[common.APPLICATION_TYPE] && l.RuleProcessorFactory.RuleProcessor().Evaluate(&rule.Rule, context, log.Fields{}) {
-			logupload.CopySettings(settings, l.GetSettings(rule.ID), rule, context, fields)
+			logupload.CopySettings(settings, l.GetSettings(context[common.TENANT_ID], rule.ID), rule, context, fields)
 		}
 		if settings.AreFull() {
 			return settings
@@ -58,15 +58,15 @@ func (l *LogUploadRuleBase) Eval(context map[string]string, fields log.Fields) *
 	return nil
 }
 
-func (l *LogUploadRuleBase) getSortedDcmRules() []*logupload.DCMGenericRule {
+func (l *LogUploadRuleBase) getSortedDcmRules(tenantId string) []*logupload.DCMGenericRule {
 	cm := db.GetCacheManager()
 	cacheKey := "DCMGenericRuleListSorted"
-	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(tenantId, db.TABLE_DCM_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*logupload.DCMGenericRule)
 	}
 
-	all := logupload.GetDCMGenericRuleList()
+	all := logupload.GetDCMGenericRuleList(tenantId)
 	if len(all) <= 1 {
 		return all
 	}
@@ -78,7 +78,7 @@ func (l *LogUploadRuleBase) getSortedDcmRules() []*logupload.DCMGenericRule {
 		return sortedList[i].Priority < sortedList[j].Priority
 	})
 
-	cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, cacheKey, sortedList)
+	cm.ApplicationCacheSet(tenantId, db.TABLE_DCM_RULES, cacheKey, sortedList)
 
 	return sortedList
 }
@@ -89,19 +89,19 @@ var GetOneUploadRepositoryFunc = logupload.GetOneUploadRepository
 var GetLogFileListFunc = logupload.GetLogFileList
 var GetOneVodSettingsFunc = logupload.GetOneVodSettings
 
-func (l *LogUploadRuleBase) GetSettings(id string) *logupload.Settings {
+func (l *LogUploadRuleBase) GetSettings(tenantId string, id string) *logupload.Settings {
 	settings := logupload.NewSettings(1)
 	var err error
 	var deviceSettings logupload.DeviceSettings
 	var deviceSettingsOK = false
-	deviceSettingsPointer := GetOneDeviceSettingsFunc(id)
+	deviceSettingsPointer := GetOneDeviceSettingsFunc(tenantId, id)
 	if deviceSettingsPointer != nil {
 		deviceSettings = *deviceSettingsPointer
 		deviceSettingsOK = true
 	}
 
 	var logUploadSettings logupload.LogUploadSettings
-	logUploadSettingsPointer := GetOneLogUploadSettingsFunc(id)
+	logUploadSettingsPointer := GetOneLogUploadSettingsFunc(tenantId, id)
 	var logUploadSettingsOK = false
 	if logUploadSettingsPointer != nil {
 		logUploadSettings = *logUploadSettingsPointer
@@ -126,7 +126,7 @@ func (l *LogUploadRuleBase) GetSettings(id string) *logupload.Settings {
 		uploadRepositoryId := logUploadSettings.UploadRepositoryID
 		if len(uploadRepositoryId) > 0 {
 			var uploadRepository logupload.UploadRepository
-			uploadRepositoryPointer := GetOneUploadRepositoryFunc(uploadRepositoryId)
+			uploadRepositoryPointer := GetOneUploadRepositoryFunc(tenantId, uploadRepositoryId)
 			if uploadRepositoryPointer != nil {
 				uploadRepository = *uploadRepositoryPointer
 				settings.LusUploadRepositoryName = uploadRepository.Name
@@ -146,21 +146,21 @@ func (l *LogUploadRuleBase) GetSettings(id string) *logupload.Settings {
 			var listLogFilesForLogUplSettings []*logupload.LogFile
 			var listLogFilesOK = true
 			if logUploadSettings.ModeToGetLogFiles == logupload.MODE_TO_GET_LOG_FILES_0 {
-				listLogFilesForLogUplSettings, err = getLogFileList(logUploadSettings.ID, math.MaxInt32/100)
+				listLogFilesForLogUplSettings, err = getLogFileList(tenantId, logUploadSettings.ID, math.MaxInt32/100)
 				if err != nil {
 					listLogFilesOK = false
 				}
 			} else if logUploadSettings.ModeToGetLogFiles == logupload.MODE_TO_GET_LOG_FILES_1 {
 				keyFileGroup := logUploadSettings.LogFilesGroupID
 				if len(keyFileGroup) > 0 {
-					listLogFilesForLogUplSettings, err = getLogFileList(keyFileGroup, math.MaxInt32/100)
+					listLogFilesForLogUplSettings, err = getLogFileList(tenantId, keyFileGroup, math.MaxInt32/100)
 					if err != nil {
 						listLogFilesOK = false
 					}
 				}
 			} else if logUploadSettings.ModeToGetLogFiles == logupload.MODE_TO_GET_LOG_FILES_2 {
 				// logFiles []*logupload.LogFile
-				logFiles := GetLogFileListFunc(math.MaxInt32 / 100)
+				logFiles := GetLogFileListFunc(tenantId, math.MaxInt32/100)
 				if logFiles == nil {
 					log.Warn(fmt.Sprintf("no logFiles found "))
 					listLogFilesOK = false
@@ -188,7 +188,7 @@ func (l *LogUploadRuleBase) GetSettings(id string) *logupload.Settings {
 		settings.SchedulerType = uploadSchedule.Type
 	}
 	var vodSettings logupload.VodSettings
-	vodSettingsPointer := GetOneVodSettingsFunc(id)
+	vodSettingsPointer := GetOneVodSettingsFunc(tenantId, id)
 	if vodSettingsPointer != nil {
 		vodSettings = *vodSettingsPointer
 		settings.VodSettingsName = vodSettings.Name
@@ -200,9 +200,9 @@ func (l *LogUploadRuleBase) GetSettings(id string) *logupload.Settings {
 
 var GetOneLogFileListFunc = logupload.GetOneLogFileList
 
-func getLogFileList(id string, maxResults int) ([]*logupload.LogFile, error) {
+func getLogFileList(tenantId string, id string, maxResults int) ([]*logupload.LogFile, error) {
 	var logFileList logupload.LogFileList
-	logFileListPointer, err := GetOneLogFileListFunc(id)
+	logFileListPointer, err := GetOneLogFileListFunc(tenantId, id)
 	if logFileListPointer == nil {
 		return nil, err
 	}

@@ -20,13 +20,14 @@ package estbfirmware
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"gotest.tools/assert"
 )
 
 func TestNewEnvModelPercentage(t *testing.T) {
 	emp := NewEnvModelPercentage()
-	
+
 	assert.Assert(t, emp != nil)
 	assert.Assert(t, !emp.RebootImmediately)
 	assert.Assert(t, !emp.Active)
@@ -36,7 +37,7 @@ func TestNewEnvModelPercentage(t *testing.T) {
 
 func TestNewEmptyPercentFilterValue(t *testing.T) {
 	pfv := NewEmptyPercentFilterValue()
-	
+
 	assert.Assert(t, pfv != nil)
 	assert.Equal(t, PERCENT_FILTER_SINGLETON_ID, pfv.ID)
 	assert.Equal(t, PercentFilterClass, pfv.Type)
@@ -51,9 +52,9 @@ func TestNewPercentFilterValue(t *testing.T) {
 	envModelPercentages := map[string]EnvModelPercentage{
 		"key1": {Percentage: 50.0, Active: true},
 	}
-	
+
 	pfv := NewPercentFilterValue(whitelist, 75.5, envModelPercentages)
-	
+
 	assert.Assert(t, pfv != nil)
 	assert.Equal(t, PERCENT_FILTER_SINGLETON_ID, pfv.ID)
 	assert.Equal(t, PercentFilterClass, pfv.Type)
@@ -65,7 +66,7 @@ func TestNewPercentFilterValue(t *testing.T) {
 
 func TestPercentFilterValue_SetId_Valid(t *testing.T) {
 	pfv := NewEmptyPercentFilterValue()
-	
+
 	err := pfv.SetId(PERCENT_FILTER_SINGLETON_ID)
 	assert.NilError(t, err)
 	assert.Equal(t, PERCENT_FILTER_SINGLETON_ID, pfv.ID)
@@ -73,7 +74,7 @@ func TestPercentFilterValue_SetId_Valid(t *testing.T) {
 
 func TestPercentFilterValue_SetId_Invalid(t *testing.T) {
 	pfv := NewEmptyPercentFilterValue()
-	
+
 	err := pfv.SetId("INVALID_ID")
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "PercentFilterValue id is PERCENT_FILTER_VALUE")
@@ -81,14 +82,14 @@ func TestPercentFilterValue_SetId_Invalid(t *testing.T) {
 
 func TestPercentFilterValue_GetId(t *testing.T) {
 	pfv := NewEmptyPercentFilterValue()
-	
+
 	id := pfv.GetId()
 	assert.Equal(t, PERCENT_FILTER_SINGLETON_ID, id)
 }
 
 func TestNewGlobalPercentage(t *testing.T) {
 	gp := NewGlobalPercentage()
-	
+
 	assert.Assert(t, gp != nil)
 	assert.Equal(t, float32(100.0), gp.Percentage)
 	assert.Equal(t, shared.STB, gp.ApplicationType)
@@ -101,7 +102,7 @@ func TestGlobalPercentage_WithFields(t *testing.T) {
 		Percentage:      50.0,
 		ApplicationType: "xhome",
 	}
-	
+
 	assert.Equal(t, "whitelist-1", gp.Whitelist)
 	assert.Equal(t, float32(50.0), gp.Percentage)
 	assert.Equal(t, "xhome", gp.ApplicationType)
@@ -109,7 +110,7 @@ func TestGlobalPercentage_WithFields(t *testing.T) {
 
 func TestNewDefaultPercentFilterVo(t *testing.T) {
 	pfvo := NewDefaultPercentFilterVo()
-	
+
 	assert.Assert(t, pfvo != nil)
 	assert.Assert(t, pfvo.PercentageBeans != nil)
 	assert.Equal(t, 0, len(pfvo.PercentageBeans))
@@ -122,9 +123,9 @@ func TestNewPercentFilterVo(t *testing.T) {
 		{ID: "bean1", Active: true},
 		{ID: "bean2", Active: false},
 	}
-	
+
 	pfvo := NewPercentFilterVo(gp, beans)
-	
+
 	assert.Assert(t, pfvo != nil)
 	assert.Assert(t, pfvo.GlobalPercentage != nil)
 	assert.Equal(t, float32(80.0), pfvo.GlobalPercentage.Percentage)
@@ -141,7 +142,7 @@ func TestPercentageBean_Creation(t *testing.T) {
 		FirmwareCheckRequired: false,
 		RebootImmediately:     true,
 	}
-	
+
 	assert.Equal(t, "bean-1", bean.ID)
 	assert.Equal(t, "Test Bean", bean.Name)
 	assert.Assert(t, bean.Active)
@@ -156,7 +157,7 @@ func TestPercentageBean_WithVersions(t *testing.T) {
 		IntermediateVersion: "1.5.0",
 		FirmwareVersions:    []string{"2.0.0", "2.1.0"},
 	}
-	
+
 	assert.Equal(t, "1.0.0", bean.LastKnownGood)
 	assert.Equal(t, "1.5.0", bean.IntermediateVersion)
 	assert.Equal(t, 2, len(bean.FirmwareVersions))
@@ -171,7 +172,7 @@ func TestPercentageBean_WithEnvironmentModel(t *testing.T) {
 		Model:           "MODEL-X",
 		ApplicationType: "stb",
 	}
-	
+
 	assert.Equal(t, "PROD", bean.Environment)
 	assert.Equal(t, "MODEL-X", bean.Model)
 	assert.Equal(t, "stb", bean.ApplicationType)
@@ -182,7 +183,7 @@ func TestPercentageBean_WithWhitelist(t *testing.T) {
 		ID:        "bean-4",
 		Whitelist: "whitelist-group-1",
 	}
-	
+
 	assert.Equal(t, "whitelist-group-1", bean.Whitelist)
 }
 
@@ -191,7 +192,7 @@ func TestPercentageBean_UseAccountIdPercentage(t *testing.T) {
 		ID:                     "bean-5",
 		UseAccountIdPercentage: true,
 	}
-	
+
 	assert.Assert(t, bean.UseAccountIdPercentage)
 }
 
@@ -203,7 +204,7 @@ func TestEnvModelPercentage_Creation(t *testing.T) {
 		RebootImmediately:     false,
 		Name:                  "Test Env Model",
 	}
-	
+
 	assert.Equal(t, float32(25.5), emp.Percentage)
 	assert.Assert(t, emp.Active)
 	assert.Assert(t, emp.FirmwareCheckRequired)
@@ -217,7 +218,7 @@ func TestEnvModelPercentage_WithVersions(t *testing.T) {
 		IntermediateVersion: "3.5.0",
 		FirmwareVersions:    []string{"4.0.0", "4.1.0", "4.2.0"},
 	}
-	
+
 	assert.Equal(t, "3.0.0", emp.LastKnownGood)
 	assert.Equal(t, "3.5.0", emp.IntermediateVersion)
 	assert.Equal(t, 3, len(emp.FirmwareVersions))
@@ -231,7 +232,7 @@ func TestEnvModelPercentage_WithWhitelist(t *testing.T) {
 		Whitelist: whitelist,
 		Active:    true,
 	}
-	
+
 	assert.Assert(t, emp.Whitelist != nil)
 	assert.Equal(t, "wl-group", emp.Whitelist.Id)
 	assert.Equal(t, "Whitelist Group", emp.Whitelist.Name)
@@ -252,12 +253,12 @@ func TestPercentFilterValue_WithEnvModelPercentages(t *testing.T) {
 			Name:              "QA Model 2",
 		},
 	}
-	
+
 	pfv := &PercentFilterValue{
 		ID:                  PERCENT_FILTER_SINGLETON_ID,
 		EnvModelPercentages: envModelPercentages,
 	}
-	
+
 	assert.Equal(t, 2, len(pfv.EnvModelPercentages))
 	assert.Equal(t, float32(30.0), pfv.EnvModelPercentages["prod-model1"].Percentage)
 	assert.Assert(t, pfv.EnvModelPercentages["prod-model1"].Active)
@@ -267,7 +268,7 @@ func TestPercentFilterValue_WithEnvModelPercentages(t *testing.T) {
 
 func TestNewPercentageBean(t *testing.T) {
 	bean := NewPercentageBean()
-	
+
 	assert.Assert(t, bean != nil)
 	assert.Equal(t, shared.STB, bean.ApplicationType)
 	assert.Assert(t, bean.FirmwareVersions != nil)
@@ -278,14 +279,14 @@ func TestNewPercentageBean(t *testing.T) {
 
 func TestPercentageBean_GetTemplateId(t *testing.T) {
 	bean := &PercentageBean{}
-	
+
 	templateId := bean.GetTemplateId()
 	assert.Equal(t, "ENV_MODEL_RULE", templateId)
 }
 
 func TestPercentageBean_GetRuleType(t *testing.T) {
 	bean := &PercentageBean{}
-	
+
 	ruleType := bean.GetRuleType()
 	assert.Equal(t, "PercentFilter", ruleType)
 }
@@ -304,7 +305,7 @@ func TestPercentageBean_ValidateAll_NoDuplicates(t *testing.T) {
 		Model:       "MODEL-B",
 	}
 	beans := []*PercentageBean{bean1, bean2}
-	
+
 	err := bean1.ValidateAll(beans)
 	assert.NilError(t, err)
 }
@@ -319,7 +320,7 @@ func TestPercentageBean_ValidateAll_DuplicateName(t *testing.T) {
 		Name: "duplicate name", // Same name, different case
 	}
 	beans := []*PercentageBean{bean1, bean2}
-	
+
 	err := bean1.ValidateAll(beans)
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "This name")
@@ -340,7 +341,7 @@ func TestPercentageBean_ValidateAll_DuplicateEnvModel(t *testing.T) {
 		Model:       "MODEL-A",
 	}
 	beans := []*PercentageBean{bean1, bean2}
-	
+
 	err := bean1.ValidateAll(beans)
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "PercentageBean already exists")
@@ -352,8 +353,8 @@ func TestPercentageBean_Validate_BlankName(t *testing.T) {
 		Model:           "MODEL-A",
 		ApplicationType: "stb",
 	}
-	
-	err := bean.Validate()
+
+	err := bean.Validate(db.DEFAULT_TENANT_ID)
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "Name could not be blank")
 }
@@ -364,8 +365,8 @@ func TestPercentageBean_Validate_BlankModel(t *testing.T) {
 		Model:           "",
 		ApplicationType: "stb",
 	}
-	
-	err := bean.Validate()
+
+	err := bean.Validate(db.DEFAULT_TENANT_ID)
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "Model could not be blank")
 }
@@ -375,13 +376,13 @@ func TestPercentFilterValue_GetEnvModelPercentage_Exists(t *testing.T) {
 		Percentage: 50.0,
 		Active:     true,
 	}
-	
+
 	pfv := &PercentFilterValue{
 		EnvModelPercentages: map[string]EnvModelPercentage{
 			"test-key": emp,
 		},
 	}
-	
+
 	result := pfv.GetEnvModelPercentage("test-key")
 	assert.Assert(t, result != nil)
 	assert.Equal(t, float32(50.0), result.Percentage)
@@ -392,7 +393,7 @@ func TestPercentFilterValue_GetEnvModelPercentage_NotExists(t *testing.T) {
 	pfv := &PercentFilterValue{
 		EnvModelPercentages: map[string]EnvModelPercentage{},
 	}
-	
+
 	result := pfv.GetEnvModelPercentage("non-existent")
 	assert.Assert(t, result == nil)
 }
@@ -410,7 +411,7 @@ func TestEnvModelPercentage_AllFields(t *testing.T) {
 		FirmwareVersions:      []string{"v1", "v2", "v3"},
 		Name:                  "Env Model Name",
 	}
-	
+
 	assert.Equal(t, float32(75.5), emp.Percentage)
 	assert.Assert(t, emp.Active)
 	assert.Assert(t, emp.FirmwareCheckRequired)
@@ -427,12 +428,12 @@ func TestPercentFilterVo_EmptyPercentageBeans(t *testing.T) {
 		Percentage:      100.0,
 		ApplicationType: "stb",
 	}
-	
+
 	pfvo := &PercentFilterVo{
 		GlobalPercentage: gp,
 		PercentageBeans:  []PercentageBean{},
 	}
-	
+
 	assert.Assert(t, pfvo.GlobalPercentage != nil)
 	assert.Equal(t, 0, len(pfvo.PercentageBeans))
 }
@@ -443,7 +444,7 @@ func TestGlobalPercentage_AllFields(t *testing.T) {
 		Percentage:      85.5,
 		ApplicationType: "xhome",
 	}
-	
+
 	assert.Equal(t, "whitelist-id", gp.Whitelist)
 	assert.Equal(t, float32(85.5), gp.Percentage)
 	assert.Equal(t, "xhome", gp.ApplicationType)

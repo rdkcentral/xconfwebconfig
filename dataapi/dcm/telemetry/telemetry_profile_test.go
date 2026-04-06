@@ -21,6 +21,7 @@ package telemetry
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	log "github.com/sirupsen/logrus"
@@ -247,7 +248,7 @@ func TestGetTelemetryTwoProfileByTelemetryRules(t *testing.T) {
 		}
 
 		fields := log.Fields{}
-		profiles := service.GetTelemetryTwoProfileByTelemetryRules(rules, fields)
+		profiles := service.GetTelemetryTwoProfileByTelemetryRules(db.DEFAULT_TENANT_ID, rules, fields)
 
 		assert.NotNil(t, profiles)
 		assert.Len(t, profiles, 3) // Should have 3 unique profiles (deduplication)
@@ -270,7 +271,7 @@ func TestGetTelemetryTwoProfileByTelemetryRules(t *testing.T) {
 		}
 
 		fields := log.Fields{}
-		profiles := service.GetTelemetryTwoProfileByTelemetryRules(rules, fields)
+		profiles := service.GetTelemetryTwoProfileByTelemetryRules(db.DEFAULT_TENANT_ID, rules, fields)
 
 		assert.NotNil(t, profiles)
 		assert.Len(t, profiles, 0)
@@ -290,7 +291,7 @@ func TestGetTelemetryTwoProfileByTelemetryRules(t *testing.T) {
 		}
 
 		fields := log.Fields{}
-		profiles := service.GetTelemetryTwoProfileByTelemetryRules(rules, fields)
+		profiles := service.GetTelemetryTwoProfileByTelemetryRules(db.DEFAULT_TENANT_ID, rules, fields)
 
 		assert.NotNil(t, profiles)
 		assert.Len(t, profiles, 1) // Only profile1 should be included
@@ -307,7 +308,7 @@ func TestGetTelemetryTwoProfileByTelemetryRules(t *testing.T) {
 		}
 
 		fields := log.Fields{}
-		profiles := service.GetTelemetryTwoProfileByTelemetryRules(rules, fields)
+		profiles := service.GetTelemetryTwoProfileByTelemetryRules(db.DEFAULT_TENANT_ID, rules, fields)
 
 		assert.NotNil(t, profiles)
 		assert.Len(t, profiles, 1) // Should deduplicate to 1 profile
@@ -336,7 +337,7 @@ func TestCreateTelemetryProfile(t *testing.T) {
 		Name: "Test Profile",
 	}
 
-	rule := service.CreateTelemetryProfile("estbMac", "AA:BB:CC:DD:EE:FF", profile)
+	rule := service.CreateTelemetryProfile(db.DEFAULT_TENANT_ID, "estbMac", "AA:BB:CC:DD:EE:FF", profile)
 
 	assert.NotNil(t, rule)
 	assert.NotNil(t, rule.Rule.Condition)
@@ -359,7 +360,7 @@ func TestDropTelemetryFor(t *testing.T) {
 			return nil
 		}
 
-		result := service.DropTelemetryFor("estbMac", "AA:BB:CC:DD:EE:FF")
+		result := service.DropTelemetryFor(db.DEFAULT_TENANT_ID, "estbMac", "AA:BB:CC:DD:EE:FF")
 		assert.Nil(t, result)
 	})
 
@@ -383,7 +384,7 @@ func TestDropTelemetryFor(t *testing.T) {
 			deletedKeys = append(deletedKeys, key)
 		}
 
-		result := service.DropTelemetryFor("estbMac", "AA:BB:CC:DD:EE:FF")
+		result := service.DropTelemetryFor(db.DEFAULT_TENANT_ID, "estbMac", "AA:BB:CC:DD:EE:FF")
 		assert.NotNil(t, result)
 		assert.Len(t, *result, 0)
 	})

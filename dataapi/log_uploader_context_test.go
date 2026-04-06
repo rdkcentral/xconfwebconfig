@@ -23,6 +23,7 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	loguploader "github.com/rdkcentral/xconfwebconfig/dataapi/dcm/logupload"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -357,7 +358,7 @@ func TestLogResultSettings(t *testing.T) {
 
 	t.Run("LogWithValidSettings", func(t *testing.T) {
 		// Mock GetOneDcmRuleFunc
-		loguploader.GetOneDcmRuleFunc = func(ruleId string) *logupload.DCMGenericRule {
+		loguploader.GetOneDcmRuleFunc = func(tenantId string, ruleId string) *logupload.DCMGenericRule {
 			if ruleId == "rule-1" {
 				return &logupload.DCMGenericRule{
 					ID:   "rule-1",
@@ -398,7 +399,7 @@ func TestLogResultSettings(t *testing.T) {
 
 		fields := log.Fields{}
 
-		LogResultSettings(settings, telemetryRule, settingRules, fields)
+		LogResultSettings(db.DEFAULT_TENANT_ID, settings, telemetryRule, settingRules, fields)
 
 		// Verify fields are set
 		assert.NotNil(t, fields["formulaNames"])
@@ -412,7 +413,7 @@ func TestLogResultSettings(t *testing.T) {
 	})
 
 	t.Run("LogWithNilTelemetryRule", func(t *testing.T) {
-		loguploader.GetOneDcmRuleFunc = func(ruleId string) *logupload.DCMGenericRule {
+		loguploader.GetOneDcmRuleFunc = func(tenantId string, ruleId string) *logupload.DCMGenericRule {
 			return &logupload.DCMGenericRule{
 				ID:   ruleId,
 				Name: "Rule " + ruleId,
@@ -427,14 +428,14 @@ func TestLogResultSettings(t *testing.T) {
 
 		fields := log.Fields{}
 
-		LogResultSettings(settings, nil, []*logupload.SettingRule{}, fields)
+		LogResultSettings(db.DEFAULT_TENANT_ID, settings, nil, []*logupload.SettingRule{}, fields)
 
 		// When telemetry rule is nil, should log "NoMatch"
 		assert.Equal(t, "NoMatch", fields["telemetryRuleName"])
 	})
 
 	t.Run("LogWithEmptySettingRules", func(t *testing.T) {
-		loguploader.GetOneDcmRuleFunc = func(ruleId string) *logupload.DCMGenericRule {
+		loguploader.GetOneDcmRuleFunc = func(tenantId string, ruleId string) *logupload.DCMGenericRule {
 			return nil
 		}
 
@@ -448,7 +449,7 @@ func TestLogResultSettings(t *testing.T) {
 
 		fields := log.Fields{}
 
-		LogResultSettings(settings, telemetryRule, []*logupload.SettingRule{}, fields)
+		LogResultSettings(db.DEFAULT_TENANT_ID, settings, telemetryRule, []*logupload.SettingRule{}, fields)
 
 		assert.Equal(t, "Test Rule", fields["telemetryRuleName"])
 		settingRuleNames := fields["settingRuleNames"].([]string)
@@ -457,7 +458,7 @@ func TestLogResultSettings(t *testing.T) {
 
 	t.Run("LogWithNilDcmRule", func(t *testing.T) {
 		// Mock returns nil
-		loguploader.GetOneDcmRuleFunc = func(ruleId string) *logupload.DCMGenericRule {
+		loguploader.GetOneDcmRuleFunc = func(tenantId string, ruleId string) *logupload.DCMGenericRule {
 			return nil
 		}
 
@@ -473,7 +474,7 @@ func TestLogResultSettings(t *testing.T) {
 
 		fields := log.Fields{}
 
-		LogResultSettings(settings, telemetryRule, []*logupload.SettingRule{}, fields)
+		LogResultSettings(db.DEFAULT_TENANT_ID, settings, telemetryRule, []*logupload.SettingRule{}, fields)
 
 		// Should handle nil dcmRule gracefully
 		formulaNames := fields["formulaNames"].([]string)

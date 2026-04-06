@@ -54,7 +54,7 @@ func TestExtractConfigFromAction(t *testing.T) {
 	convertedContext := coreef.GetContextConverted(contextMap)
 	applyversions := map[string]string{}
 	// result is in applyversion
-	cfgId := e.ExtractConfigFromAction(convertedContext, rulelst[1].ApplicableAction, applyversions)
+	cfgId := e.ExtractConfigFromAction(db.DEFAULT_TENANT_ID, convertedContext, rulelst[1].ApplicableAction, applyversions)
 	assert.Assert(t, cfgId != "")
 	assert.Equal(t, cfgId, FirmwareConfigId2)
 	assert.Assert(t, len(applyversions) != 0)
@@ -122,7 +122,7 @@ func TestFindMatchedRules(t *testing.T) {
 		copyrules[k] = v
 	}
 
-	templates := e.GetSortedTemplate(corefw.RULE_TEMPLATE, false, log.Fields{})
+	templates := e.GetSortedTemplate(db.DEFAULT_TENANT_ID, corefw.RULE_TEMPLATE, false, log.Fields{})
 	for _, template := range templates {
 		ruleType := template.ID
 		if _, ok := bypassFilters[ruleType]; ok {
@@ -224,7 +224,7 @@ func TestApplyMatchedFilters(t *testing.T) {
 	es := estbfirmware.NewEvaluationResult()
 	e := estbfirmware.NewEstbFirmwareRuleBaseDefault()
 	//e := &estbfirmware.EstbFirmwareRuleBase{}
-	res := e.ApplyMatchedFilters(rules, corefw.DEFINE_PROPERTIES_TEMPLATE, context, bypassFilters, es)
+	res := e.ApplyMatchedFilters(db.DEFAULT_TENANT_ID, rules, corefw.DEFINE_PROPERTIES_TEMPLATE, context, bypassFilters, es)
 	assert.Assert(t, res != nil)
 	t.Log(fmt.Sprintf("TestApplyMatchedFilters result of applyMarchedFilter %v", res))
 
@@ -265,16 +265,16 @@ func TestEval(t *testing.T) {
 
 	// check the rule templte
 
-	templates, errdb := corefw.GetFirmwareRuleTemplateAllAsListByActionType(corefw.DEFINE_PROPERTIES_TEMPLATE)
+	templates, errdb := corefw.GetFirmwareRuleTemplateAllAsListByActionType(db.DEFAULT_TENANT_ID, corefw.DEFINE_PROPERTIES_TEMPLATE)
 	assert.NilError(t, errdb)
 	assert.Assert(t, templates != nil)
 
-	templates, errdb = corefw.GetFirmwareRuleTemplateAllAsListByActionType(corefw.BLOCKING_FILTER_TEMPLATE)
+	templates, errdb = corefw.GetFirmwareRuleTemplateAllAsListByActionType(db.DEFAULT_TENANT_ID, corefw.BLOCKING_FILTER_TEMPLATE)
 	assert.NilError(t, errdb)
 	assert.Assert(t, templates != nil)
 	assert.Equal(t, len(templates), 1)
 
-	templates, errdb = corefw.GetFirmwareRuleTemplateAllAsListByActionType(corefw.RULE_TEMPLATE)
+	templates, errdb = corefw.GetFirmwareRuleTemplateAllAsListByActionType(db.DEFAULT_TENANT_ID, corefw.RULE_TEMPLATE)
 	assert.NilError(t, errdb)
 	assert.Assert(t, templates != nil)
 	assert.Assert(t, len(templates) >= 2)
@@ -322,38 +322,38 @@ func setUpRules(t *testing.T) ([]*corefw.FirmwareRule, []*coreef.FirmwareConfig)
 	assert.Assert(t, firmwareRuleTemplate1.ID != "")
 
 	// store into DB
-	err := corefw.CreateFirmwareRuleOneDB(firmwareRule1)
+	err := corefw.CreateFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, firmwareRule1)
 	assert.NilError(t, err)
-	err = corefw.CreateFirmwareRuleOneDB(firmwareRule2)
+	err = corefw.CreateFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, firmwareRule2)
 	assert.NilError(t, err)
-	err = corefw.CreateFirmwareRuleOneDB(firmwareRule3)
+	err = corefw.CreateFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, firmwareRule3)
 	assert.NilError(t, err)
-	err = corefw.CreateFirmwareRuleOneDB(firmwareRule4)
+	err = corefw.CreateFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, firmwareRule4)
 	assert.NilError(t, err)
 
-	err = corefw.CreateFirmwareRuleTemplateOneDB(firmwareRuleTemplate1)
+	err = corefw.CreateFirmwareRuleTemplateOneDB(db.DEFAULT_TENANT_ID, firmwareRuleTemplate1)
 	assert.NilError(t, err)
-	err = corefw.CreateFirmwareRuleTemplateOneDB(firmwareRuleTemplate2)
+	err = corefw.CreateFirmwareRuleTemplateOneDB(db.DEFAULT_TENANT_ID, firmwareRuleTemplate2)
 	assert.NilError(t, err)
-	err = corefw.CreateFirmwareRuleTemplateOneDB(firmwareRuleTemplate3)
+	err = corefw.CreateFirmwareRuleTemplateOneDB(db.DEFAULT_TENANT_ID, firmwareRuleTemplate3)
 	assert.NilError(t, err)
-	err = corefw.CreateFirmwareRuleTemplateOneDB(firmwareRuleTemplate4)
+	err = corefw.CreateFirmwareRuleTemplateOneDB(db.DEFAULT_TENANT_ID, firmwareRuleTemplate4)
 	assert.NilError(t, err)
 
 	// read from DB
-	dbrules, dberr := corefw.GetFirmwareRuleAllAsListDB()
+	dbrules, dberr := corefw.GetFirmwareRuleAllAsListDB(db.DEFAULT_TENANT_ID)
 	assert.NilError(t, dberr)
 	assert.Assert(t, dbrules != nil)
 	assert.Assert(t, len(dbrules) != 0)
 	assert.Assert(t, len(dbrules) >= 4)
 
-	err = coreef.CreateFirmwareConfigOneDB(firmwareConfig1)
+	err = coreef.CreateFirmwareConfigOneDB(db.DEFAULT_TENANT_ID, firmwareConfig1)
 	assert.NilError(t, err)
-	err = coreef.CreateFirmwareConfigOneDB(firmwareConfig2)
+	err = coreef.CreateFirmwareConfigOneDB(db.DEFAULT_TENANT_ID, firmwareConfig2)
 	assert.NilError(t, err)
 
 	// read from DB
-	dbcfs, dberr1 := coreef.GetFirmwareConfigAsListDB()
+	dbcfs, dberr1 := coreef.GetFirmwareConfigAsListDB(db.DEFAULT_TENANT_ID)
 	assert.NilError(t, dberr1)
 	assert.Assert(t, dbcfs != nil)
 	assert.Assert(t, len(dbcfs) != 0)
@@ -364,11 +364,11 @@ func setUpRules(t *testing.T) ([]*corefw.FirmwareRule, []*coreef.FirmwareConfig)
 	assert.NilError(t, err1)
 	assert.Assert(t, genlist != nil)
 
-	dbgenlist, err2 := shared.GetGenericNamedListOneDB(genlist.ID)
+	dbgenlist, err2 := shared.GetGenericNamedListOneDB(db.DEFAULT_TENANT_ID, genlist.ID)
 	assert.NilError(t, err2)
 	assert.Assert(t, dbgenlist != nil)
 
-	dbgenlists, err3 := shared.GetGenericNamedListListsDB()
+	dbgenlists, err3 := shared.GetGenericNamedListListsDB(db.DEFAULT_TENANT_ID)
 	assert.NilError(t, err3)
 	assert.Assert(t, dbgenlists != nil)
 
@@ -402,10 +402,10 @@ func TestGetBseConfiguration(t *testing.T) {
 
 	// store into DB
 
-	err := corefw.CreateFirmwareRuleOneDB(firmwareRule4)
+	err := corefw.CreateFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, firmwareRule4)
 	assert.NilError(t, err)
 
-	err = coreef.CreateFirmwareConfigOneDB(firmwareConfig1)
+	err = coreef.CreateFirmwareConfigOneDB(db.DEFAULT_TENANT_ID, firmwareConfig1)
 	assert.NilError(t, err)
 
 	// name list to create IP groups in the DB
@@ -413,11 +413,11 @@ func TestGetBseConfiguration(t *testing.T) {
 	assert.NilError(t, err1)
 	assert.Assert(t, genlist != nil)
 
-	rulelst, err := corefw.GetFirmwareRuleAllAsListDB()
+	rulelst, err := corefw.GetFirmwareRuleAllAsListDB(db.DEFAULT_TENANT_ID)
 	assert.NilError(t, err)
 	assert.Assert(t, rulelst != nil)
 
-	sortedrulelst, err := corefw.GetFirmwareSortedRuleAllAsListDB()
+	sortedrulelst, err := corefw.GetFirmwareSortedRuleAllAsListDB(db.DEFAULT_TENANT_ID)
 	assert.NilError(t, err)
 	assert.Assert(t, sortedrulelst != nil)
 	assert.Equal(t, len(rulelst), len(sortedrulelst))
@@ -436,12 +436,12 @@ func TestGetBseConfiguration(t *testing.T) {
 	dw.Locations = append(dw.Ipv6locations, loc)
 	dw.Ipv6locations = append(dw.Ipv6locations, loc)
 	// store into DB
-	err = coreef.CreateDownloadLocationRoundRobinFilterValOneDB(dw)
+	err = coreef.CreateDownloadLocationRoundRobinFilterValOneDB(db.DEFAULT_TENANT_ID, dw)
 	assert.NilError(t, err)
 
 	// check this Rules convension
 	ipaddress := shared.NewIpAddress(IpAddress4)
-	ipRuleBean, err := coreef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule4)
+	ipRuleBean, err := coreef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(db.DEFAULT_TENANT_ID, firmwareRule4)
 	assert.NilError(t, err)
 	firmwareConfig := ipRuleBean.FirmwareConfig
 	assert.Equal(t, firmware.IP_RULE, firmwareRule4.Type)
@@ -458,7 +458,7 @@ func TestGetBseConfiguration(t *testing.T) {
 	//assert.Assert(t, ipRuleBean.IpAddressGroup.IsInRange(ipaddress))
 
 	e := estbfirmware.NewEstbFirmwareRuleBaseDefault()
-	config, err := e.GetBseConfiguration(ipaddress)
+	config, err := e.GetBseConfiguration(db.DEFAULT_TENANT_ID, ipaddress)
 	assert.NilError(t, err)
 	assert.Assert(t, config != nil)
 }
@@ -474,14 +474,14 @@ func TestGetBseConfigurationSecondVersions(t *testing.T) {
 
 	dw := GetGetRDKCDownloadLocationROUNDROBINFILTERVALUE()
 	// store into DB
-	err := coreef.CreateDownloadLocationRoundRobinFilterValOneDB(dw)
+	err := coreef.CreateDownloadLocationRoundRobinFilterValOneDB(db.DEFAULT_TENANT_ID, dw)
 	assert.NilError(t, err)
 
 	// check this Rules convension
 	ipaddress := shared.NewIpAddress(IpAddress4)
 
 	e := estbfirmware.NewEstbFirmwareRuleBaseDefault()
-	config, err := e.GetBseConfiguration(ipaddress)
+	config, err := e.GetBseConfiguration(db.DEFAULT_TENANT_ID, ipaddress)
 	assert.NilError(t, err)
 	assert.Assert(t, config != nil)
 }
@@ -545,15 +545,15 @@ func TestGetSortedTemplate(t *testing.T) {
 	setUpRules(t)
 
 	e := estbfirmware.NewEstbFirmwareRuleBaseDefault()
-	ruletemplates := e.GetSortedTemplate(corefw.RULE, false, log.Fields{})
+	ruletemplates := e.GetSortedTemplate(db.DEFAULT_TENANT_ID, corefw.RULE, false, log.Fields{})
 	assert.Assert(t, ruletemplates == nil)
-	ruletemplates = e.GetSortedTemplate(corefw.RULE_TEMPLATE, true, log.Fields{})
+	ruletemplates = e.GetSortedTemplate(db.DEFAULT_TENANT_ID, corefw.RULE_TEMPLATE, true, log.Fields{})
 	assert.Assert(t, ruletemplates != nil)
 	assert.Assert(t, len(ruletemplates) >= 2)
 	// reverse is true, so should get the lowest priority rule template
 	assert.Assert(t, ruletemplates[0].ID == "ENV_MODEL_RULE" || ruletemplates[0].ID == "IP_RULE")
 
-	ruletemplates = e.GetSortedTemplate(corefw.RULE_TEMPLATE, false, log.Fields{})
+	ruletemplates = e.GetSortedTemplate(db.DEFAULT_TENANT_ID, corefw.RULE_TEMPLATE, false, log.Fields{})
 	assert.Assert(t, ruletemplates != nil)
 	assert.Assert(t, len(ruletemplates) >= 2)
 	// reverse is false, so should get the highest priority rule template

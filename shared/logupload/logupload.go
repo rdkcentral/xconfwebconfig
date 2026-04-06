@@ -258,15 +258,15 @@ func (dcm *DCMGenericRule) ToStringOnlyBaseProperties() string {
 	return dcm.Rule.Condition.String()
 }
 
-func GetDCMGenericRuleList() []*DCMGenericRule {
+func GetDCMGenericRuleList(tenantId string) []*DCMGenericRule {
 	cm := db.GetCacheManager()
 	cacheKey := "DCMGenericRuleList"
-	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(tenantId, db.TABLE_DCM_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*DCMGenericRule)
 	}
 
-	dmcRuleList, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, 0)
+	dmcRuleList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_DCM_RULES, 0)
 	if err != nil {
 		log.Warn("no dmcRule found")
 		return []*DCMGenericRule{}
@@ -282,15 +282,15 @@ func GetDCMGenericRuleList() []*DCMGenericRule {
 	}
 
 	if len(all) > 0 {
-		cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, cacheKey, all)
+		cm.ApplicationCacheSet(tenantId, db.TABLE_DCM_RULES, cacheKey, all)
 	}
 
 	return all
 }
 
-func GetDCMGenericRuleListForAS() []*DCMGenericRule {
+func GetDCMGenericRuleListForAS(tenantId string) []*DCMGenericRule {
 	all := []*DCMGenericRule{}
-	dmcRuleList, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, 0)
+	dmcRuleList, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_DCM_RULES, 0)
 	if err != nil {
 		log.Warn("no dmcRule found")
 		return all
@@ -304,8 +304,8 @@ func GetDCMGenericRuleListForAS() []*DCMGenericRule {
 	return all
 }
 
-func GetOneDCMGenericRule(id string) *DCMGenericRule {
-	dmcRuleInst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, id)
+func GetOneDCMGenericRule(tenantId string, id string) *DCMGenericRule {
+	dmcRuleInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_DCM_RULES, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no dmcRule found for:%s ", id))
 		return nil

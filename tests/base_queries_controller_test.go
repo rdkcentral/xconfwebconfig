@@ -279,7 +279,7 @@ func CreateAndSaveFirmwareConfig(firmwareVersion string, modelId string, firmwar
 }
 
 func SetFirmwareConfig(firmwareConfig *coreef.FirmwareConfig) error {
-	err := coreef.CreateFirmwareConfigOneDB(firmwareConfig)
+	err := coreef.CreateFirmwareConfigOneDB(db.DEFAULT_TENANT_ID, firmwareConfig)
 	if err != nil {
 		return err
 	}
@@ -312,7 +312,7 @@ func CreatePercentageBean(name string, envId string, modelId string, whitelistId
 
 func CreateAndSaveFirmwareRuleTemplate(id string, rule *re.Rule, applicableAction *corefw.TemplateApplicableAction) *corefw.FirmwareRuleTemplate {
 	template := CreateFirmwareRuleTemplate(id, rule, applicableAction)
-	err := corefw.CreateFirmwareRuleTemplateOneDB(template)
+	err := corefw.CreateFirmwareRuleTemplateOneDB(db.DEFAULT_TENANT_ID, template)
 	if err != nil {
 		return nil
 	}
@@ -335,7 +335,7 @@ func CreateAndSaveEnvModelFirmwareRule(name string, firmwareConfigId string, env
 	envModelRule.ApplicableAction = ruleAct
 	envModelRule.Type = "ENV_MODEL_RULE"
 	envModelRule.Rule = *CreateEnvModelRule(envId, modelId, macListId)
-	err := corefw.CreateFirmwareRuleOneDB(envModelRule)
+	err := corefw.CreateFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, envModelRule)
 	if err != nil {
 		return nil
 	}
@@ -382,7 +382,7 @@ func CreateAndSavePercentFilter(
 	percentFilter.EnvModelPercentages = mapEnvModes
 
 	percentFilterService := estb.NewPercentFilterService()
-	percentFilterService.Save(percentFilter, applicationType)
+	percentFilterService.Save(db.DEFAULT_TENANT_ID, percentFilter, applicationType)
 
 	return percentFilter
 }

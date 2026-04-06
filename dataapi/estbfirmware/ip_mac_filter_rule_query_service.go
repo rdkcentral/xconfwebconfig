@@ -40,8 +40,8 @@ type IpRuleService struct {
 }
 
 // GetByApplicationTyp ...
-func (i *IpRuleService) GetByApplicationType(applicationType string) []*sharedef.IpRuleBean {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
+func (i *IpRuleService) GetByApplicationType(tenantId string, applicationType string) []*sharedef.IpRuleBean {
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetByApplicationType: %v", err))
 		return []*sharedef.IpRuleBean{}
@@ -54,15 +54,15 @@ func (i *IpRuleService) GetByApplicationType(applicationType string) []*sharedef
 		if frule.Type != sharedfw.IP_RULE {
 			continue
 		}
-		ipfilter := i.ConvertToIpRuleOrReturnNull(frule)
+		ipfilter := i.ConvertToIpRuleOrReturnNull(tenantId, frule)
 		result = append(result, ipfilter)
 	}
 	return result
 }
 
 // ConvertToIpRuleOrReturnNull ...
-func (i *IpRuleService) ConvertToIpRuleOrReturnNull(firmwareRule *sharedfw.FirmwareRule) *sharedef.IpRuleBean {
-	bean, _ := sharedef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule)
+func (i *IpRuleService) ConvertToIpRuleOrReturnNull(tenantId string, firmwareRule *sharedfw.FirmwareRule) *sharedef.IpRuleBean {
+	bean, _ := sharedef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(tenantId, firmwareRule)
 	if bean == nil {
 		log.Error("Could not convert: ")
 		//return &sharedef.IpRuleBean{} // or return nil
@@ -72,7 +72,7 @@ func (i *IpRuleService) ConvertToIpRuleOrReturnNull(firmwareRule *sharedfw.Firmw
 }
 
 // Save ...
-func (i *IpRuleService) Save(bean *sharedef.IpRuleBean, applicationType string) error {
+func (i *IpRuleService) Save(tenantId string, bean *sharedef.IpRuleBean, applicationType string) error {
 	if len(bean.Id) == 0 {
 		bean.Id = uuid.New().String()
 	}
@@ -85,20 +85,20 @@ func (i *IpRuleService) Save(bean *sharedef.IpRuleBean, applicationType string) 
 		return err
 	}
 
-	return db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, ipRule.ID, ipRule)
+	return db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FIRMWARE_RULES, ipRule.ID, ipRule)
 }
 
 // Delete ...
-func (i *IpRuleService) Delete(id string) {
-	db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, id)
+func (i *IpRuleService) Delete(tenantId string, id string) {
+	db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_FIRMWARE_RULES, id)
 }
 
-func (i *IpRuleService) getOne(id string) *sharedef.IpRuleBean {
-	frule, err := sharedfw.GetFirmwareRuleOneDB(id)
+func (i *IpRuleService) getOne(tenantId string, id string) *sharedef.IpRuleBean {
+	frule, err := sharedfw.GetFirmwareRuleOneDB(tenantId, id)
 	if err != nil {
 		return nil
 	}
-	bean, err := coreef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(frule)
+	bean, err := coreef.ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(tenantId, frule)
 	if err != nil {
 		return nil
 	}
@@ -119,16 +119,16 @@ type IpFilterService struct {
 
 // private FirmwareRulePredicates firmwareRulePredicates;
 
-func (i *IpFilterService) getOneIpFilterFromDB(id string) *sharedef.IpFilter {
-	frule, err := sharedfw.GetFirmwareRuleOneDB(id)
+func (i *IpFilterService) getOneIpFilterFromDB(tenantId string, id string) *sharedef.IpFilter {
+	frule, err := sharedfw.GetFirmwareRuleOneDB(tenantId, id)
 	if err == nil {
-		return sharedef.ConvertFirmwareRuleToIpFilter(frule)
+		return sharedef.ConvertFirmwareRuleToIpFilter(tenantId, frule)
 	}
 	return nil
 }
 
-func (i *IpFilterService) getIpFilterByName(name string, applicationType string) *sharedef.IpFilter {
-	for _, ipFilter := range i.getByApplicationType(applicationType) {
+func (i *IpFilterService) getIpFilterByName(tenantId string, name string, applicationType string) *sharedef.IpFilter {
+	for _, ipFilter := range i.getByApplicationType(tenantId, applicationType) {
 		if strings.ToUpper(ipFilter.Name) == strings.ToUpper(name) {
 			return ipFilter
 		}
@@ -136,8 +136,8 @@ func (i *IpFilterService) getIpFilterByName(name string, applicationType string)
 	return nil
 }
 
-func (i *IpFilterService) getByApplicationType(applicationType string) []*sharedef.IpFilter {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
+func (i *IpFilterService) getByApplicationType(tenantId string, applicationType string) []*sharedef.IpFilter {
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("getByApplicationType: %v", err))
 		return []*sharedef.IpFilter{}
@@ -153,7 +153,7 @@ func (i *IpFilterService) getByApplicationType(applicationType string) []*shared
 			continue
 		}
 
-		ipfilter := sharedef.ConvertFirmwareRuleToIpFilter(frule)
+		ipfilter := sharedef.ConvertFirmwareRuleToIpFilter(tenantId, frule)
 		// Avoid Dup based on Name
 		if ipfilter == nil {
 			continue
@@ -167,7 +167,7 @@ func (i *IpFilterService) getByApplicationType(applicationType string) []*shared
 	return result
 }
 
-func (i *IpFilterService) save(filter *sharedef.IpFilter, applicationType string) {
+func (i *IpFilterService) save(tenantId string, filter *sharedef.IpFilter, applicationType string) {
 	if len(filter.Id) == 0 {
 		filter.Id = uuid.New().String()
 	}
@@ -179,11 +179,11 @@ func (i *IpFilterService) save(filter *sharedef.IpFilter, applicationType string
 	if len(applicationType) != 0 {
 		rule.ApplicationType = applicationType
 	}
-	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, rule.ID, rule)
+	db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FIRMWARE_RULES, rule.ID, rule)
 }
 
-func (i *IpFilterService) delete(id string) {
-	db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, id)
+func (i *IpFilterService) delete(tenantId string, id string) {
+	db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_FIRMWARE_RULES, id)
 }
 
 type PercentFilterService struct {
@@ -193,14 +193,14 @@ func NewPercentFilterService() *PercentFilterService {
 	return &PercentFilterService{}
 }
 
-func (p *PercentFilterService) Save(filter *sharedef.PercentFilterValue, applicationType string) {
+func (p *PercentFilterService) Save(tenantId string, filter *sharedef.PercentFilterValue, applicationType string) {
 	globalPercentage := sharedef.ConvertIntoGlobalPercentage(filter, applicationType)
 	if globalPercentage != nil {
 		globalPercentage.ApplicationType = applicationType
-		sharedfw.CreateFirmwareRuleOneDB(globalPercentage)
+		sharedfw.CreateFirmwareRuleOneDB(tenantId, globalPercentage)
 	}
 
-	rules, err := sharedfw.GetEnvModelFirmwareRules(applicationType)
+	rules, err := sharedfw.GetEnvModelFirmwareRules(tenantId, applicationType)
 	if err != nil {
 		log.Error(fmt.Sprintf("PercentFilterService.Save : %v %v", rules, err))
 		return
@@ -222,8 +222,8 @@ func getEnvModelPercentage(filter sharedef.PercentFilterValue, name string) *sha
 type MacRuleService struct {
 }
 
-func (m *MacRuleService) GetFirmwareMacRules(applicationType string) []*sharedfw.FirmwareRule {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
+func (m *MacRuleService) GetFirmwareMacRules(tenantId string, applicationType string) []*sharedfw.FirmwareRule {
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetRulesWithMacCondition: %v", err))
 		return []*sharedfw.FirmwareRule{}
@@ -245,8 +245,8 @@ func (m *MacRuleService) GetFirmwareMacRules(applicationType string) []*sharedfw
 	return result
 }
 
-func (m *MacRuleService) GetByApplicationType(applicationType string) []*sharedef.MacRuleBean {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
+func (m *MacRuleService) GetByApplicationType(tenantId string, applicationType string) []*sharedef.MacRuleBean {
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetByApplicationType: %v", err))
 		return []*sharedef.MacRuleBean{}
@@ -265,7 +265,7 @@ func (m *MacRuleService) GetByApplicationType(applicationType string) []*sharede
 		if frule.Type != sharedfw.MAC_RULE {
 			continue
 		}
-		macRuleBean := convertFirmwareRuleToMacRuleBean(frule)
+		macRuleBean := convertFirmwareRuleToMacRuleBean(tenantId, frule)
 		_, idExists := macRuleBeanIdSet[macRuleBean.Id]
 		if !idExists {
 			macRuleBeanIdSet[macRuleBean.Id] = true
@@ -281,8 +281,8 @@ func (m *MacRuleService) GetByApplicationType(applicationType string) []*sharede
 	return result
 }
 
-func convertFirmwareRuleSearchResultToMacRuleBean(firmwareRule *sharedfw.FirmwareRule, macListId *string, macs *[]string) *sharedef.MacRuleBean {
-	macRuleBean := convertFirmwareRuleToMacRuleBean(firmwareRule)
+func convertFirmwareRuleSearchResultToMacRuleBean(tenantId string, firmwareRule *sharedfw.FirmwareRule, macListId *string, macs *[]string) *sharedef.MacRuleBean {
+	macRuleBean := convertFirmwareRuleToMacRuleBean(tenantId, firmwareRule)
 	if macListId != nil {
 		macRuleBean.MacListRef = *macListId
 	} else {
@@ -292,8 +292,8 @@ func convertFirmwareRuleSearchResultToMacRuleBean(firmwareRule *sharedfw.Firmwar
 	return macRuleBean
 }
 
-func GetNamespacedListById(typeName string, id string) *shared.GenericNamespacedList {
-	nl, err := shared.GetGenericNamedListOneDB(id)
+func GetNamespacedListById(tenantId string, typeName string, id string) *shared.GenericNamespacedList {
+	nl, err := shared.GetGenericNamedListOneDB(tenantId, id)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetNamespacedListById: %v", err))
 		return nil
@@ -304,9 +304,9 @@ func GetNamespacedListById(typeName string, id string) *shared.GenericNamespaced
 	return nl
 }
 
-func (m *MacRuleService) SearchMacRules(macPart string, applicationType string) []*sharedef.MacRuleBean {
+func (m *MacRuleService) SearchMacRules(tenantId string, macPart string, applicationType string) []*sharedef.MacRuleBean {
 	macPart = util.RemoveNonAlphabeticSymbols(macPart)
-	firmwareMacRules := m.GetFirmwareMacRules(applicationType)
+	firmwareMacRules := m.GetFirmwareMacRules(tenantId, applicationType)
 	searchResult := []*sharedef.MacRuleBean{}
 	for _, firmwareMacRule := range firmwareMacRules {
 		macAddressesToSearch := []string{}
@@ -321,7 +321,7 @@ func (m *MacRuleService) SearchMacRules(macPart string, applicationType string) 
 			if common.ESTB_MAC == condition.GetCondition().GetFreeArg().Name {
 				fixedArg := condition.GetCondition().GetFixedArg()
 				if fixedArg.IsStringValue() && re.StandardOperationInList == condition.GetCondition().Operation {
-					macList := GetNamespacedListById(shared.MAC_LIST, fixedArg.GetValue().(string))
+					macList := GetNamespacedListById(tenantId, shared.MAC_LIST, fixedArg.GetValue().(string))
 					if macList != nil && isExistMacAddressInList(&macList.Data, macPart) && matchedFirmwareRule == nil {
 						matchedFirmwareRule = firmwareMacRule
 						macListId = &macList.ID
@@ -336,7 +336,7 @@ func (m *MacRuleService) SearchMacRules(macPart string, applicationType string) 
 				}
 
 				if matchedFirmwareRule != nil {
-					searchResult = append(searchResult, convertFirmwareRuleSearchResultToMacRuleBean(matchedFirmwareRule, macListId, &macAddressesToSearch))
+					searchResult = append(searchResult, convertFirmwareRuleSearchResultToMacRuleBean(tenantId, matchedFirmwareRule, macListId, &macAddressesToSearch))
 					break
 				}
 			}
@@ -355,8 +355,8 @@ func isExistMacAddressInList(macAddresses *[]string, macPart string) bool {
 	return false
 }
 
-func (m *MacRuleService) GetRulesWithMacCondition(applicationType string) []*sharedef.MacRuleBean {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
+func (m *MacRuleService) GetRulesWithMacCondition(tenantId string, applicationType string) []*sharedef.MacRuleBean {
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetRulesWithMacCondition: %v", err))
 		return []*sharedef.MacRuleBean{}
@@ -374,7 +374,7 @@ func (m *MacRuleService) GetRulesWithMacCondition(applicationType string) []*sha
 		if !re.IsExistConditionByFreeArgName(frule.Rule, common.ESTB_MAC) {
 			continue
 		}
-		macRuleBean := convertFirmwareRuleToMacRuleBean(frule)
+		macRuleBean := convertFirmwareRuleToMacRuleBean(tenantId, frule)
 		_, idExists := macRuleBeanIdSet[macRuleBean.Id]
 		if !idExists {
 			macRuleBeanIdSet[macRuleBean.Id] = true
@@ -390,11 +390,11 @@ func (m *MacRuleService) GetRulesWithMacCondition(applicationType string) []*sha
 	return result
 }
 
-func convertFirmwareRuleToMacRuleBean(firmwareRule *sharedfw.FirmwareRule) *sharedef.MacRuleBean {
+func convertFirmwareRuleToMacRuleBean(tenantId string, firmwareRule *sharedfw.FirmwareRule) *sharedef.MacRuleBean {
 	macRuleBean := sharedef.ConvertFirmwareRuleToMacRuleBeanWrapper(firmwareRule)
 	action := firmwareRule.ApplicableAction
 	if action != nil && action.ConfigId != "" {
-		config, err := sharedef.GetFirmwareConfigOneDB(action.ConfigId)
+		config, err := sharedef.GetFirmwareConfigOneDB(tenantId, action.ConfigId)
 		if err != nil {
 			log.Error(fmt.Sprintf("GetFirmwareConfigOneDB: %v", err))
 		}
@@ -411,8 +411,8 @@ func convertFirmwareRuleToMacRuleBean(firmwareRule *sharedfw.FirmwareRule) *shar
 type EnvModelRuleService struct {
 }
 
-func (em *EnvModelRuleService) GetByApplicationType(applicationType string) []*sharedef.EnvModelBean {
-	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin()
+func (em *EnvModelRuleService) GetByApplicationType(tenantId string, applicationType string) []*sharedef.EnvModelBean {
+	insts, err := sharedfw.GetFirmwareRuleAllAsListDBForAdmin(tenantId)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetByApplicationType: %v", err))
 		return []*sharedef.EnvModelBean{}
@@ -427,7 +427,7 @@ func (em *EnvModelRuleService) GetByApplicationType(applicationType string) []*s
 		if frule.ApplicationType != applicationType {
 			continue
 		}
-		emRuleBean := sharedef.ConvertFirmwareRuleToEnvModelRuleBean(frule)
+		emRuleBean := sharedef.ConvertFirmwareRuleToEnvModelRuleBean(tenantId, frule)
 		_, idExists := macRuleBeanIdSet[emRuleBean.Id]
 		if !idExists {
 			macRuleBeanIdSet[emRuleBean.Id] = true

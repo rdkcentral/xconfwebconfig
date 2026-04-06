@@ -20,6 +20,7 @@ package tests
 import (
 	"encoding/json"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -48,7 +49,7 @@ func GetFirmwareRuleTemplate(i int) *corefw.FirmwareRuleTemplate {
 
 func GetSetDaoGenericNamespacedList() (*shared.GenericNamespacedList, error) {
 	newList := shared.NewGenericNamespacedList(NamespaceIPListKey, shared.IpList, NamespaceIPList)
-	err := shared.CreateGenericNamedListOneDB(newList)
+	err := shared.CreateGenericNamedListOneDB(db.DEFAULT_TENANT_ID, newList)
 	return newList, err
 }
 

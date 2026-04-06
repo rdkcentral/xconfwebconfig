@@ -20,6 +20,7 @@ package featurecontrol
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/rfc"
 
@@ -61,7 +62,7 @@ func TestSortCaseInsensitive(t *testing.T) {
 }
 
 func TestGetSortedFeatureRules(t *testing.T) {
-	rfc.GetFeatureListFunc = func() []*rfc.FeatureRule {
+	rfc.GetFeatureListFunc = func(string) []*rfc.FeatureRule {
 		all := []*rfc.FeatureRule{}
 		featureIds := []string{"1", "2", "3"}
 		featureRule1 := rfc.FeatureRule{
@@ -101,7 +102,7 @@ func TestGetSortedFeatureRules(t *testing.T) {
 		return all
 	}
 	// rules []*rfc.FeatureRule
-	sortedRules := rfc.GetSortedFeatureRules()
+	sortedRules := rfc.GetSortedFeatureRules(db.DEFAULT_TENANT_ID)
 	assert.Equal(t, len(sortedRules), 3)
 	assert.Equal(t, sortedRules[0].Id, "id1")
 	assert.Equal(t, sortedRules[0].Priority, 1)
@@ -113,7 +114,7 @@ func TestGetSortedFeatureRules(t *testing.T) {
 }
 
 func TestAddFeaturesToResult(t *testing.T) {
-	GetGenericNamedListOneByTypeFunc = func(string, string) (*shared.GenericNamespacedList, error) {
+	GetGenericNamedListOneByTypeFunc = func(string, string, string) (*shared.GenericNamespacedList, error) {
 		genericNamespacedList := shared.GenericNamespacedList{
 			ID:       "id",
 			Updated:  12345,
@@ -123,7 +124,7 @@ func TestAddFeaturesToResult(t *testing.T) {
 		return &genericNamespacedList, nil
 	}
 
-	rfcGetOneFeatureFunc = func(featureId string) *rfc.Feature {
+	rfcGetOneFeatureFunc = func(tenantId string, featureId string) *rfc.Feature {
 		whitelistProperty1 := rfc.WhitelistProperty{
 			Key:                "key1",
 			Value:              "value1",
@@ -190,7 +191,7 @@ func TestAddFeaturesToResult(t *testing.T) {
 	featureControlRuleBase = &FeatureControlRuleBase{}
 	featureMap := make(map[string]*rfc.Feature)
 	var featureIDs = []string{"id1", "id2", "id3", "id4"}
-	featureControlRuleBase.AddFeaturesToResult(featureMap, featureIDs)
+	featureControlRuleBase.AddFeaturesToResult(db.DEFAULT_TENANT_ID, featureMap, featureIDs)
 	assert.Equal(t, len(featureMap), 3)
 	if _, ok := featureMap["name3"]; ok {
 		feature := featureMap["name3"]

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
 
@@ -36,10 +37,10 @@ func TestConvertToIpRuleOrReturnNull(t *testing.T) {
 
 	svc := &estbfirmware.IpRuleService{}
 	// store into DB
-	err := corefw.CreateFirmwareRuleOneDB(firmwareRule)
+	err := corefw.CreateFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, firmwareRule)
 	assert.NilError(t, err)
-	err = coreef.CreateFirmwareConfigOneDB(firmwareConfig)
+	err = coreef.CreateFirmwareConfigOneDB(db.DEFAULT_TENANT_ID, firmwareConfig)
 	assert.NilError(t, err)
-	bean := svc.ConvertToIpRuleOrReturnNull(firmwareRule)
+	bean := svc.ConvertToIpRuleOrReturnNull(db.DEFAULT_TENANT_ID, firmwareRule)
 	assert.Assert(t, bean != nil)
 }

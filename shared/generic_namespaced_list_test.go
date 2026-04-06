@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"gotest.tools/assert"
 )
 
@@ -137,13 +138,13 @@ func TestGenericNamespacedListClone(t *testing.T) {
 // Test Validate - valid cases
 func TestGenericNamespacedListValidate_ValidIPList(t *testing.T) {
 	list := NewGenericNamespacedList("test-ip-list", IP_LIST, []string{"1.2.3.4", "5.6.7.8"})
-	err := list.Validate()
+	err := list.Validate(db.DEFAULT_TENANT_ID)
 	assert.NilError(t, err)
 }
 
 func TestGenericNamespacedListValidate_ValidMACList(t *testing.T) {
 	list := NewGenericNamespacedList("test-mac-list", MAC_LIST, []string{"AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66"})
-	err := list.Validate()
+	err := list.Validate(db.DEFAULT_TENANT_ID)
 	// May fail due to cache not configured, but that's OK for unit test
 	if err != nil {
 		assert.Assert(t, strings.HasPrefix(err.Error(), "cache not found or configured"))
@@ -152,45 +153,45 @@ func TestGenericNamespacedListValidate_ValidMACList(t *testing.T) {
 
 func TestGenericNamespacedListValidate_ValidSTRINGList(t *testing.T) {
 	list := NewGenericNamespacedList("test-string-list", STRING, []string{"value1", "value2"})
-	err := list.Validate()
+	err := list.Validate(db.DEFAULT_TENANT_ID)
 	assert.NilError(t, err)
 }
 
 func TestGenericNamespacedListValidate_ValidNameWithSpecialChars(t *testing.T) {
 	list := NewGenericNamespacedList("test-name_123.ABC 'quoted'", STRING, []string{"value1"})
-	err := list.Validate()
+	err := list.Validate(db.DEFAULT_TENANT_ID)
 	assert.NilError(t, err)
 }
 
 // Test Validate - invalid cases
 func TestGenericNamespacedListValidate_InvalidName(t *testing.T) {
 	list := NewGenericNamespacedList("test@invalid#name", STRING, []string{"value1"})
-	err := list.Validate()
+	err := list.Validate(db.DEFAULT_TENANT_ID)
 	assert.Error(t, err, "name is invalid")
 }
 
 func TestGenericNamespacedListValidate_InvalidType(t *testing.T) {
 	list := NewGenericNamespacedList("test", "INVALID_TYPE", []string{"value1"})
-	err := list.Validate()
+	err := list.Validate(db.DEFAULT_TENANT_ID)
 	assert.Assert(t, err != nil)
 	assert.Assert(t, err.Error() == "type INVALID_TYPE is invalid")
 }
 
 func TestGenericNamespacedListValidate_EmptyData(t *testing.T) {
 	list := NewGenericNamespacedList("test", IP_LIST, []string{})
-	err := list.Validate()
+	err := list.Validate(db.DEFAULT_TENANT_ID)
 	assert.Error(t, err, "List must not be empty")
 }
 
 func TestGenericNamespacedListValidate_InvalidIPAddress(t *testing.T) {
 	list := NewGenericNamespacedList("test", IP_LIST, []string{"invalid-ip", "1.2.3.4"})
-	err := list.Validate()
+	err := list.Validate(db.DEFAULT_TENANT_ID)
 	assert.Assert(t, err != nil)
 }
 
 func TestGenericNamespacedListValidate_InvalidMACAddress(t *testing.T) {
 	list := NewGenericNamespacedList("test", MAC_LIST, []string{"invalid-mac", "AA:BB:CC:DD:EE:FF"})
-	err := list.Validate()
+	err := list.Validate(db.DEFAULT_TENANT_ID)
 	assert.Assert(t, err != nil)
 }
 
@@ -341,26 +342,26 @@ func TestNewGenericNamespacedListInf(t *testing.T) {
 // Test ValidateForAdminService
 func TestValidateForAdminService_Valid(t *testing.T) {
 	list := NewGenericNamespacedList("test-list", STRING, []string{"value1", "value2"})
-	err := list.ValidateForAdminService()
+	err := list.ValidateForAdminService(db.DEFAULT_TENANT_ID)
 	assert.NilError(t, err)
 }
 
 func TestValidateForAdminService_InvalidName(t *testing.T) {
 	list := NewGenericNamespacedList("test@invalid", STRING, []string{"value1"})
-	err := list.ValidateForAdminService()
+	err := list.ValidateForAdminService(db.DEFAULT_TENANT_ID)
 	assert.Error(t, err, "name is invalid")
 }
 
 func TestValidateForAdminService_InvalidType(t *testing.T) {
 	list := NewGenericNamespacedList("test", "BAD_TYPE", []string{"value1"})
-	err := list.ValidateForAdminService()
+	err := list.ValidateForAdminService(db.DEFAULT_TENANT_ID)
 	assert.Assert(t, err != nil)
 }
 
 // Test with duplicate data (should be deduplicated)
 func TestValidate_RemovesDuplicates(t *testing.T) {
 	list := NewGenericNamespacedList("test", STRING, []string{"a", "b", "a", "c", "b"})
-	err := list.Validate()
+	err := list.Validate(db.DEFAULT_TENANT_ID)
 
 	assert.NilError(t, err)
 	// Data should be deduplicated
@@ -380,20 +381,20 @@ func TestNewNamespacedListInf(t *testing.T) {
 // Additional edge case tests for ValidateForAdminService
 func TestValidateForAdminService_EmptyData(t *testing.T) {
 	list := NewGenericNamespacedList("test", STRING, []string{})
-	err := list.ValidateForAdminService()
+	err := list.ValidateForAdminService(db.DEFAULT_TENANT_ID)
 	// Should fail because list is empty
 	assert.Assert(t, err != nil)
 }
 
 func TestValidateForAdminService_InvalidIPList(t *testing.T) {
 	list := NewGenericNamespacedList("test", IP_LIST, []string{"192.168.1.1", "invalid"})
-	err := list.ValidateForAdminService()
+	err := list.ValidateForAdminService(db.DEFAULT_TENANT_ID)
 	assert.Assert(t, err != nil)
 }
 
 func TestValidateForAdminService_InvalidMACList(t *testing.T) {
 	list := NewGenericNamespacedList("test", MAC_LIST, []string{"AA:BB:CC:DD:EE:FF", "ZZZZ"})
-	err := list.ValidateForAdminService()
+	err := list.ValidateForAdminService(db.DEFAULT_TENANT_ID)
 	assert.Assert(t, err != nil)
 }
 

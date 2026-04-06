@@ -351,14 +351,14 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 		if contextMap[common.FIRMWARE_VERSION] != "" {
 			log.Trace("Logging last config request.")
 			lastConfigLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, true)
-			err := coreef.SetLastConfigLog(mac, lastConfigLog)
+			err := coreef.SetLastConfigLog(contextMap[common.TENANT_ID], mac, lastConfigLog)
 			if err != nil {
 				log.Error(fmt.Sprintf("Can't save last log config request: %+v", err))
 			}
 			if evaluationResult.MatchedRule != nil && !evaluationResult.Blocked && evaluationResult.FirmwareConfig != nil && !strings.EqualFold(contextMap[common.FIRMWARE_VERSION], evaluationResult.FirmwareConfig.GetFirmwareVersion()) {
 				log.Trace(fmt.Sprintf("logging config change from %s to %s", evaluationResult.FirmwareConfig.GetFirmwareVersion(), contextMap[common.FIRMWARE_VERSION]))
 				configChangeLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, false)
-				err = coreef.SetConfigChangeLog(mac, configChangeLog)
+				err = coreef.SetConfigChangeLog(contextMap[common.TENANT_ID], mac, configChangeLog)
 				if err != nil {
 					log.Error(fmt.Sprintf("Can't save config change log request: %+v", err))
 				}

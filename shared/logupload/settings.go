@@ -488,9 +488,9 @@ func NewLogUploadSettingsInf() interface{} {
 	}
 }
 
-func GetOneDeviceSettings(id string) *DeviceSettings {
+func GetOneDeviceSettings(tenantId string, id string) *DeviceSettings {
 	var deviceSettings *DeviceSettings
-	deviceSettingsInst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_DEVICE_SETTINGS, id)
+	deviceSettingsInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_DEVICE_SETTINGS, id)
 	if err != nil {
 		log.Debug(fmt.Sprintf("no deviceSettings found for Id: %s", id))
 		return nil
@@ -499,9 +499,9 @@ func GetOneDeviceSettings(id string) *DeviceSettings {
 	return deviceSettings
 }
 
-func GetOneLogUploadSettings(id string) *LogUploadSettings {
+func GetOneLogUploadSettings(tenantId string, id string) *LogUploadSettings {
 	var logUploadSettings *LogUploadSettings
-	logUploadSettingsInst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_LOG_UPLOAD_SETTINGS, id)
+	logUploadSettingsInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_LOG_UPLOAD_SETTINGS, id)
 	if err != nil {
 		log.Debug(fmt.Sprintf("no logUploadSettings found for Id: %s", id))
 		return nil
@@ -510,9 +510,9 @@ func GetOneLogUploadSettings(id string) *LogUploadSettings {
 	return logUploadSettings
 }
 
-func GetOneUploadRepository(id string) *UploadRepository {
+func GetOneUploadRepository(tenantId string, id string) *UploadRepository {
 	var uploadRepository *UploadRepository
-	uploadRepositoryInst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_UPLOAD_REPOSITORIES, id)
+	uploadRepositoryInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_UPLOAD_REPOSITORIES, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no uploadRepository found for Id: %s", id))
 		return nil
@@ -521,9 +521,9 @@ func GetOneUploadRepository(id string) *UploadRepository {
 	return uploadRepository
 }
 
-func GetLogFileList(size int) []*LogFile {
+func GetLogFileList(tenantId string, size int) []*LogFile {
 	var logFiles []*LogFile
-	logFileListInst, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_LOG_FILES, size)
+	logFileListInst, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_LOG_FILES, size)
 	if err != nil {
 		log.Warn("no logFiles found ")
 		return nil
@@ -535,9 +535,9 @@ func GetLogFileList(size int) []*LogFile {
 	return logFiles
 }
 
-func GetOneVodSettings(id string) *VodSettings {
+func GetOneVodSettings(tenantId string, id string) *VodSettings {
 	var vodSettings *VodSettings
-	vodSettingsInst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_VOD_SETTINGS, id)
+	vodSettingsInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_VOD_SETTINGS, id)
 	if err != nil {
 		log.Debug(fmt.Sprintf("no vodSettings found for Id: %s", id))
 		return nil
@@ -546,9 +546,9 @@ func GetOneVodSettings(id string) *VodSettings {
 	return vodSettings
 }
 
-func GetOneLogFileList(id string) (*LogFileList, error) {
+func GetOneLogFileList(tenantId string, id string) (*LogFileList, error) {
 	var logFileList *LogFileList
-	logFileListInst, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_LOG_FILE_LISTS, id)
+	logFileListInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_LOG_FILE_LISTS, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no LogFileList found for Id: %s", id))
 		return nil, err

@@ -46,8 +46,8 @@ type EnvModelRuleBean struct {
 	FirmwareConfig *FirmwareConfig `json:"firmwareConfig,omitempty" xml:"firmwareConfig,omitempty"`
 }
 
-func TimeFiltersByApplicationType(applicationType string) ([]*TimeFilter, error) {
-	rulelst, err := firmware.GetFirmwareRuleAllAsListDB()
+func TimeFiltersByApplicationType(tenantId string, applicationType string) ([]*TimeFilter, error) {
+	rulelst, err := firmware.GetFirmwareRuleAllAsListDB(tenantId)
 	if err != nil {
 		return nil, err
 	}
@@ -66,14 +66,14 @@ func TimeFiltersByApplicationType(applicationType string) ([]*TimeFilter, error)
 			NeverBlockRebootDecoupled: false,
 			NeverBlockHttpDownload:    false,
 		}
-		convertConditions(frule, fr)
+		convertConditions(tenantId, frule, fr)
 		filtedRules = append(filtedRules, fr)
 	}
 	return filtedRules, nil
 }
 
-func TimeFilterByName(name string, applicationType string) (*TimeFilter, error) {
-	rules, _ := TimeFiltersByApplicationType(applicationType)
+func TimeFilterByName(tenantId string, name string, applicationType string) (*TimeFilter, error) {
+	rules, _ := TimeFiltersByApplicationType(tenantId, applicationType)
 	for _, rule := range rules {
 		if rule.Name == name {
 			return rule, nil
@@ -82,7 +82,7 @@ func TimeFilterByName(name string, applicationType string) (*TimeFilter, error) 
 	return nil, nil
 }
 
-func convertConditions(rule *firmware.FirmwareRule, timefilter *TimeFilter) {
+func convertConditions(tenantId string, rule *firmware.FirmwareRule, timefilter *TimeFilter) {
 	for _, r := range rule.Rule.CompoundParts {
 		cond := r.Condition
 		fAName := cond.GetFreeArg().Name
@@ -98,7 +98,7 @@ func convertConditions(rule *firmware.FirmwareRule, timefilter *TimeFilter) {
 					timefilter.NeverBlockHttpDownload = true
 				}
 			} else if IsLegacyIpFreeArg(cond.GetFreeArg()) || RuleFactoryIP.Name == fAName {
-				timefilter.IpWhiteList = GetIpAddressGroup(cond)
+				timefilter.IpWhiteList = GetIpAddressGroup(tenantId, cond)
 			} else if RuleFactoryMODEL.Name == fAName {
 				timefilter.EnvModelRuleBean.ModelId = trimSingleQuote(cond.GetFixedArg().String())
 			} else if RuleFactoryENV.Name == fAName {

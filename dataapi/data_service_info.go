@@ -31,9 +31,10 @@ import (
 )
 
 func GetInfoRefreshAllHandler(w http.ResponseWriter, r *http.Request) {
-	failedToRefreshTables := db.GetCacheManager().RefreshAll(db.DEFAULT_TENANT_ID)
+	tenantId := xhttp.GetTenantId(r, "")
+	failedToRefreshTables := db.GetCacheManager().RefreshAll(tenantId)
 	if len(failedToRefreshTables) == 0 {
-		stats := db.GetCacheManager().GetStatistics(db.DEFAULT_TENANT_ID)
+		stats := db.GetCacheManager().GetStatistics(tenantId)
 		response, _ := util.JSONMarshal(stats.TableStats)
 		xhttp.WriteXconfResponse(w, http.StatusOK, response)
 	} else {
@@ -43,9 +44,10 @@ func GetInfoRefreshAllHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetInfoRefreshHandler(w http.ResponseWriter, r *http.Request) {
 	tableName := mux.Vars(r)[common.TABLE_NAME]
-	err := db.GetCacheManager().Refresh(db.DEFAULT_TENANT_ID, tableName)
+	tenantId := xhttp.GetTenantId(r, "")
+	err := db.GetCacheManager().Refresh(tenantId, tableName)
 	if err == nil {
-		if stats, err := db.GetCacheManager().GetCacheStats(db.DEFAULT_TENANT_ID, tableName); err == nil {
+		if stats, err := db.GetCacheManager().GetCacheStats(tenantId, tableName); err == nil {
 			response, _ := util.JSONMarshal(stats)
 			xhttp.WriteXconfResponse(w, http.StatusOK, response)
 		} else {
@@ -57,7 +59,8 @@ func GetInfoRefreshHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetInfoStatistics(w http.ResponseWriter, r *http.Request) {
-	stats := *db.GetCacheManager().GetStatistics(db.DEFAULT_TENANT_ID)
+	tenantId := xhttp.GetTenantId(r, "")
+	stats := *db.GetCacheManager().GetStatistics(tenantId)
 	response, _ := util.JSONMarshal(stats)
 	xhttp.WriteXconfResponse(w, 200, response)
 }

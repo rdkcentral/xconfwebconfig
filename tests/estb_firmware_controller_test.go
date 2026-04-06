@@ -117,7 +117,7 @@ func TestFirmwareConfigParametersCanNotBeOverriddenByDefinePropertiesRule(t *tes
 	percentageBean := CreatePercentageBean("test percentage bean", defaultEnvironmentId, definePropertiesModelId, "", "", defaultFirmwareVersion, "stb")
 	percentageBean.LastKnownGood = firmwareConfig.ID
 	percentageBean.FirmwareVersions = append(percentageBean.FirmwareVersions, firmwareConfig.FirmwareVersion)
-	err = SavePercentageBean(percentageBean)
+	err = SavePercentageBean(db.DEFAULT_TENANT_ID, percentageBean)
 	assert.NilError(t, err)
 
 	defineProperties := map[string]string{}
@@ -445,7 +445,7 @@ func createAndSaveUseAccountPercentageBean(lkgConfig *estbfirmware.FirmwareConfi
 	firmwareVersions := useAccountBean.FirmwareVersions
 	firmwareVersions = append(firmwareVersions, lkgConfig.FirmwareVersion)
 	useAccountBean.FirmwareVersions = firmwareVersions
-	err := SavePercentageBean(useAccountBean)
+	err := SavePercentageBean(db.DEFAULT_TENANT_ID, useAccountBean)
 	return useAccountBean, err
 }
 
@@ -462,9 +462,9 @@ func buildDefinePropertyTemplateAction(parameters map[string]string, requiredAll
 	return propertyValues
 }
 
-func SavePercentageBean(percentageBean *estbfirmware.PercentageBean) error {
+func SavePercentageBean(tenantId string, percentageBean *estbfirmware.PercentageBean) error {
 	firmwareRule := estbfirmware.ConvertPercentageBeanToFirmwareRule(*percentageBean)
-	return corefw.CreateFirmwareRuleOneDB(firmwareRule)
+	return corefw.CreateFirmwareRuleOneDB(tenantId, firmwareRule)
 }
 
 func performPostSwuRequestAndValidateBody(t *testing.T, server *xwhttp.XconfServer, router *mux.Router, headers map[string]string, context *estbfirmware.ConvertedContext, expectedResponse estbfirmware.FirmwareConfigFacadeResponse) {

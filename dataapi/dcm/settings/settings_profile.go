@@ -28,15 +28,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetSettingRuleAllAsList() ([]*logupload.SettingRule, error) {
+func GetSettingRuleAllAsList(tenantId string) ([]*logupload.SettingRule, error) {
 	cm := db.GetCacheManager()
 	cacheKey := "SettingRuleList"
-	cacheInst := cm.ApplicationCacheGet(db.DEFAULT_TENANT_ID, db.TABLE_SETTING_RULES, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(tenantId, db.TABLE_SETTING_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*logupload.SettingRule), nil
 	}
 
-	list, err := db.GetCachedSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_SETTING_RULES, 0)
+	list, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_SETTING_RULES, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -49,19 +49,19 @@ func GetSettingRuleAllAsList() ([]*logupload.SettingRule, error) {
 	}
 
 	if len(settingRules) > 0 {
-		cm.ApplicationCacheSet(db.DEFAULT_TENANT_ID, db.TABLE_SETTING_RULES, cacheKey, settingRules)
+		cm.ApplicationCacheSet(tenantId, db.TABLE_SETTING_RULES, cacheKey, settingRules)
 	}
 
 	return settingRules, nil
 }
 
-func GetSettingRulesBySettingType(settingType string) []*logupload.SettingRule {
+func GetSettingRulesBySettingType(tenantId string, settingType string) []*logupload.SettingRule {
 	settingTypeEnum := logupload.SettingTypeEnum(settingType)
 	var settingRules []*logupload.SettingRule
-	list, err := GetSettingRuleAllAsList()
+	list, err := GetSettingRuleAllAsList(tenantId)
 	if err == nil {
 		for _, rule := range list {
-			if profile := GetSettingProfileBySettingRule(rule); profile != nil {
+			if profile := GetSettingProfileBySettingRule(tenantId, rule); profile != nil {
 				profileSettingType := logupload.SettingTypeEnum(profile.SettingType)
 				if profileSettingType == settingTypeEnum {
 					settingRules = append(settingRules, rule)
@@ -72,10 +72,10 @@ func GetSettingRulesBySettingType(settingType string) []*logupload.SettingRule {
 	return settingRules
 }
 
-func GetSettingProfileBySettingRule(settingRule *logupload.SettingRule) *logupload.SettingProfiles {
+func GetSettingProfileBySettingRule(tenantId string, settingRule *logupload.SettingRule) *logupload.SettingProfiles {
 	var settingProfile *logupload.SettingProfiles
 	if settingRule != nil && settingRule.BoundSettingID != "" {
-		profileData, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_SETTING_PROFILES, settingRule.BoundSettingID)
+		profileData, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_SETTING_PROFILES, settingRule.BoundSettingID)
 		if err == nil {
 			settingProfile = profileData.(*logupload.SettingProfiles)
 		}
@@ -83,25 +83,23 @@ func GetSettingProfileBySettingRule(settingRule *logupload.SettingRule) *loguplo
 	return settingProfile
 }
 
-func GetMaxRule(settingsRules []logupload.SettingRule) *logupload.SettingRule {
-	if settingsRules != nil && len(settingsRules) > 0 {
+func GetMaxRule(tenantId string, settingsRules []logupload.SettingRule) *logupload.SettingRule {
+	if len(settingsRules) > 0 {
 		sort.Slice(settingsRules, func(i, j int) bool { return re.CompareRules(settingsRules[i].Rule, settingsRules[j].Rule) > 0 })
 		return &settingsRules[0]
 	}
 	return nil
 }
 
-func GetSettingsRuleByTypeForContext(settingType string, contextMap map[string]string) *logupload.SettingRule {
-	settingRules := GetSettingRulesBySettingType(settingType)
+func GetSettingsRuleByTypeForContext(tenantId string, settingType string, contextMap map[string]string) *logupload.SettingRule {
+	settingRules := GetSettingRulesBySettingType(tenantId, settingType)
 	var rules []logupload.SettingRule
-	if settingRules != nil {
-		for _, rule := range settingRules {
-			ruleProcessorFactory := re.NewRuleProcessorFactory()
-			// TODO: please add log.Fields to this method
-			if contextMap[common.APPLICATION_TYPE] == rule.GetApplicationType() && ruleProcessorFactory.Processor.Evaluate(&rule.Rule, contextMap, log.Fields{}) {
-				rules = append(rules, *rule)
-			}
+	for _, rule := range settingRules {
+		ruleProcessorFactory := re.NewRuleProcessorFactory()
+		// TODO: please add log.Fields to this method
+		if contextMap[common.APPLICATION_TYPE] == rule.GetApplicationType() && ruleProcessorFactory.Processor.Evaluate(&rule.Rule, contextMap, log.Fields{}) {
+			rules = append(rules, *rule)
 		}
 	}
-	return GetMaxRule(rules)
+	return GetMaxRule(tenantId, rules)
 }

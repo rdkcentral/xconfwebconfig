@@ -26,7 +26,6 @@ import (
 	dcmlogupload "github.com/rdkcentral/xconfwebconfig/dataapi/dcm/logupload"
 	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/settings"
 	"github.com/rdkcentral/xconfwebconfig/dataapi/dcm/telemetry"
-	"github.com/rdkcentral/xconfwebconfig/db"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
@@ -56,7 +55,6 @@ func GetLogUploaderTelemetryProfilesHandler(w http.ResponseWriter, r *http.Reque
 
 	contextMap, _ := GetContextMapAndSettingTypes(r)
 	fields[common.ESTB_MAC_ADDRESS] = contextMap[common.ESTB_MAC_ADDRESS]
-	fields[common.TENANT_ID] = contextMap[common.TENANT_ID]
 	coastTags, _ := AddLogUploaderContext(Ws, r, contextMap, false, fields)
 	xconfTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, true, fields)
 	CompareTaggingSources(contextMap, coastTags, xconfTags, fields)
@@ -93,7 +91,7 @@ func GetContextMapAndSettingTypes(r *http.Request) (map[string]string, []string)
 	}
 	contextMap := make(map[string]string)
 	contextMap[common.APPLICATION_TYPE] = applicationType
-	contextMap[common.TENANT_ID] = db.DEFAULT_TENANT_ID // TODO - get tenantId from request when multi-tenancy is supported
+	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r, "")
 	var settingTypes []string
 	if len(queryParams) > 0 {
 		for k, v := range queryParams {
@@ -146,7 +144,7 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 		if result != nil {
 			telemetryProfileService := telemetry.NewTelemetryProfileService()
 			telemetryRule = telemetryProfileService.GetTelemetryRuleForContext(contextMap)
-			permanentTelemetryProfile := telemetryProfileService.GetPermanentProfileByTelemetryRule(telemetryRule)
+			permanentTelemetryProfile := telemetryProfileService.GetPermanentProfileByTelemetryRule(contextMap[common.TENANT_ID], telemetryRule)
 			if permanentTelemetryProfile != nil {
 				cloneObj, err := permanentTelemetryProfile.Clone()
 				if err == nil {
@@ -173,8 +171,8 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 		if util.IsVersionGreaterOrEqual(contextMap[common.VERSION], 2.1) && len(settingTypes) > 0 {
 			var settingProfiles []logupload.SettingProfiles
 			for _, settingType := range settingTypes {
-				rule := settings.GetSettingsRuleByTypeForContext(settingType, contextMap)
-				profile := settings.GetSettingProfileBySettingRule(rule)
+				rule := settings.GetSettingsRuleByTypeForContext(contextMap[common.TENANT_ID], settingType, contextMap)
+				profile := settings.GetSettingProfileBySettingRule(contextMap[common.TENANT_ID], rule)
 				if profile != nil {
 					settingProfiles = append(settingProfiles, *profile)
 					settingRules = append(settingRules, rule)
@@ -211,7 +209,7 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 					result.LusUploadRepositoryURLNew = Ws.LogUploadSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, result.LusUploadRepositoryURLNew, fields)
 				}
 			}
-			LogResultSettings(result, telemetryRule, settingRules, fields)
+			LogResultSettings(contextMap[common.TENANT_ID], result, telemetryRule, settingRules, fields)
 			settingsResponse := logupload.CreateSettingsResponseObject(result)
 			response, _ := util.JSONMarshal(settingsResponse)
 			xhttp.WriteXconfResponse(w, 200, response)

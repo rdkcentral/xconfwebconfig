@@ -89,13 +89,13 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	canPrecookRfcResponse := false
 	isRfcPrecook304Enabled := false
 	isRfcPrecookForOfferedFwEnabled := Xc.EnableRfcPrecookForOfferedFw
-	isPrecookLockdownMode := shared.GetBooleanAppSetting(common.PROP_PRECOOK_LOCKDOWN_ENABLED, false)
+	isPrecookLockdownMode := shared.GetBooleanAppSetting(contextMap[common.TENANT_ID], common.PROP_PRECOOK_LOCKDOWN_ENABLED, false)
 	tfields := common.FilterLogFields(fields)
 	// only check values of precook flags if not in precook lockdown mode and mac is not in exclusion
 	if isPrecookLockdownMode {
 		log.WithFields(tfields).Debug("Currently in pre-cook lockdown mode, setting pre-cook flags to false.")
 	} else {
-		exclusionMacsSet, _ := shared.GetGenericNamedListSetByType(shared.MAC_LIST)
+		exclusionMacsSet, _ := shared.GetGenericNamedListSetByType(contextMap[common.TENANT_ID], shared.MAC_LIST)
 		if exclusionMacsSet.Contains(contextMap[common.ESTB_MAC_ADDRESS]) {
 			log.WithFields(tfields).Debugf("Device mac %s is in precook exclusion list, will not deliver precook data.", contextMap[common.ESTB_MAC_ADDRESS])
 			xhttp.IncreasePrecookExcludeMacListCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])

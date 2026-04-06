@@ -48,7 +48,7 @@ func TestRuleEval(t *testing.T) {
 
 	macs := []string{mac3, "AA:AA:AA:BB:BB:BB", "AA:AA:AA:BB:BB:CC"}
 	newList := shared.NewGenericNamespacedList(namespaceListKey, shared.MacList, macs)
-	err := shared.CreateGenericNamedListOneDB(newList)
+	err := shared.CreateGenericNamedListOneDB(db.DEFAULT_TENANT_ID, newList)
 	assert.NilError(t, err)
 
 	// load data
