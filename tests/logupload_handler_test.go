@@ -39,18 +39,16 @@ const (
 )
 
 type UrlSecurityTokenTest struct {
-	name                string
-	ssrPath             string
-	url                 string
-	apiVersion          string
-	mac                 string
-	ip                  string
-	tokenEnabled        bool
-	groupServiceEnabled bool
+	name         string
+	ssrPath      string
+	url          string
+	apiVersion   string
+	mac          string
+	tokenEnabled bool
 }
 
-func setUpXconfServerWithLoguploaderSecurityConfig(localServer *xwhttp.XconfServer, ssrPath, securityKey string, tokenEnabled bool, groupServiceEnabled bool) *mux.Router {
-	localServer.SecurityTokenConfig = createSecurityTokenConfig(securityKey, groupServiceEnabled)
+func setUpXconfServerWithLoguploaderSecurityConfig(localServer *xwhttp.XconfServer, ssrPath, securityKey string, tokenEnabled bool) *mux.Router {
+	localServer.SecurityTokenConfig = createSecurityTokenConfig(securityKey)
 	localServer.LogUploadSecurityTokenConfig = createSecurityPathConfig(ssrPath, tokenEnabled)
 	localRouter := localServer.GetRouter(true)
 	dataapi.XconfSetup(localServer, localRouter)
@@ -63,10 +61,9 @@ func createSecurityPathConfig(path string, enabled bool) *xwhttp.SecurityTokenPa
 	return &xwhttp.SecurityTokenPathConfig{UrlPathMap: configMap}
 }
 
-func createSecurityTokenConfig(securityKey string, groupServiceEnabled bool) *xwhttp.SecurityTokenConfig {
+func createSecurityTokenConfig(securityKey string) *xwhttp.SecurityTokenConfig {
 	return &xwhttp.SecurityTokenConfig{
 		SkipSecurityTokenClientProtocolSet: util.NewSet(),
-		SecurityTokenGroupServiceEnabled:   groupServiceEnabled,
 	}
 }
 
