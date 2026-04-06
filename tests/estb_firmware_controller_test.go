@@ -18,8 +18,6 @@
 package tests
 
 import (
-	"crypto/hmac"
-	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -52,11 +50,9 @@ const (
 )
 
 type SecurityTokenTest struct {
-	name                string
-	mac                 string
-	ip                  string
-	tokenEnabled        bool
-	groupServiceEnabled bool
+	name         string
+	mac          string
+	tokenEnabled bool
 }
 
 func TestFirmwareConfigParametersAreReturned(t *testing.T) {
@@ -369,16 +365,10 @@ func verifyFirmwareLocation(t *testing.T, rr *httptest.ResponseRecorder, testPar
 	pathList := strings.Split(firmwareLocationUrl.Path, "/")
 	xdsKey := pathList[1]
 	respToken := pathList[2]
-	// if there's no token, the path will just be the original url path
+	// if there's no token, the path will just be the original url path, else it will be mac with no colons
 	if !testParameters.tokenEnabled {
 		assert.Equal(t, X1_SIGN_REDIRECT, firmwareLocationUrl.Path)
 		assert.Assert(t, xdsKey != "xds")
-	} else if !testParameters.groupServiceEnabled {
-		signingKey := hmac.New(sha1.New, []byte(securityKey))
-		signingKey.Write([]byte(testParameters.ip))
-		securityToken := customBase64Encoding.EncodeToString(signingKey.Sum(nil))
-		assert.Equal(t, securityToken, respToken)
-		assert.Equal(t, xdsKey, "xds")
 	} else {
 		mac := strings.ToUpper(strings.ReplaceAll(testParameters.mac, ":", ""))
 		assert.Equal(t, mac, respToken)
@@ -429,8 +419,8 @@ func preCreateCertExpiryFirmwareRule(modelId string, rule *re.Rule) (*corefw.Fir
 	return firmwareRule, firmwareConfig
 }
 
-func setUpXconfServerWithFirmwareSecurityConfig(localServer *xwhttp.XconfServer, ssrPath, securityToken string, tokenEnabled bool, groupServiceEnabled bool) *mux.Router {
-	localServer.SecurityTokenConfig = createSecurityTokenConfig(securityToken, groupServiceEnabled)
+func setUpXconfServerWithFirmwareSecurityConfig(localServer *xwhttp.XconfServer, ssrPath, securityToken string, tokenEnabled bool) *mux.Router {
+	localServer.SecurityTokenConfig = createSecurityTokenConfig(securityToken)
 	localServer.FirmwareSecurityTokenConfig = createSecurityPathConfig(ssrPath, tokenEnabled)
 	localRouter := localServer.GetRouter(true)
 	dataapi.XconfSetup(localServer, localRouter)
