@@ -39,7 +39,7 @@ func TestToRfcResponse_NotWhitelisted(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
+	result := ToRfcResponse(db.GetDefaultTenantId(), feature)
 
 	// Should return feature unchanged
 	assert.Equal(t, feature, result)
@@ -78,7 +78,7 @@ func TestToRfcResponse_WithValidWhitelistProperty(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
+	result := ToRfcResponse(db.GetDefaultTenantId(), feature)
 
 	// Should populate Properties with namespaced list data
 	assert.NotNil(t, result)
@@ -112,7 +112,7 @@ func TestToRfcResponse_GetGenericNamedListError(t *testing.T) {
 		ConfigData: map[string]string{},
 	}
 
-	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
+	result := ToRfcResponse(db.GetDefaultTenantId(), feature)
 
 	// Should still return the feature even on error
 	assert.NotNil(t, result)
@@ -142,7 +142,7 @@ func TestToRfcResponse_GetGenericNamedListReturnsNil(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
+	result := ToRfcResponse(db.GetDefaultTenantId(), feature)
 
 	// Should return feature but Properties should not be set
 	assert.NotNil(t, result)
@@ -160,7 +160,7 @@ func TestToRfcResponse_NilWhitelistProperty(t *testing.T) {
 		WhitelistProperty: nil,
 	}
 
-	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
+	result := ToRfcResponse(db.GetDefaultTenantId(), feature)
 
 	// Should return feature unchanged
 	assert.NotNil(t, result)
@@ -181,7 +181,7 @@ func TestToRfcResponse_EmptyWhitelistPropertyValue(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
+	result := ToRfcResponse(db.GetDefaultTenantId(), feature)
 
 	// Should trigger warning log and return feature unchanged
 	assert.NotNil(t, result)
@@ -201,7 +201,7 @@ func TestToRfcResponse_EmptyNamespacedListType(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
+	result := ToRfcResponse(db.GetDefaultTenantId(), feature)
 
 	// Should trigger warning log and return feature unchanged
 	assert.NotNil(t, result)
@@ -233,7 +233,7 @@ func TestToRfcResponse_WithEmptyDataList(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
+	result := ToRfcResponse(db.GetDefaultTenantId(), feature)
 
 	// Should set Properties with empty list
 	assert.NotNil(t, result)
@@ -273,7 +273,7 @@ func TestToRfcResponse_WithLargeDataList(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
+	result := ToRfcResponse(db.GetDefaultTenantId(), feature)
 
 	assert.NotNil(t, result)
 	assert.NotNil(t, result.Properties)
@@ -312,7 +312,7 @@ func TestToRfcResponse_PreservesExistingProperties(t *testing.T) {
 		},
 	}
 
-	result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
+	result := ToRfcResponse(db.GetDefaultTenantId(), feature)
 
 	// Should preserve all original properties
 	assert.Equal(t, "feat123", result.ID)
@@ -381,7 +381,7 @@ func TestToRfcResponse_DifferentListTypes(t *testing.T) {
 				},
 			}
 
-			result := ToRfcResponse(db.DEFAULT_TENANT_ID, feature)
+			result := ToRfcResponse(db.GetDefaultTenantId(), feature)
 
 			assert.Equal(t, tc.expectedListType, result.ListType)
 			assert.Equal(t, len(tc.data), result.ListSize)

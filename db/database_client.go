@@ -82,6 +82,13 @@ func (ri *RangeInfo) IsNilEndValue() bool {
 	return ri.EndValue == nil || ri.EndValue == "" || ri.EndValue == 0
 }
 
+// Tenants table object
+type Tenant struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Updated int64  `json:"updated"`
+}
+
 type DatabaseClient interface {
 	SetUp() error
 	TearDown() error
@@ -148,6 +155,11 @@ type DatabaseClient interface {
 	AcquireLock(tenantId string, lockName string, lockedBy string, ttlSeconds int) error
 	ReleaseLock(tenantId string, lockName string, lockedBy string) error
 	GetLockInfo(tenantId string, lockName string) (map[string]any, error)
+
+	// Tenants
+	GetAllTenants() []*Tenant
+	SetTenant(tenant *Tenant) error
+	DeleteTenant(tenantId string) error
 }
 
 // BatchOperation interface for database batch operations

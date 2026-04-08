@@ -33,12 +33,12 @@ const (
 
 // CompressingDataDao interface
 type CompressingDataDao interface {
-	GetOne(tenantId string, tableName string, key string) (interface{}, error)
+	GetOne(tenantId string, tableName string, key string) (any, error)
 	SetOne(tenantId string, tableName string, key string, value []byte) error
 	DeleteOne(tenantId string, tableName string, key string) error
-	GetAllByKeys(tenantId string, tableName string, keys []string) ([]interface{}, error)
-	GetAllAsList(tenantId string, tableName string, continueOnError bool) ([]interface{}, error)
-	GetAllAsMap(tenantId string, tableName string, continueOnError bool) (map[string]interface{}, error)
+	GetAllByKeys(tenantId string, tableName string, keys []string) ([]any, error)
+	GetAllAsList(tenantId string, tableName string, continueOnError bool) ([]any, error)
+	GetAllAsMap(tenantId string, tableName string, continueOnError bool) (map[string]any, error)
 	GetKeys(tenantId string, tableName string) []string
 }
 
@@ -52,7 +52,7 @@ func GetCompressingDataDao() CompressingDataDao {
 }
 
 // GetOne get one compressed Xconf record
-func (cd compressingDataDaoImpl) GetOne(tenantId string, tableName string, key string) (interface{}, error) {
+func (cd compressingDataDaoImpl) GetOne(tenantId string, tableName string, key string) (any, error) {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return nil, err
@@ -100,8 +100,8 @@ func (cd compressingDataDaoImpl) DeleteOne(tenantId string, tableName string, ke
 }
 
 // GetAllByKeys get Xconf records for the specified list of keys
-func (cd compressingDataDaoImpl) GetAllByKeys(tenantId string, tableName string, keys []string) ([]interface{}, error) {
-	var result []interface{}
+func (cd compressingDataDaoImpl) GetAllByKeys(tenantId string, tableName string, keys []string) ([]any, error) {
+	var result []any
 
 	// Process one compressed record at a time
 	for _, key := range keys {
@@ -116,13 +116,13 @@ func (cd compressingDataDaoImpl) GetAllByKeys(tenantId string, tableName string,
 }
 
 // GetAllAsList get a list of all Xconf records
-func (cd compressingDataDaoImpl) GetAllAsList(tenantId string, tableName string, continueOnError bool) ([]interface{}, error) {
+func (cd compressingDataDaoImpl) GetAllAsList(tenantId string, tableName string, continueOnError bool) ([]any, error) {
 	resultMap, err := cd.GetAllAsMap(tenantId, tableName, continueOnError)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]interface{}, 0, len(resultMap))
+	result := make([]any, 0, len(resultMap))
 	for _, value := range resultMap {
 		result = append(result, value)
 	}
@@ -131,8 +131,8 @@ func (cd compressingDataDaoImpl) GetAllAsList(tenantId string, tableName string,
 }
 
 // GetAllAsMap get a map of all Xconf records
-func (cd compressingDataDaoImpl) GetAllAsMap(tenantId string, tableName string, continueOnError bool) (map[string]interface{}, error) {
-	var result = make(map[string]interface{})
+func (cd compressingDataDaoImpl) GetAllAsMap(tenantId string, tableName string, continueOnError bool) (map[string]any, error) {
+	var result = make(map[string]any)
 
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {

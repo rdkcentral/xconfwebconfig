@@ -37,10 +37,10 @@ func TestConvertToIpRuleOrReturnNull(t *testing.T) {
 
 	svc := &estbfirmware.IpRuleService{}
 	// store into DB
-	err := corefw.CreateFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, firmwareRule)
+	err := corefw.CreateFirmwareRuleOneDB(db.GetDefaultTenantId(), firmwareRule)
 	assert.NilError(t, err)
-	err = coreef.CreateFirmwareConfigOneDB(db.DEFAULT_TENANT_ID, firmwareConfig)
+	err = coreef.CreateFirmwareConfigOneDB(db.GetDefaultTenantId(), firmwareConfig)
 	assert.NilError(t, err)
-	bean := svc.ConvertToIpRuleOrReturnNull(db.DEFAULT_TENANT_ID, firmwareRule)
+	bean := svc.ConvertToIpRuleOrReturnNull(db.GetDefaultTenantId(), firmwareRule)
 	assert.Assert(t, bean != nil)
 }

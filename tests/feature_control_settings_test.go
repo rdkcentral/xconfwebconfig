@@ -700,11 +700,11 @@ func createTagFeatureRule(tagNameForRule string) *rfc.Feature {
 }
 
 func setFeatureRule(featureRule *rfc.FeatureRule) {
-	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FEATURE_CONTROL_RULES, featureRule.Id, featureRule)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FEATURE_CONTROL_RULES, featureRule.Id, featureRule)
 }
 
 func setFeature(feature *rfc.Feature) {
-	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FEATURES, feature.ID, feature)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FEATURES, feature.ID, feature)
 }
 
 func createAndSaveFeature() *rfc.Feature {

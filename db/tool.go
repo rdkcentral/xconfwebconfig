@@ -58,7 +58,7 @@ func GetSetColumnsStr(columns []string) string {
 
 // GetShardId returns the shard ID for the given key which can be
 // used in a partition key to distribute data across multiple nodes
-func GetShardId(key interface{}) int {
+func GetShardId(key any) int {
 	switch t := key.(type) {
 	case int:
 		return getShardIdForInt64(int64(t))

@@ -112,7 +112,7 @@ type BatchWrapper struct {
 	*gocql.Batch
 }
 
-func (bw *BatchWrapper) Query(stmt string, args ...interface{}) {
+func (bw *BatchWrapper) Query(stmt string, args ...any) {
 	bw.Batch.Query(stmt, args...)
 }
 
@@ -273,7 +273,7 @@ func (c *CassandraClient) XconfRecookingStatusTableName() string {
 
 // Cassandra Impl of DatabaseClient
 
-func (c *CassandraClient) GetPenetrationMetrics(estbMac string) (map[string]interface{}, error) {
+func (c *CassandraClient) GetPenetrationMetrics(estbMac string) (map[string]any, error) {
 	dict := util.Dict{}
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
@@ -289,7 +289,7 @@ func (c *CassandraClient) GetPenetrationMetrics(estbMac string) (map[string]inte
 }
 
 func (c *CassandraClient) SetPenetrationMetrics(pMetrics *PenetrationMetrics) error {
-	values := []interface{}{pMetrics.EstbMac, pMetrics.Partner, pMetrics.Model, pMetrics.FwVersion, pMetrics.FwReportedVersion, pMetrics.FwAdditionalVersionInfo, pMetrics.FwAppliedRule, pMetrics.FwTs, pMetrics.RfcAppliedRules, pMetrics.RfcFeatures, pMetrics.RfcTs}
+	values := []any{pMetrics.EstbMac, pMetrics.Partner, pMetrics.Model, pMetrics.FwVersion, pMetrics.FwReportedVersion, pMetrics.FwAdditionalVersionInfo, pMetrics.FwAppliedRule, pMetrics.FwTs, pMetrics.RfcAppliedRules, pMetrics.RfcFeatures, pMetrics.RfcTs}
 	stmt := fmt.Sprintf(`INSERT INTO "%s" (estb_mac,partner,model,fw_version,fw_reported_version,fw_additional_version_info,fw_applied_rule,fw_ts,rfc_features,rfc_applied_rules,rfc_ts) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, PenetrationMetricsTable)
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
@@ -477,7 +477,7 @@ func (c *CassandraClient) GetAllXconfDataAsMap(tenantId string, tableName string
 
 	iter := c.Query(stmt, tenantId, shardIds).Iter()
 	for {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 		if !iter.MapScan(row) {
 			break
 		}
@@ -546,7 +546,7 @@ func (c *CassandraClient) GetAllXconfData(tenantId string, tableName string, key
 }
 
 // GetAllXconfDataTwoKeysRange Get multiple rows for the specified key and key2 range as list of values, where value is JSON data
-func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tenantId string, tableName string, key interface{}, key2FieldName string, rangeInfo *RangeInfo) [][]byte {
+func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tenantId string, tableName string, key any, key2FieldName string, rangeInfo *RangeInfo) [][]byte {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
@@ -616,11 +616,11 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tenantId string, tableName
 }
 
 // GetAllXconfDataTwoKeysAsMap Get multiple rows for the specified key and key2 list as map of values, where value is JSON data
-func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, key string, key2FieldName string, key2List []interface{}) map[interface{}][]byte {
+func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, key string, key2FieldName string, key2List []any) map[any][]byte {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
-	var resultData = make(map[interface{}][]byte)
+	var resultData = make(map[any][]byte)
 	var iter *gocql.Iter
 
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
@@ -644,7 +644,7 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tenantId string, tableName
 }
 
 // SetXconfDataTwoKeys Create XconfData for the specified two keys and value, where value is JSON data
-func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string, key interface{}, key2FieldName string, key2 interface{}, value []byte, ttl int) error {
+func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string, key any, key2FieldName string, key2 any, value []byte, ttl int) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
@@ -671,7 +671,7 @@ func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string,
 }
 
 // GetXconfDataTwoKeys Get one row where return value is JSON data
-func (c *CassandraClient) GetXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 interface{}) ([]byte, error) {
+func (c *CassandraClient) GetXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 any) ([]byte, error) {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
@@ -691,7 +691,7 @@ func (c *CassandraClient) GetXconfDataTwoKeys(tenantId string, tableName string,
 }
 
 // DeleteXconfDataTwoKeys Delete XconfData for the specified two keys
-func (c *CassandraClient) DeleteXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 interface{}) error {
+func (c *CassandraClient) DeleteXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 any) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
@@ -723,7 +723,7 @@ func (c *CassandraClient) GetAllXconfTwoKeys(tenantId string, tableName string, 
 	}
 
 	for {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 		if !iter.MapScan(row) {
 			break
 		}
@@ -739,11 +739,11 @@ func (c *CassandraClient) GetAllXconfTwoKeys(tenantId string, tableName string, 
 }
 
 // GetAllXconfKey2s Get a list of Xconf key2 for the specified key
-func (c *CassandraClient) GetAllXconfKey2s(tenantId string, tableName string, key string, key2FieldName string) []interface{} {
+func (c *CassandraClient) GetAllXconfKey2s(tenantId string, tableName string, key string, key2FieldName string) []any {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
-	var resultData []interface{}
+	var resultData []any
 	var iter *gocql.Iter
 
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
@@ -756,7 +756,7 @@ func (c *CassandraClient) GetAllXconfKey2s(tenantId string, tableName string, ke
 	}
 
 	for {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 		if !iter.MapScan(row) {
 			break
 		}
@@ -822,7 +822,7 @@ func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName stri
 	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, Key2FieldNameForList, tableName)
 	iter := c.Query(stmt, tenantId, shardId, key).Iter()
 	for {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 		if !iter.MapScan(row) {
 			break
 		}
@@ -911,7 +911,7 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName s
 
 	iter := c.Query(stmt, tenantId, shardIds, NamedListCountColumnValue).Iter()
 	for {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 		if !iter.MapScan(row) {
 			break
 		}
@@ -922,7 +922,7 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName s
 	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, Key2FieldNameForList, tableName)
 	iter = c.Query(stmt, tenantId, shardIds).Iter()
 	for {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 		if !iter.MapScan(row) {
 			break
 		}
@@ -962,22 +962,22 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName s
 	return resultData
 }
 
-func (c *CassandraClient) QueryXconfDataRows(query string, queryParameters ...string) ([]map[string]interface{}, error) {
+func (c *CassandraClient) QueryXconfDataRows(query string, queryParameters ...string) ([]map[string]any, error) {
 	start := time.Now()
 
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
 	// Convert string slice to interface slice
-	params := make([]interface{}, len(queryParameters))
+	params := make([]any, len(queryParameters))
 	for i, v := range queryParameters {
 		params[i] = v
 	}
 
-	var resultData []map[string]interface{}
+	var resultData []map[string]any
 	iter := c.Query(query, params...).Iter()
 	for {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 		if !iter.MapScan(row) {
 			break
 		}
@@ -994,7 +994,7 @@ func (c *CassandraClient) ModifyXconfData(query string, queryParameters ...strin
 	defer func() { <-c.ConcurrentQueries }()
 
 	// Convert string slice to interface slice
-	params := make([]interface{}, len(queryParameters))
+	params := make([]any, len(queryParameters))
 	for i, v := range queryParameters {
 		params[i] = v
 	}
@@ -1045,6 +1045,46 @@ func (c *CassandraClient) ExecuteBatch(batch BatchOperation) error {
 	return err
 }
 
+func (c *CassandraClient) GetAllTenants() []*Tenant {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	var tenants []*Tenant
+	stmt := fmt.Sprintf(`SELECT id, name, updated FROM %s`, TABLE_TENANTS)
+	iter := c.Query(stmt).Iter()
+	for {
+		var tenant Tenant
+		if !iter.Scan(&tenant.ID, &tenant.Name, &tenant.Updated) {
+			break
+		}
+		tenants = append(tenants, &tenant)
+	}
+
+	return tenants
+}
+
+func (c *CassandraClient) SetTenant(tenant *Tenant) error {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	stmt := fmt.Sprintf(`INSERT INTO "%s"(id, name, updated) VALUES(?,?,?)`, TABLE_TENANTS)
+	if err := c.Query(stmt, tenant.ID, tenant.Name, tenant.Updated).Exec(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *CassandraClient) DeleteTenant(tenantId string) error {
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE id = ?`, TABLE_TENANTS)
+	if err := c.Query(stmt, tenantId).Exec(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *CassandraClient) AcquireLock(tenantId string, lockName string, lockedBy string, ttl int) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
@@ -1053,7 +1093,7 @@ func (c *CassandraClient) AcquireLock(tenantId string, lockName string, lockedBy
 	expiresAt := lockedAt.Add(time.Duration(ttl) * time.Second)
 
 	// First, try to insert a new lock (if no lock exists)
-	existingLock := make(map[string]interface{})
+	existingLock := make(map[string]any)
 	stmt := fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, name, locked_by, locked_at, expires_at) VALUES(?,?,?,?,?,?) IF NOT EXISTS`, TABLE_LOCKS)
 	applied, err := c.Query(stmt, tenantId, GetShardId(lockName), lockName, lockedBy, lockedAt, expiresAt).MapScanCAS(existingLock)
 	if err != nil {
@@ -1089,7 +1129,7 @@ func (c *CassandraClient) ReleaseLock(tenantId string, lockName string, lockedBy
 	defer func() { <-c.ConcurrentQueries }()
 
 	// Try to release the lock by deleting the record only if it is held by the specified lockHolder
-	existingLock := make(map[string]interface{})
+	existingLock := make(map[string]any)
 	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND name = ? IF locked_by = ?`, TABLE_LOCKS)
 	applied, err := c.Query(stmt, tenantId, GetShardId(lockName), lockName, lockedBy).MapScanCAS(existingLock)
 	if err != nil {
@@ -1103,7 +1143,7 @@ func (c *CassandraClient) ReleaseLock(tenantId string, lockName string, lockedBy
 	return nil
 }
 
-func (c *CassandraClient) GetLockInfo(tenantId string, lockName string) (map[string]interface{}, error) {
+func (c *CassandraClient) GetLockInfo(tenantId string, lockName string) (map[string]any, error) {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 

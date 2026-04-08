@@ -97,9 +97,9 @@ func DeleteAllEntities() {
 		db.TABLE_GENERIC_NS_LIST,
 	}
 	for _, table := range cachedTableList {
-		tablemap, _ := db.GetCachedSimpleDao().GetAllAsMap(db.DEFAULT_TENANT_ID, table)
+		tablemap, _ := db.GetCachedSimpleDao().GetAllAsMap(db.GetDefaultTenantId(), table)
 		for key := range tablemap {
-			db.GetCachedSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, table, key.(string))
+			db.GetCachedSimpleDao().DeleteOne(db.GetDefaultTenantId(), table, key.(string))
 		}
 	}
 }
@@ -147,7 +147,7 @@ func CreateFirmwareRule(id string, templateId string, applicationType string, ac
 }
 
 func SetFirmwareRule(firmwareRule *corefw.FirmwareRule) {
-	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, firmwareRule.ID, firmwareRule)
 }
 
 func CreateRuleAction(typ string, actiontyp corefw.ApplicableActionType, firmwareConfigId string) *corefw.ApplicableAction {
@@ -228,7 +228,7 @@ func CreateODPPartnerObjectWithPartnerAndTimezoneInvalid() xwhttp.DeviceServiceO
 
 func CreateAndSaveModel(id string) *shared.Model {
 	model := shared.NewModel(id, "ModelDescription")
-	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, model.ID, model)
+	err := db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, model)
 	if err != nil {
 		return nil
 	}
@@ -238,7 +238,7 @@ func CreateAndSaveModel(id string) *shared.Model {
 
 func CreateAndSaveEnvironment(id string) *shared.Environment {
 	env := shared.NewEnvironment(id, "ENV_MODEL_RULE_ENVIRONMENT_ID")
-	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_ENVIRONMENTS, env.ID, env)
+	err := db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_ENVIRONMENTS, env.ID, env)
 	if err != nil {
 		return nil
 	}
@@ -248,7 +248,7 @@ func CreateAndSaveEnvironment(id string) *shared.Environment {
 
 func CreateAndSaveGenericNamespacedList(name string, ttype string, data string) *shared.GenericNamespacedList {
 	namespacedList := CreateGenericNamespacedList(name, ttype, data)
-	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, namespacedList.ID, namespacedList)
+	err := db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, namespacedList.ID, namespacedList)
 	if err != nil {
 		return nil
 	}
@@ -279,7 +279,7 @@ func CreateAndSaveFirmwareConfig(firmwareVersion string, modelId string, firmwar
 }
 
 func SetFirmwareConfig(firmwareConfig *coreef.FirmwareConfig) error {
-	err := coreef.CreateFirmwareConfigOneDB(db.DEFAULT_TENANT_ID, firmwareConfig)
+	err := coreef.CreateFirmwareConfigOneDB(db.GetDefaultTenantId(), firmwareConfig)
 	if err != nil {
 		return err
 	}
@@ -312,7 +312,7 @@ func CreatePercentageBean(name string, envId string, modelId string, whitelistId
 
 func CreateAndSaveFirmwareRuleTemplate(id string, rule *re.Rule, applicableAction *corefw.TemplateApplicableAction) *corefw.FirmwareRuleTemplate {
 	template := CreateFirmwareRuleTemplate(id, rule, applicableAction)
-	err := corefw.CreateFirmwareRuleTemplateOneDB(db.DEFAULT_TENANT_ID, template)
+	err := corefw.CreateFirmwareRuleTemplateOneDB(db.GetDefaultTenantId(), template)
 	if err != nil {
 		return nil
 	}
@@ -335,7 +335,7 @@ func CreateAndSaveEnvModelFirmwareRule(name string, firmwareConfigId string, env
 	envModelRule.ApplicableAction = ruleAct
 	envModelRule.Type = "ENV_MODEL_RULE"
 	envModelRule.Rule = *CreateEnvModelRule(envId, modelId, macListId)
-	err := corefw.CreateFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, envModelRule)
+	err := corefw.CreateFirmwareRuleOneDB(db.GetDefaultTenantId(), envModelRule)
 	if err != nil {
 		return nil
 	}
@@ -382,7 +382,7 @@ func CreateAndSavePercentFilter(
 	percentFilter.EnvModelPercentages = mapEnvModes
 
 	percentFilterService := estb.NewPercentFilterService()
-	percentFilterService.Save(db.DEFAULT_TENANT_ID, percentFilter, applicationType)
+	percentFilterService.Save(db.GetDefaultTenantId(), percentFilter, applicationType)
 
 	return percentFilter
 }

@@ -92,7 +92,7 @@ func TestConvertFirmwareRuleToIpRuleBean(t *testing.T) {
 	var rule firmware.FirmwareRule
 	err := json.Unmarshal(ruleStr, &rule)
 	assert.NilError(t, err)
-	bean := ConvertFirmwareRuleToIpRuleBean(db.DEFAULT_TENANT_ID, &rule)
+	bean := ConvertFirmwareRuleToIpRuleBean(db.GetDefaultTenantId(), &rule)
 	assert.Assert(t, bean != nil)
 	assert.Assert(t, bean.IpAddressGroup != nil)
 }

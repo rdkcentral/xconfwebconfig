@@ -46,14 +46,14 @@ The following code illustrates how to retrieve a specific Model from the Model t
 
 // CachedListingDao interface for ListingDao
 type CachedListingDao interface {
-	GetOne(tenantId string, tableName string, key string, key2 interface{}) (interface{}, error)
-	SetOne(tenantId string, tableName string, key string, key2 interface{}, entity interface{}) error
-	DeleteOne(tenantId string, tableName string, key string, key2 interface{}) error
+	GetOne(tenantId string, tableName string, key string, key2 any) (any, error)
+	SetOne(tenantId string, tableName string, key string, key2 any, entity any) error
+	DeleteOne(tenantId string, tableName string, key string, key2 any) error
 	DeleteAll(tenantId string, tableName string, key string) error
-	GetAll(tenantId string, tableName string, key string) ([]interface{}, error)
-	GetAllAsMap(tenantId string, tableName string, key string, key2List []interface{}) (map[interface{}]interface{}, error)
+	GetAll(tenantId string, tableName string, key string) ([]any, error)
+	GetAllAsMap(tenantId string, tableName string, key string, key2List []any) (map[any]any, error)
 	GetKeys(tenantId string, tableName string) ([]TwoKeys, error)
-	GetKey2AsList(tenantId string, tableName string, key string) ([]interface{}, error)
+	GetKey2AsList(tenantId string, tableName string, key string) ([]any, error)
 }
 
 type cachedListingDaoImpl struct{}
@@ -66,7 +66,7 @@ func GetCachedListingDao() CachedListingDao {
 }
 
 // GetOne get one Xconf record from cache
-func (cld cachedListingDaoImpl) GetOne(tenantId string, tableName string, key string, key2 interface{}) (interface{}, error) {
+func (cld cachedListingDaoImpl) GetOne(tenantId string, tableName string, key string, key2 any) (any, error) {
 	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func (cld cachedListingDaoImpl) GetOne(tenantId string, tableName string, key st
 }
 
 // SetOne set Xconf record in DB and cache where entity param is the model/struct
-func (cld cachedListingDaoImpl) SetOne(tenantId string, tableName string, key string, key2 interface{}, entity interface{}) error {
+func (cld cachedListingDaoImpl) SetOne(tenantId string, tableName string, key string, key2 any, entity any) error {
 	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (cld cachedListingDaoImpl) SetOne(tenantId string, tableName string, key st
 }
 
 // DeleteOne delete Xconf record from DB and cache
-func (cld cachedListingDaoImpl) DeleteOne(tenantId string, tableName string, key string, key2 interface{}) error {
+func (cld cachedListingDaoImpl) DeleteOne(tenantId string, tableName string, key string, key2 any) error {
 	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return err
@@ -164,14 +164,14 @@ func (cld cachedListingDaoImpl) DeleteAll(tenantId string, tableName string, key
 }
 
 // GetAll get all Xconf records from cache for the specified key
-func (cld cachedListingDaoImpl) GetAll(tenantId string, tableName string, key string) ([]interface{}, error) {
+func (cld cachedListingDaoImpl) GetAll(tenantId string, tableName string, key string) ([]any, error) {
 	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
 
 	cloneData := GetCacheManager().settings.cloneDataEnabled
-	result := make([]interface{}, len(key))
+	result := make([]any, len(key))
 
 	// find all records in cache with key that has key + delimiter as the prefix
 	keyPrefix := key + TwowKeysDelimiter
@@ -195,14 +195,14 @@ func (cld cachedListingDaoImpl) GetAll(tenantId string, tableName string, key st
 }
 
 // GetAllAsMap get a map of all Xconf records for the specified key2 list
-func (cld cachedListingDaoImpl) GetAllAsMap(tenantId string, tableName string, key string, key2List []interface{}) (map[interface{}]interface{}, error) {
+func (cld cachedListingDaoImpl) GetAllAsMap(tenantId string, tableName string, key string, key2List []any) (map[any]any, error) {
 	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
 
 	cloneData := GetCacheManager().settings.cloneDataEnabled
-	var result = make(map[interface{}]interface{})
+	var result = make(map[any]any)
 
 	for _, key2 := range key2List {
 		tkStr := GetTwoKeysAsString(key, key2)
@@ -248,13 +248,13 @@ func (cld cachedListingDaoImpl) GetKeys(tenantId string, tableName string) ([]Tw
 }
 
 // GetKey2AsList get a list of Xconf key2 for the specified key
-func (cld cachedListingDaoImpl) GetKey2AsList(tenantId string, tableName string, key string) ([]interface{}, error) {
+func (cld cachedListingDaoImpl) GetKey2AsList(tenantId string, tableName string, key string) ([]any, error) {
 	cache, err := GetCacheManager().getCache(tenantId, tableName)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []interface{}
+	var result []any
 
 	// find all records in cache with key that has key + delimiter as the prefix
 	keyPrefix := key + TwowKeysDelimiter

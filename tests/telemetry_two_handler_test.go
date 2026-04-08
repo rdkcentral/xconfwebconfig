@@ -72,9 +72,9 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 	assert.NilError(t, err)
 	for _, v := range t2Rules {
 		t2Rule := v
-		err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID, &t2Rule)
+		err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID, &t2Rule)
 		assert.NilError(t, err)
-		itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID)
+		itf, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID)
 		assert.NilError(t, err)
 		fetchedT2Rule, ok := itf.(*logupload.TelemetryTwoRule)
 		assert.Assert(t, ok)
@@ -88,10 +88,10 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 		var srcT2Profile logupload.TelemetryTwoProfile
 		err = json.Unmarshal([]byte(sp1), &srcT2Profile)
 		assert.NilError(t, err)
-		err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
+		err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
 		assert.NilError(t, err)
 		// get a t2profile
-		itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
+		itf, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
 		assert.NilError(t, err)
 		tgtT2Profile, ok := itf.(*logupload.TelemetryTwoProfile)
 		assert.Assert(t, ok)
@@ -103,9 +103,9 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 	assert.NilError(t, err)
 	for _, v := range t2Rules {
 		t2Rule := v
-		err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID, &t2Rule)
+		err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID, &t2Rule)
 		assert.NilError(t, err)
-		itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID)
+		itf, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID)
 		assert.NilError(t, err)
 		fetchedT2Rule, ok := itf.(*logupload.TelemetryTwoRule)
 		assert.Assert(t, ok)
@@ -116,10 +116,10 @@ func TestTelemetryTwoHandlerSampleData(t *testing.T) {
 	var srcT2Profile logupload.TelemetryTwoProfile
 	err = json.Unmarshal([]byte(sp1), &srcT2Profile)
 	assert.NilError(t, err)
-	err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, IllFormattedProfileUuid, &srcT2Profile)
+	err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, IllFormattedProfileUuid, &srcT2Profile)
 	assert.NilError(t, err)
 	// get a t2profile
-	itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, IllFormattedProfileUuid)
+	itf, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, IllFormattedProfileUuid)
 	assert.NilError(t, err)
 	tgtT2Profile, ok := itf.(*logupload.TelemetryTwoProfile)
 	assert.Assert(t, ok)
@@ -247,9 +247,9 @@ func TestTelemetryTwoHandlerMac(t *testing.T) {
 		"11:11:22:22:33:07",
 	}
 	srcGnl := shared.NewGenericNamespacedList(namedlistKey, shared.MacList, macList1)
-	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, srcGnl.ID, srcGnl)
+	err := db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, srcGnl.ID, srcGnl)
 	assert.NilError(t, err)
-	itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, srcGnl.ID)
+	itf, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, srcGnl.ID)
 	assert.NilError(t, err)
 	readGnl, ok := itf.(*shared.GenericNamespacedList)
 	assert.Assert(t, ok)
@@ -261,10 +261,10 @@ func TestTelemetryTwoHandlerMac(t *testing.T) {
 	var srcT2Rule logupload.TelemetryTwoRule
 	err = json.Unmarshal([]byte(sr2), &srcT2Rule)
 	assert.NilError(t, err)
-	err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, srcT2Rule.ID, &srcT2Rule)
+	err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, srcT2Rule.ID, &srcT2Rule)
 	assert.NilError(t, err)
 	// get a t2rule
-	itf, err = db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, ruleUuid)
+	itf, err = db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, ruleUuid)
 	tgtT2Rule, ok := itf.(*logupload.TelemetryTwoRule)
 	assert.Assert(t, ok)
 	assert.Assert(t, srcT2Rule.Equals(tgtT2Rule))
@@ -274,10 +274,10 @@ func TestTelemetryTwoHandlerMac(t *testing.T) {
 	var srcT2Profile logupload.TelemetryTwoProfile
 	err = json.Unmarshal([]byte(sp1), &srcT2Profile)
 	assert.NilError(t, err)
-	err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
+	err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
 	assert.NilError(t, err)
 	// get a t2profile
-	itf, err = db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
+	itf, err = db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
 	tgtT2Profile, ok := itf.(*logupload.TelemetryTwoProfile)
 	assert.Assert(t, ok)
 	assert.DeepEqual(t, &srcT2Profile, tgtT2Profile)
@@ -364,9 +364,9 @@ func TestTelemetryTwoHandlerIpRange(t *testing.T) {
 		"33.44.55.66/20",
 	}
 	srcGnl := shared.NewGenericNamespacedList(namedlistKey, shared.IpList, ipList1)
-	err := db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, srcGnl.ID, srcGnl)
+	err := db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, srcGnl.ID, srcGnl)
 	assert.NilError(t, err)
-	itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, srcGnl.ID)
+	itf, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, srcGnl.ID)
 	assert.NilError(t, err)
 	readGnl, ok := itf.(*shared.GenericNamespacedList)
 	assert.Assert(t, ok)
@@ -378,10 +378,10 @@ func TestTelemetryTwoHandlerIpRange(t *testing.T) {
 	var srcT2Rule logupload.TelemetryTwoRule
 	err = json.Unmarshal([]byte(sr3), &srcT2Rule)
 	assert.NilError(t, err)
-	err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, srcT2Rule.ID, &srcT2Rule)
+	err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, srcT2Rule.ID, &srcT2Rule)
 	assert.NilError(t, err)
 	// get a t2rule
-	itf, err = db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, ruleUuid)
+	itf, err = db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, ruleUuid)
 	tgtT2Rule, ok := itf.(*logupload.TelemetryTwoRule)
 	assert.Assert(t, ok)
 	assert.Assert(t, srcT2Rule.Equals(tgtT2Rule))
@@ -391,10 +391,10 @@ func TestTelemetryTwoHandlerIpRange(t *testing.T) {
 	var srcT2Profile logupload.TelemetryTwoProfile
 	err = json.Unmarshal([]byte(sp1), &srcT2Profile)
 	assert.NilError(t, err)
-	err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
+	err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
 	assert.NilError(t, err)
 	// get a t2profile
-	itf, err = db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
+	itf, err = db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
 	tgtT2Profile, ok := itf.(*logupload.TelemetryTwoProfile)
 	assert.Assert(t, ok)
 	assert.DeepEqual(t, &srcT2Profile, tgtT2Profile)
@@ -463,12 +463,12 @@ func TestTelemetryTwoEvaluationNoOpRule(t *testing.T) {
 	dataapi.XconfSetup(server, router)
 
 	profile := createTelemetryTwoProfile()
-	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, profile.ID, profile)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, profile.ID, profile)
 
 	model := CreateAndSaveModel("TEST_PROFILE_MODEL")
 
 	telemetryTwoRule := createTelemetryTwoRule([]string{profile.ID}, model.ID, true)
-	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, telemetryTwoRule.ID, telemetryTwoRule)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, telemetryTwoRule.ID, telemetryTwoRule)
 
 	reqUrl := "/loguploader/getTelemetryProfiles?model=" + model.ID
 

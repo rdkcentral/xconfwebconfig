@@ -52,7 +52,7 @@ func TestGetLogFileList(t *testing.T) {
 			}, nil
 		}
 
-		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 100)
+		logFiles, err := getLogFileList(db.GetDefaultTenantId(), "test-id", 100)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, logFiles)
@@ -77,7 +77,7 @@ func TestGetLogFileList(t *testing.T) {
 		}
 
 		// Request only 3 files (maxResults = 3)
-		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 3)
+		logFiles, err := getLogFileList(db.GetDefaultTenantId(), "test-id", 3)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, logFiles)
@@ -93,7 +93,7 @@ func TestGetLogFileList(t *testing.T) {
 			return nil, nil
 		}
 
-		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 100)
+		logFiles, err := getLogFileList(db.GetDefaultTenantId(), "test-id", 100)
 
 		assert.NoError(t, err)
 		assert.Nil(t, logFiles)
@@ -107,7 +107,7 @@ func TestGetLogFileList(t *testing.T) {
 			}, nil
 		}
 
-		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 100)
+		logFiles, err := getLogFileList(db.GetDefaultTenantId(), "test-id", 100)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, logFiles)
@@ -127,7 +127,7 @@ func TestGetLogFileList(t *testing.T) {
 		}
 
 		// maxResults = 3, same as data length
-		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 3)
+		logFiles, err := getLogFileList(db.GetDefaultTenantId(), "test-id", 3)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, logFiles)
@@ -147,7 +147,7 @@ func TestGetLogFileList(t *testing.T) {
 		}
 
 		// maxResults = 10, but only 2 files available
-		logFiles, err := getLogFileList(db.DEFAULT_TENANT_ID, "test-id", 10)
+		logFiles, err := getLogFileList(db.GetDefaultTenantId(), "test-id", 10)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, logFiles)
@@ -183,7 +183,7 @@ func TestGetSettings(t *testing.T) {
 		GetOneVodSettingsFunc = func(tenantId string, id string) *logupload.VodSettings { return nil }
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
+		settings := ruleBase.GetSettings(db.GetDefaultTenantId(), "test-id")
 
 		assert.NotNil(t, settings)
 		// Should have empty/default values
@@ -213,7 +213,7 @@ func TestGetSettings(t *testing.T) {
 		GetOneVodSettingsFunc = func(tenantId string, id string) *logupload.VodSettings { return nil }
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
+		settings := ruleBase.GetSettings(db.GetDefaultTenantId(), "test-id")
 
 		assert.NotNil(t, settings)
 		// Should not populate GroupName since device settings are inactive
@@ -241,7 +241,7 @@ func TestGetSettings(t *testing.T) {
 		GetOneVodSettingsFunc = func(tenantId string, id string) *logupload.VodSettings { return nil }
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
+		settings := ruleBase.GetSettings(db.GetDefaultTenantId(), "test-id")
 
 		assert.NotNil(t, settings)
 		// Should not populate LusName since log upload settings are inactive
@@ -264,7 +264,7 @@ func TestGetSettings(t *testing.T) {
 		}
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
+		settings := ruleBase.GetSettings(db.GetDefaultTenantId(), "test-id")
 
 		assert.NotNil(t, settings)
 		assert.Equal(t, "Test VOD", settings.VodSettingsName)
@@ -324,7 +324,7 @@ func TestGetSettings(t *testing.T) {
 		GetOneVodSettingsFunc = func(tenantId string, id string) *logupload.VodSettings { return nil }
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
+		settings := ruleBase.GetSettings(db.GetDefaultTenantId(), "test-id")
 
 		assert.NotNil(t, settings)
 
@@ -393,7 +393,7 @@ func TestGetSettings(t *testing.T) {
 		GetOneVodSettingsFunc = func(tenantId string, id string) *logupload.VodSettings { return nil }
 
 		ruleBase := NewLogUploadRuleBase()
-		settings := ruleBase.GetSettings(db.DEFAULT_TENANT_ID, "test-id")
+		settings := ruleBase.GetSettings(db.GetDefaultTenantId(), "test-id")
 
 		assert.NotNil(t, settings)
 		// URL already contains "://", should use as-is

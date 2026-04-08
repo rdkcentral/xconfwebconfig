@@ -50,10 +50,10 @@ func TestTelemetryTwoDao(t *testing.T) {
 	var srcT2Rule logupload.TelemetryTwoRule
 	err := json.Unmarshal([]byte(sr1), &srcT2Rule)
 	assert.NilError(t, err)
-	err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, srcT2Rule.ID, &srcT2Rule)
+	err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, srcT2Rule.ID, &srcT2Rule)
 	assert.NilError(t, err)
 	// get a t2profile
-	itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, ruleUuid)
+	itf, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, ruleUuid)
 	tgtT2Rule, ok := itf.(*logupload.TelemetryTwoRule)
 	assert.Assert(t, ok)
 	assert.Assert(t, srcT2Rule.Equals(tgtT2Rule))
@@ -63,10 +63,10 @@ func TestTelemetryTwoDao(t *testing.T) {
 	var srcT2Profile logupload.TelemetryTwoProfile
 	err = json.Unmarshal([]byte(sp1), &srcT2Profile)
 	assert.NilError(t, err)
-	err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
+	err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &srcT2Profile)
 	assert.NilError(t, err)
 	// get a t2profile
-	itf, err = db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
+	itf, err = db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
 	tgtT2Profile, ok := itf.(*logupload.TelemetryTwoProfile)
 	assert.Assert(t, ok)
 	assert.DeepEqual(t, &srcT2Profile, tgtT2Profile)
@@ -87,9 +87,9 @@ func TestTelemetryTwoDaoSampleData(t *testing.T) {
 		t2Rule := v
 		sourceData[t2Rule.ID] = &t2Rule
 		mykeys = append(mykeys, t2Rule.ID)
-		err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID, &t2Rule)
+		err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID, &t2Rule)
 		assert.NilError(t, err)
-		itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID)
+		itf, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, t2Rule.ID)
 		assert.NilError(t, err)
 		fetchedT2Rule, ok := itf.(*logupload.TelemetryTwoRule)
 		assert.Assert(t, ok)
@@ -98,7 +98,7 @@ func TestTelemetryTwoDaoSampleData(t *testing.T) {
 
 	fetchedData := util.Dict{}
 	for _, x := range mykeys {
-		itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_RULES, x)
+		itf, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_RULES, x)
 		assert.NilError(t, err)
 		fetchedT2Rule, ok := itf.(*logupload.TelemetryTwoRule)
 		assert.Assert(t, ok)
@@ -113,10 +113,10 @@ func TestTelemetryTwoDaoSampleData(t *testing.T) {
 		var sourceT2Profile logupload.TelemetryTwoProfile
 		err = json.Unmarshal([]byte(sp1), &sourceT2Profile)
 		assert.NilError(t, err)
-		err = db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &sourceT2Profile)
+		err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid, &sourceT2Profile)
 		assert.NilError(t, err)
 		// get a t2profile
-		itf, err := db.GetCachedSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
+		itf, err := db.GetCachedSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_TELEMETRY_TWO_PROFILES, profileUuid)
 		assert.NilError(t, err)
 		fetchedT2Profile, ok := itf.(*logupload.TelemetryTwoProfile)
 		assert.Assert(t, ok)
@@ -139,9 +139,9 @@ func TestGenericNamedListDaoForMacs(t *testing.T) {
 	sourceNamedlist := shared.NewGenericNamespacedList(namedListKey, shared.MacList, macs)
 	bbytes, err := json.Marshal(sourceNamedlist)
 	assert.NilError(t, err)
-	err = db.GetCompressingDataDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID, bbytes)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID, bbytes)
 	assert.NilError(t, err)
-	itf, err := db.GetCompressingDataDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID)
+	itf, err := db.GetCompressingDataDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID)
 	assert.NilError(t, err)
 	fetchedNamedlist, ok := itf.(*shared.GenericNamespacedList)
 	assert.Assert(t, ok)
@@ -162,9 +162,9 @@ func TestGenericNamedlistDaoForIpAddresses(t *testing.T) {
 	sourceNamedlist := shared.NewGenericNamespacedList(namedListKey, shared.IpList, ips)
 	bbytes, err := json.Marshal(sourceNamedlist)
 	assert.NilError(t, err)
-	err = db.GetCompressingDataDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID, bbytes)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID, bbytes)
 	assert.NilError(t, err)
-	itf, err := db.GetCompressingDataDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID)
+	itf, err := db.GetCompressingDataDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID)
 	assert.NilError(t, err)
 	fetchedNamedlist, ok := itf.(*shared.GenericNamespacedList)
 	assert.Assert(t, ok)

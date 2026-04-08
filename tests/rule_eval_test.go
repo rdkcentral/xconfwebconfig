@@ -38,21 +38,21 @@ func TestRuleEval(t *testing.T) {
 	}
 
 	// setup data
-	server.SetXconfData(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId1, firmwareConfig1Bytes, 3600)
-	server.SetXconfData(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId2, firmwareConfig2Bytes, 3600)
-	server.SetXconfData(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId3, firmwareConfig3Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId1, firmwareConfig1Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId2, firmwareConfig2Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId3, firmwareConfig3Bytes, 3600)
 
-	server.SetXconfData(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, firmwareRuleId1, firmwareRule1Bytes, 3600)
-	server.SetXconfData(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, firmwareRuleId2, firmwareRule2Bytes, 3600)
-	server.SetXconfData(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, firmwareRuleId3, firmwareRule3Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, firmwareRuleId1, firmwareRule1Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, firmwareRuleId2, firmwareRule2Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, firmwareRuleId3, firmwareRule3Bytes, 3600)
 
 	macs := []string{mac3, "AA:AA:AA:BB:BB:BB", "AA:AA:AA:BB:BB:CC"}
 	newList := shared.NewGenericNamespacedList(namespaceListKey, shared.MacList, macs)
-	err := shared.CreateGenericNamedListOneDB(db.DEFAULT_TENANT_ID, newList)
+	err := shared.CreateGenericNamedListOneDB(db.GetDefaultTenantId(), newList)
 	assert.NilError(t, err)
 
 	// load data
-	ruleBytes := server.GetAllXconfDataAsList(db.DEFAULT_TENANT_ID, db.TABLE_FIRMWARE_RULES, 0)
+	ruleBytes := server.GetAllXconfDataAsList(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, 0)
 	processor := re.NewRuleProcessorFactory().RuleProcessor()
 
 	// setup test parameters

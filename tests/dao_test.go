@@ -41,18 +41,18 @@ func TestCRUD(t *testing.T) {
 	model := shared.NewModel(fmt.Sprintf("Model-%s", uuid.New().String()), "TestCacheCRUD")
 
 	// Verify record does not exist
-	_, err := db.GetSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, model.ID)
+	_, err := db.GetSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID)
 	assert.Assert(t, errors.Is(err, gocql.ErrNotFound))
 
 	// test create
 	jsonData, err := json.Marshal(model)
 	assert.NilError(t, err)
 
-	err = db.GetSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, model.ID, jsonData)
+	err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, jsonData)
 	assert.NilError(t, err)
 
 	// test retrieve
-	obj, err := db.GetSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, model.ID)
+	obj, err := db.GetSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID)
 	assert.NilError(t, err)
 	assert.Assert(t, obj != nil)
 
@@ -65,10 +65,10 @@ func TestCRUD(t *testing.T) {
 	jsonData, err = json.Marshal(model)
 	assert.NilError(t, err)
 
-	err = db.GetSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, model.ID, jsonData)
+	err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, jsonData)
 	assert.NilError(t, err)
 
-	obj, err = db.GetSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, model.ID)
+	obj, err = db.GetSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID)
 	assert.NilError(t, err)
 	assert.Assert(t, obj != nil)
 
@@ -77,10 +77,10 @@ func TestCRUD(t *testing.T) {
 	assert.Equal(t, m.Description, model.Description)
 
 	// test delete
-	err = db.GetSimpleDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, model.ID)
+	err = db.GetSimpleDao().DeleteOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID)
 	assert.NilError(t, err)
 
-	_, err = db.GetSimpleDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, model.ID)
+	_, err = db.GetSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID)
 	assert.Assert(t, errors.Is(err, gocql.ErrNotFound))
 }
 
@@ -95,7 +95,7 @@ func TestGetAllByKeys(t *testing.T) {
 	assert.Assert(t, len(keys) == 5)
 
 	rowKeys := keys[0:3]
-	models, err := db.GetSimpleDao().GetAllByKeys(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, rowKeys)
+	models, err := db.GetSimpleDao().GetAllByKeys(db.GetDefaultTenantId(), db.TABLE_MODELS, rowKeys)
 	assert.NilError(t, err)
 	assert.Equal(t, len(models), len(rowKeys))
 
@@ -117,7 +117,7 @@ func TestGetAllAsList(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, len(keys) == 5)
 
-	models, err := db.GetSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, 0)
+	models, err := db.GetSimpleDao().GetAllAsList(db.GetDefaultTenantId(), db.TABLE_MODELS, 0)
 	assert.NilError(t, err)
 	assert.Equal(t, len(models), len(keys))
 
@@ -126,7 +126,7 @@ func TestGetAllAsList(t *testing.T) {
 		assert.Assert(t, util.Contains(keys, m.ID))
 	}
 
-	models, err = db.GetSimpleDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, 3)
+	models, err = db.GetSimpleDao().GetAllAsList(db.GetDefaultTenantId(), db.TABLE_MODELS, 3)
 	assert.NilError(t, err)
 	assert.Equal(t, len(models), 3)
 }
@@ -143,7 +143,7 @@ func TestGetAllAsMap(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, len(keys) == 5)
 
-	modelMap, err := db.GetSimpleDao().GetAllAsMap(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, 0)
+	modelMap, err := db.GetSimpleDao().GetAllAsMap(db.GetDefaultTenantId(), db.TABLE_MODELS, 0)
 	assert.NilError(t, err)
 	assert.Equal(t, len(modelMap), len(keys))
 
@@ -151,7 +151,7 @@ func TestGetAllAsMap(t *testing.T) {
 		assert.Assert(t, modelMap[key] != nil)
 	}
 
-	modelMap, err = db.GetSimpleDao().GetAllAsMap(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, 3)
+	modelMap, err = db.GetSimpleDao().GetAllAsMap(db.GetDefaultTenantId(), db.TABLE_MODELS, 3)
 	assert.NilError(t, err)
 	assert.Equal(t, len(modelMap), 3)
 }
@@ -168,7 +168,7 @@ func TestGetKeys(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, len(keys) == 5)
 
-	rowKeys := db.GetSimpleDao().GetKeys(db.DEFAULT_TENANT_ID, db.TABLE_MODELS)
+	rowKeys := db.GetSimpleDao().GetKeys(db.GetDefaultTenantId(), db.TABLE_MODELS)
 	assert.Equal(t, len(rowKeys), len(keys))
 
 	assert.Assert(t, util.StringElementsMatch(keys, rowKeys), fmt.Sprintf("%v : %v", keys, rowKeys))
@@ -184,7 +184,7 @@ func generateTestModels(num int) ([]string, error) {
 			return nil, err
 		}
 
-		err = db.GetSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_MODELS, model.ID, jsonData)
+		err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, jsonData)
 		if err != nil {
 			return nil, err
 		}
@@ -204,7 +204,7 @@ func generateTestEnvironments(num int) ([]string, error) {
 			return nil, err
 		}
 
-		err = db.GetSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_ENVIRONMENTS, env.ID, jsonData)
+		err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_ENVIRONMENTS, env.ID, jsonData)
 		if err != nil {
 			return nil, err
 		}
@@ -218,7 +218,7 @@ func truncateTable(tableName string) error {
 	dbClient := db.GetDatabaseClient()
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
 	if ok {
-		return cassandraClient.DeleteAllXconfData(db.DEFAULT_TENANT_ID, tableName)
+		return cassandraClient.DeleteAllXconfData(db.GetDefaultTenantId(), tableName)
 	}
 	return nil
 }

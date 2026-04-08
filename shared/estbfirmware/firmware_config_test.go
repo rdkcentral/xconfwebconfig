@@ -164,7 +164,7 @@ func TestFirmwareConfig_Clone(t *testing.T) {
 func TestFirmwareConfig_Validate_NilConfig(t *testing.T) {
 	var config *FirmwareConfig = nil
 
-	err := config.Validate(db.DEFAULT_TENANT_ID)
+	err := config.Validate(db.GetDefaultTenantId())
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "Firmware config is not present")
 }
@@ -178,7 +178,7 @@ func TestFirmwareConfig_Validate_EmptyDescription(t *testing.T) {
 		SupportedModelIds: []string{"MODEL-A"},
 	}
 
-	err := config.Validate(db.DEFAULT_TENANT_ID)
+	err := config.Validate(db.GetDefaultTenantId())
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "Description is empty")
 }
@@ -192,7 +192,7 @@ func TestFirmwareConfig_Validate_EmptyFilename(t *testing.T) {
 		SupportedModelIds: []string{"MODEL-A"},
 	}
 
-	err := config.Validate(db.DEFAULT_TENANT_ID)
+	err := config.Validate(db.GetDefaultTenantId())
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "File name is empty")
 }
@@ -206,7 +206,7 @@ func TestFirmwareConfig_Validate_EmptyVersion(t *testing.T) {
 		SupportedModelIds: []string{"MODEL-A"},
 	}
 
-	err := config.Validate(db.DEFAULT_TENANT_ID)
+	err := config.Validate(db.GetDefaultTenantId())
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "Version is empty")
 }
@@ -220,7 +220,7 @@ func TestFirmwareConfig_Validate_EmptySupportedModels(t *testing.T) {
 		SupportedModelIds: []string{},
 	}
 
-	err := config.Validate(db.DEFAULT_TENANT_ID)
+	err := config.Validate(db.GetDefaultTenantId())
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "Supported model list is empty")
 }

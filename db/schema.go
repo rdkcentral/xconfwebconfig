@@ -23,6 +23,7 @@ import (
 
 const (
 	// Common
+	TABLE_TENANTS            = "tenants"
 	TABLE_APPLICATION_TYPES  = "application_types"
 	TABLE_ENVIRONMENTS       = "environments"
 	TABLE_MODELS             = "models"

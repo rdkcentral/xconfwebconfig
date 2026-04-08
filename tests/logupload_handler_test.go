@@ -72,19 +72,19 @@ func createSecurityTokenConfig(securityKey string, groupServiceEnabled bool) *xw
 
 func preCreateFormula(id string, priority int, uploadRepoUrl string, rule rulesengine.Rule) {
 	uploadRepo := createUploadRepository(id, uploadRepoUrl)
-	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_UPLOAD_REPOSITORIES, uploadRepo.ID, uploadRepo)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_UPLOAD_REPOSITORIES, uploadRepo.ID, uploadRepo)
 
 	deviceSetting := createDeviceSettings(id)
-	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_DEVICE_SETTINGS, deviceSetting.ID, deviceSetting)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DEVICE_SETTINGS, deviceSetting.ID, deviceSetting)
 
 	logUploadSettings := createLogUploadSettings(id, uploadRepo.ID)
-	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_LOG_UPLOAD_SETTINGS, logUploadSettings.ID, logUploadSettings)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_LOG_UPLOAD_SETTINGS, logUploadSettings.ID, logUploadSettings)
 
 	vodSettings := createVodSettings(id)
-	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_VOD_SETTINGS, vodSettings.ID, vodSettings)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_VOD_SETTINGS, vodSettings.ID, vodSettings)
 
 	dcmRule := createDcmRule(id, priority, rule)
-	db.GetCachedSimpleDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_DCM_RULES, dcmRule.ID, dcmRule)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_DCM_RULES, dcmRule.ID, dcmRule)
 }
 
 func createDcmRule(id string, priority int, rule rulesengine.Rule) *logupload.DCMGenericRule {

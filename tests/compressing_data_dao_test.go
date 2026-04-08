@@ -51,11 +51,11 @@ func TestCompressingDataCRUD(t *testing.T) {
 	jsonData, err := json.Marshal(nl)
 	assert.NilError(t, err)
 
-	err = db.GetCompressingDataDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
 	assert.NilError(t, err)
 
 	// test retrieve
-	obj, err := db.GetCompressingDataDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, nl.ID)
+	obj, err := db.GetCompressingDataDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID)
 	assert.NilError(t, err)
 	assert.Assert(t, obj != nil)
 
@@ -77,10 +77,10 @@ func TestCompressingDataCRUD(t *testing.T) {
 	jsonData, err = json.Marshal(nl)
 	assert.NilError(t, err)
 
-	err = db.GetCompressingDataDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
 	assert.NilError(t, err)
 
-	obj, err = db.GetCompressingDataDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, nl.ID)
+	obj, err = db.GetCompressingDataDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID)
 	assert.NilError(t, err)
 	assert.Assert(t, obj != nil)
 
@@ -90,10 +90,10 @@ func TestCompressingDataCRUD(t *testing.T) {
 	assert.Assert(t, util.StringElementsMatch(resNL.Data, macList))
 
 	// test delete
-	err = db.GetCompressingDataDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, resNL.ID)
+	err = db.GetCompressingDataDao().DeleteOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, resNL.ID)
 	assert.NilError(t, err)
 
-	_, err = db.GetCompressingDataDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, resNL.ID)
+	_, err = db.GetCompressingDataDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, resNL.ID)
 	assert.Assert(t, errors.Is(err, gocql.ErrNotFound))
 }
 
@@ -108,7 +108,7 @@ func TestCompressingDataGetAllByKeys(t *testing.T) {
 	assert.Assert(t, len(keys) == 5)
 
 	rowKeys := keys[0:3]
-	list, err := db.GetCompressingDataDao().GetAllByKeys(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, rowKeys)
+	list, err := db.GetCompressingDataDao().GetAllByKeys(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, rowKeys)
 	assert.NilError(t, err)
 	assert.Equal(t, len(list), len(rowKeys))
 
@@ -130,7 +130,7 @@ func TestCompressingDataGetAllAsList(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, len(keys) == 5)
 
-	list, err := db.GetCompressingDataDao().GetAllAsList(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, false)
+	list, err := db.GetCompressingDataDao().GetAllAsList(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, false)
 	assert.NilError(t, err)
 	assert.Equal(t, len(list), len(keys))
 
@@ -152,7 +152,7 @@ func TestCompressingDataGetAllAsMap(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, len(keys) == 5)
 
-	nlMap, err := db.GetCompressingDataDao().GetAllAsMap(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, false)
+	nlMap, err := db.GetCompressingDataDao().GetAllAsMap(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, false)
 	assert.NilError(t, err)
 	assert.Equal(t, len(nlMap), len(keys))
 
@@ -173,7 +173,7 @@ func TestCompressingDataGetKeys(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, len(keys) == 5)
 
-	rowKeys := db.GetCompressingDataDao().GetKeys(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST)
+	rowKeys := db.GetCompressingDataDao().GetKeys(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST)
 	assert.NilError(t, err)
 	assert.Equal(t, len(rowKeys), len(keys))
 	assert.Assert(t, util.StringElementsMatch(keys, rowKeys), fmt.Sprintf("%v : %v", keys, rowKeys))
@@ -197,11 +197,11 @@ func TestCompressingDataMultipleParts(t *testing.T) {
 	jsonData, err := json.Marshal(nl)
 	assert.NilError(t, err)
 
-	err = db.GetCompressingDataDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
 	assert.NilError(t, err)
 
 	// test retrieve
-	obj, err := db.GetCompressingDataDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, nl.ID)
+	obj, err := db.GetCompressingDataDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID)
 	assert.NilError(t, err)
 	assert.Assert(t, obj != nil)
 
@@ -215,11 +215,11 @@ func TestCompressingDataMultipleParts(t *testing.T) {
 	jsonData, err = json.Marshal(nl)
 	assert.NilError(t, err)
 
-	err = db.GetCompressingDataDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
 	assert.NilError(t, err)
 
 	// ensure list can be retrieve
-	obj, err = db.GetCompressingDataDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, nl.ID)
+	obj, err = db.GetCompressingDataDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID)
 	assert.NilError(t, err)
 	assert.Assert(t, obj != nil)
 
@@ -243,7 +243,7 @@ func generateTestNamespacedList(num int) ([]string, error) {
 			return nil, err
 		}
 
-		err = db.GetCompressingDataDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
+		err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
 		if err != nil {
 			return nil, err
 		}

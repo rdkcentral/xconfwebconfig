@@ -99,7 +99,7 @@ func TestGetOne(t *testing.T) {
 		}
 		return nil, nil
 	}
-	telemetryProfile := GetOneTelemetryProfile(db.DEFAULT_TENANT_ID, "rowKey")
+	telemetryProfile := GetOneTelemetryProfile(db.GetDefaultTenantId(), "rowKey")
 	assert.Equal(t, telemetryProfile.ID, "id")
 	assert.Equal(t, telemetryProfile.Schedule, "Schedule")
 	var a int64 = 123456
@@ -139,7 +139,7 @@ func TestGetTelemetryProfileList(t *testing.T) {
 		return nil, nil
 	}
 	//[]*TelemetryProfile
-	telemetryProfileList := GetTelemetryProfileList(db.DEFAULT_TENANT_ID)
+	telemetryProfileList := GetTelemetryProfileList(db.GetDefaultTenantId())
 	assert.Equal(t, len(telemetryProfileList), 2)
 	assert.Equal(t, telemetryProfileList[0].ApplicationType, "ApplicationType1")
 	assert.Equal(t, telemetryProfileList[1].UploadRepository, "uploadRepository:URL2")
@@ -192,7 +192,7 @@ func TestGetTelemetryProfileMap(t *testing.T) {
 		}
 		return nil, nil
 	}
-	finalMap := GetTelemetryProfileMap(db.DEFAULT_TENANT_ID)
+	finalMap := GetTelemetryProfileMap(db.GetDefaultTenantId())
 	assert.Equal(t, len(*finalMap), 2)
 	var a1 int64 = 1234561
 	for k, v := range *finalMap {

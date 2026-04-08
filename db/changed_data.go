@@ -41,6 +41,6 @@ type ChangedData struct {
 	TenantId       string        `json:"tenantId"`
 }
 
-func NewChangedDataInf() interface{} {
+func NewChangedDataInf() any {
 	return &ChangedData{}
 }

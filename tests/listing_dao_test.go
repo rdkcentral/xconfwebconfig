@@ -100,15 +100,15 @@ func TestListingCRUD(t *testing.T) {
 	rowKey := "A4:F3:E8:79:C8:60"
 
 	// test create
-	err := db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID, []byte(configChangeLogJsonTemplate1))
+	err := db.GetListingDao().SetOne(db.GetDefaultTenantId(), db.TABLE_CONFIG_CHANGE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID, []byte(configChangeLogJsonTemplate1))
 	assert.NilError(t, err)
-	err = db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, rowKey, "tvxads-de-k8-xconfds-0153e903b521e2a9e_1", []byte(configChangeLogJsonTemplate1))
+	err = db.GetListingDao().SetOne(db.GetDefaultTenantId(), db.TABLE_CONFIG_CHANGE_LOGS, rowKey, "tvxads-de-k8-xconfds-0153e903b521e2a9e_1", []byte(configChangeLogJsonTemplate1))
 	assert.NilError(t, err)
-	err = db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, rowKey, "tvxads-de-k8-xconfds-0153e903b521e2a9e_2", []byte(configChangeLogJsonTemplate1))
+	err = db.GetListingDao().SetOne(db.GetDefaultTenantId(), db.TABLE_CONFIG_CHANGE_LOGS, rowKey, "tvxads-de-k8-xconfds-0153e903b521e2a9e_2", []byte(configChangeLogJsonTemplate1))
 	assert.NilError(t, err)
 
 	// test retrieve
-	obj, err := db.GetListingDao().GetOne(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID)
+	obj, err := db.GetListingDao().GetOne(db.GetDefaultTenantId(), db.TABLE_CONFIG_CHANGE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID)
 	assert.NilError(t, err)
 	assert.Assert(t, obj != nil)
 	changeLog := obj.(*coreef.ConfigChangeLog)
@@ -154,16 +154,16 @@ func TestListingCRUD(t *testing.T) {
 	assert.Assert(t, len(changeLog.Explanation) > 100)
 	assert.Assert(t, changeLog.HasMinimumFirmware)
 
-	list, err := db.GetListingDao().GetAll(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, rowKey)
+	list, err := db.GetListingDao().GetAll(db.GetDefaultTenantId(), db.TABLE_CONFIG_CHANGE_LOGS, rowKey)
 	assert.NilError(t, err)
 	assert.Assert(t, list != nil)
 	assert.Assert(t, len(list) == 3)
 
 	// test delete
-	err = db.GetListingDao().DeleteOne(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID)
+	err = db.GetListingDao().DeleteOne(db.GetDefaultTenantId(), db.TABLE_CONFIG_CHANGE_LOGS, rowKey, coreef.LAST_CONFIG_LOG_ID)
 	assert.NilError(t, err)
 
-	list, err = db.GetListingDao().GetKey2AsList(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, rowKey)
+	list, err = db.GetListingDao().GetKey2AsList(db.GetDefaultTenantId(), db.TABLE_CONFIG_CHANGE_LOGS, rowKey)
 	assert.NilError(t, err)
 	assert.Assert(t, list != nil)
 	assert.Assert(t, len(list) == 2)
@@ -172,7 +172,7 @@ func TestListingCRUD(t *testing.T) {
 	assert.Assert(t, util.Contains(keys, list[0]))
 	assert.Assert(t, util.Contains(keys, list[1]))
 
-	err = db.GetListingDao().DeleteAll(db.DEFAULT_TENANT_ID, db.TABLE_CONFIG_CHANGE_LOGS, rowKey)
+	err = db.GetListingDao().DeleteAll(db.GetDefaultTenantId(), db.TABLE_CONFIG_CHANGE_LOGS, rowKey)
 	assert.NilError(t, err)
 }
 
@@ -198,7 +198,7 @@ func TestListingGetRange(t *testing.T) {
 	currentTS := util.GetTimestamp(time.Now().UTC())
 	rowKey := currentTS - (currentTS % int64(10000)) // 10 secs window
 
-	err = db.GetListingDao().SetOne(db.DEFAULT_TENANT_ID, db.TABLE_CHANGE_EVENTS, rowKey, changedData.ColumnName, jsonData)
+	err = db.GetListingDao().SetOne(db.GetDefaultTenantId(), db.TABLE_CHANGE_EVENTS, rowKey, changedData.ColumnName, jsonData)
 	assert.NilError(t, err)
 
 	// test retrieve
@@ -206,7 +206,7 @@ func TestListingGetRange(t *testing.T) {
 	assert.NilError(t, err)
 
 	rangeInfo := &db.RangeInfo{StartValue: startUuid}
-	list, err := db.GetListingDao().GetRange(db.DEFAULT_TENANT_ID, db.TABLE_CHANGE_EVENTS, rowKey, rangeInfo)
+	list, err := db.GetListingDao().GetRange(db.GetDefaultTenantId(), db.TABLE_CHANGE_EVENTS, rowKey, rangeInfo)
 	assert.NilError(t, err)
 	assert.Assert(t, len(list) == 1)
 

@@ -399,7 +399,7 @@ func TestLogResultSettings(t *testing.T) {
 
 		fields := log.Fields{}
 
-		LogResultSettings(db.DEFAULT_TENANT_ID, settings, telemetryRule, settingRules, fields)
+		LogResultSettings(db.GetDefaultTenantId(), settings, telemetryRule, settingRules, fields)
 
 		// Verify fields are set
 		assert.NotNil(t, fields["formulaNames"])
@@ -428,7 +428,7 @@ func TestLogResultSettings(t *testing.T) {
 
 		fields := log.Fields{}
 
-		LogResultSettings(db.DEFAULT_TENANT_ID, settings, nil, []*logupload.SettingRule{}, fields)
+		LogResultSettings(db.GetDefaultTenantId(), settings, nil, []*logupload.SettingRule{}, fields)
 
 		// When telemetry rule is nil, should log "NoMatch"
 		assert.Equal(t, "NoMatch", fields["telemetryRuleName"])
@@ -449,7 +449,7 @@ func TestLogResultSettings(t *testing.T) {
 
 		fields := log.Fields{}
 
-		LogResultSettings(db.DEFAULT_TENANT_ID, settings, telemetryRule, []*logupload.SettingRule{}, fields)
+		LogResultSettings(db.GetDefaultTenantId(), settings, telemetryRule, []*logupload.SettingRule{}, fields)
 
 		assert.Equal(t, "Test Rule", fields["telemetryRuleName"])
 		settingRuleNames := fields["settingRuleNames"].([]string)
@@ -474,7 +474,7 @@ func TestLogResultSettings(t *testing.T) {
 
 		fields := log.Fields{}
 
-		LogResultSettings(db.DEFAULT_TENANT_ID, settings, telemetryRule, []*logupload.SettingRule{}, fields)
+		LogResultSettings(db.GetDefaultTenantId(), settings, telemetryRule, []*logupload.SettingRule{}, fields)
 
 		// Should handle nil dcmRule gracefully
 		formulaNames := fields["formulaNames"].([]string)

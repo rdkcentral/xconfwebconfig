@@ -89,13 +89,13 @@ func initPercentConditions(t *testing.T) {
 	assert.Assert(t, envModelFirmwareRulePercentFilterTestCase != nil)
 
 	// test rule tempte or run in db
-	dbTemplaeRule, err := corefw.GetFirmwareRuleTemplateOneDBWithId(db.DEFAULT_TENANT_ID, envModelRuleTemplatePercentFilterTestCase.ID)
+	dbTemplaeRule, err := corefw.GetFirmwareRuleTemplateOneDBWithId(db.GetDefaultTenantId(), envModelRuleTemplatePercentFilterTestCase.ID)
 	assert.NilError(t, err)
 	assert.Assert(t, dbTemplaeRule != nil)
 	assert.Assert(t, dbTemplaeRule.ApplicableAction != nil)
 	assert.Equal(t, dbTemplaeRule.ApplicableAction.ActionType, corefw.RULE_TEMPLATE, fmt.Sprintf("Rule Template actioneType %v", dbTemplaeRule.ApplicableAction.ActionType))
 
-	dbPercRule, err1 := corefw.GetFirmwareRuleOneDB(db.DEFAULT_TENANT_ID, envModelFirmwareRulePercentFilterTestCase.ID)
+	dbPercRule, err1 := corefw.GetFirmwareRuleOneDB(db.GetDefaultTenantId(), envModelFirmwareRulePercentFilterTestCase.ID)
 	assert.NilError(t, err1)
 	assert.Assert(t, dbPercRule != nil)
 	assert.Assert(t, dbPercRule.ApplicableAction != nil)
@@ -150,7 +150,7 @@ func createAndNullifyFirmwareConfigFacade(firmwareConfig *coreef.FirmwareConfig)
 func performAndVerifyRequest(firmwareConfigForRequest *coreef.FirmwareConfig, expectedConfig *coreef.FirmwareConfigFacade, t *testing.T) {
 	contextMap := make(map[string]string)
 	contextMap["applicationType"] = "stb"
-	contextMap[common.TENANT_ID] = db.DEFAULT_TENANT_ID
+	contextMap[common.TENANT_ID] = db.GetDefaultTenantId()
 	contextMap["eStbMac"] = macListPercentFilterTestCase.Data[0]
 	contextMap["env"] = environmentPercentFilterTestCase.ID
 	contextMap["model"] = modelPercentFilterTestCase.ID

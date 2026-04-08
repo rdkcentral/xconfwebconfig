@@ -30,22 +30,22 @@ for the method to unmarshal the raw JSON data (i.e. []byte) to the proper struct
 Therefore, a table name and a corresponding constructor function need to be
 configured for the TableConfig variable.
 
-The returned value is an empty interface{} so the caller needs to cast the value
+The returned value is an empty interface{} (any) so the caller needs to cast the value
 to the target data type.
 */
 
 // ListingDao interface
 type ListingDao interface {
-	GetOne(tenantId string, tableName string, key string, key2 interface{}) (interface{}, error)
-	SetOne(tenantId string, tableName string, key interface{}, key2 interface{}, value []byte) error
-	DeleteOne(tenantId string, tableName string, key string, key2 interface{}) error
+	GetOne(tenantId string, tableName string, key string, key2 any) (any, error)
+	SetOne(tenantId string, tableName string, key any, key2 any, value []byte) error
+	DeleteOne(tenantId string, tableName string, key string, key2 any) error
 	DeleteAll(tenantId string, tableName string, key string) error
-	GetAll(tenantId string, tableName string, key string) ([]interface{}, error)
-	GetAllAsList(tenantId string, tableName string) ([]interface{}, error)
-	GetAllAsMap(tenantId string, tableName string, key string, key2List []interface{}) (map[interface{}]interface{}, error)
-	GetRange(tenantId string, tableName string, key interface{}, rangeInfo *RangeInfo) ([]interface{}, error)
+	GetAll(tenantId string, tableName string, key string) ([]any, error)
+	GetAllAsList(tenantId string, tableName string) ([]any, error)
+	GetAllAsMap(tenantId string, tableName string, key string, key2List []any) (map[any]any, error)
+	GetRange(tenantId string, tableName string, key any, rangeInfo *RangeInfo) ([]any, error)
 	GetKeys(tenantId string, tableName string) ([]TwoKeys, error)
-	GetKey2AsList(tenantId string, tableName string, key string) ([]interface{}, error)
+	GetKey2AsList(tenantId string, tableName string, key string) ([]any, error)
 }
 
 type listingDaoImpl struct{}
@@ -95,7 +95,7 @@ func (ld listingDaoImpl) GetOne(tenantId string, tableName string, key string, k
 }
 
 // SetOne set Xconf record for two keys
-func (ld listingDaoImpl) SetOne(tenantId string, tableName string, key interface{}, key2 any, value []byte) error {
+func (ld listingDaoImpl) SetOne(tenantId string, tableName string, key any, key2 any, value []byte) error {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return err
@@ -147,8 +147,8 @@ func (ld listingDaoImpl) DeleteAll(tenantId string, tableName string, key string
 }
 
 // GetAll get multiple Xconf records for the specified key
-func (ld listingDaoImpl) GetAll(tenantId string, tableName string, key string) ([]interface{}, error) {
-	var result []interface{}
+func (ld listingDaoImpl) GetAll(tenantId string, tableName string, key string) ([]any, error) {
+	var result []any
 
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {

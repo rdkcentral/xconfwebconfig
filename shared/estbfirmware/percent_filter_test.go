@@ -354,7 +354,7 @@ func TestPercentageBean_Validate_BlankName(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	err := bean.Validate(db.DEFAULT_TENANT_ID)
+	err := bean.Validate(db.GetDefaultTenantId())
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "Name could not be blank")
 }
@@ -366,7 +366,7 @@ func TestPercentageBean_Validate_BlankModel(t *testing.T) {
 		ApplicationType: "stb",
 	}
 
-	err := bean.Validate(db.DEFAULT_TENANT_ID)
+	err := bean.Validate(db.GetDefaultTenantId())
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "Model could not be blank")
 }

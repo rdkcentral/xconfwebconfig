@@ -102,7 +102,7 @@ func TestGetSortedFeatureRules(t *testing.T) {
 		return all
 	}
 	// rules []*rfc.FeatureRule
-	sortedRules := rfc.GetSortedFeatureRules(db.DEFAULT_TENANT_ID)
+	sortedRules := rfc.GetSortedFeatureRules(db.GetDefaultTenantId())
 	assert.Equal(t, len(sortedRules), 3)
 	assert.Equal(t, sortedRules[0].Id, "id1")
 	assert.Equal(t, sortedRules[0].Priority, 1)
@@ -191,7 +191,7 @@ func TestAddFeaturesToResult(t *testing.T) {
 	featureControlRuleBase = &FeatureControlRuleBase{}
 	featureMap := make(map[string]*rfc.Feature)
 	var featureIDs = []string{"id1", "id2", "id3", "id4"}
-	featureControlRuleBase.AddFeaturesToResult(db.DEFAULT_TENANT_ID, featureMap, featureIDs)
+	featureControlRuleBase.AddFeaturesToResult(db.GetDefaultTenantId(), featureMap, featureIDs)
 	assert.Equal(t, len(featureMap), 3)
 	if _, ok := featureMap["name3"]; ok {
 		feature := featureMap["name3"]

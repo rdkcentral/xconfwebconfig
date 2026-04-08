@@ -211,5 +211,5 @@ func CanSkipSecurityTokenForClientProtocol(deviceInfo map[string]string) bool {
 func GetTenantId(r *http.Request, partnerId string) string {
 	// TODO - we can enhance this function in the future to get tenantId from different sources (header, query param, etc.)
 	// if needed, but for now we will just return default tenant id since we only have one tenant
-	return db.DEFAULT_TENANT_ID
+	return db.GetDefaultTenantId()
 }

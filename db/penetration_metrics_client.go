@@ -120,7 +120,7 @@ func (c *CassandraClient) SetFwPenetrationMetrics(pMetrics *FwPenetrationMetrics
 		pMetrics.FwAdditionalVersionInfo = ""
 	}
 
-	values := []interface{}{
+	values := []any{
 		pMetrics.EstbMac,
 		pMetrics.FwFilename,
 		pMetrics.FwVersion,
@@ -190,7 +190,7 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		RfcPostProcColumnValue,
 	}
 
-	values := []interface{}{
+	values := []any{
 		pMetrics.EstbMac,
 		pMetrics.EcmMac,
 		pMetrics.SerialNum,
@@ -399,7 +399,7 @@ func (c *CassandraClient) UpdateFwPenetrationMetrics(kvmap map[string]string) er
 	defer func() { <-c.ConcurrentQueries }()
 
 	columns := []string{}
-	values := []interface{}{}
+	values := []any{}
 
 	for k, v := range kvmap {
 		columns = append(columns, k)

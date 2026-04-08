@@ -316,21 +316,21 @@ func TestGetNamespacedListById(t *testing.T) {
 		// This function requires database access, so we can only test
 		// the logic that doesn't require DB (nil checks, type checks)
 		// Without mocking, we expect nil or error from DB
-		result := GetNamespacedListById(db.DEFAULT_TENANT_ID, shared.MAC_LIST, "nonexistent-id")
+		result := GetNamespacedListById(db.GetDefaultTenantId(), shared.MAC_LIST, "nonexistent-id")
 
 		// Since DB is not available in unit tests, result should be nil
 		assert.Nil(t, result)
 	})
 
 	t.Run("GetNamespacedListWithEmptyId", func(t *testing.T) {
-		result := GetNamespacedListById(db.DEFAULT_TENANT_ID, shared.MAC_LIST, "")
+		result := GetNamespacedListById(db.GetDefaultTenantId(), shared.MAC_LIST, "")
 
 		// Empty ID should return nil
 		assert.Nil(t, result)
 	})
 
 	t.Run("GetNamespacedListWithEmptyTypeName", func(t *testing.T) {
-		result := GetNamespacedListById(db.DEFAULT_TENANT_ID, "", "some-id")
+		result := GetNamespacedListById(db.GetDefaultTenantId(), "", "some-id")
 
 		// This will attempt DB access, expect nil due to no DB
 		assert.Nil(t, result)
@@ -374,7 +374,7 @@ func TestIpRuleServiceConvertToIpRuleOrReturnNull(t *testing.T) {
 		// Skip this test as it causes panic - documenting expected behavior
 		t.Skip("Function panics with nil input - needs nil check in implementation")
 
-		result := service.ConvertToIpRuleOrReturnNull(db.DEFAULT_TENANT_ID, nil)
+		result := service.ConvertToIpRuleOrReturnNull(db.GetDefaultTenantId(), nil)
 		assert.Nil(t, result)
 	})
 

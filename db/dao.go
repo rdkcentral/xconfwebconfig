@@ -29,7 +29,7 @@ for the method to unmarshal the raw JSON data (i.e. []byte) to the proper struct
 Therefore, a table name and a corresponding constructor function need to be
 configured for the TableConfig variable.
 
-The returned value is an empty interface{} so the caller needs to cast the value
+The returned value is an empty interface{} (any) so the caller needs to cast the value
 to the target data type.
 
 The following code illustrates how to retrieve a specific model from the models table:
@@ -46,17 +46,17 @@ The following code illustrates how to retrieve a specific model from the models 
 
 // SimpleDao interface
 type SimpleDao interface {
-	GetOne(tenantId string, tableName string, rowKey string) (interface{}, error)
+	GetOne(tenantId string, tableName string, rowKey string) (any, error)
 	SetOne(tenantId string, tableName string, rowKey string, value []byte) error
 	DeleteOne(tenantId string, tableName string, rowKey string) error
-	GetAllByKeys(tenantId string, tableName string, rowKeys []string) ([]interface{}, error)
-	GetAllAsList(tenantId string, tableName string, maxResults int) ([]interface{}, error)
-	GetAllAsMap(tenantId string, tableName string, maxResults int) (map[string]interface{}, error)
+	GetAllByKeys(tenantId string, tableName string, rowKeys []string) ([]any, error)
+	GetAllAsList(tenantId string, tableName string, maxResults int) ([]any, error)
+	GetAllAsMap(tenantId string, tableName string, maxResults int) (map[string]any, error)
 	GetAllAsMapRaw(tenantId string, tableName string, maxResults int) (map[string]json.RawMessage, error)
 	GetKeys(tenantId string, tableName string) []string
 
 	Modify(query string, queryParams ...string) error
-	Query(query string, queryParams ...string) ([]map[string]interface{}, error)
+	Query(query string, queryParams ...string) ([]map[string]any, error)
 
 	// Batch operations
 	NewBatch(batchType int) BatchOperation
@@ -73,7 +73,7 @@ func GetSimpleDao() SimpleDao {
 }
 
 // GetOne get one Xconf record
-func (sd simpleDaoImpl) GetOne(tenantId string, tableName string, rowKey string) (interface{}, error) {
+func (sd simpleDaoImpl) GetOne(tenantId string, tableName string, rowKey string) (any, error) {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return nil, err
@@ -112,8 +112,8 @@ func (sd simpleDaoImpl) DeleteOne(tenantId string, tableName string, rowKey stri
 }
 
 // GetAllByKeys get Xconf records for the specified list of rowKeys
-func (sd simpleDaoImpl) GetAllByKeys(tenantId string, tableName string, rowKeys []string) ([]interface{}, error) {
-	var result []interface{}
+func (sd simpleDaoImpl) GetAllByKeys(tenantId string, tableName string, rowKeys []string) ([]any, error) {
+	var result []any
 
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
@@ -135,8 +135,8 @@ func (sd simpleDaoImpl) GetAllByKeys(tenantId string, tableName string, rowKeys 
 }
 
 // GetAllAsList get a list of all Xconf records
-func (sd simpleDaoImpl) GetAllAsList(tenantId string, tableName string, maxResults int) ([]interface{}, error) {
-	var result []interface{}
+func (sd simpleDaoImpl) GetAllAsList(tenantId string, tableName string, maxResults int) ([]any, error) {
+	var result []any
 
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
@@ -158,8 +158,8 @@ func (sd simpleDaoImpl) GetAllAsList(tenantId string, tableName string, maxResul
 }
 
 // GetAllAsMap get a map of all Xconf records
-func (sd simpleDaoImpl) GetAllAsMap(tenantId string, tableName string, maxResults int) (map[string]interface{}, error) {
-	var result = make(map[string]interface{})
+func (sd simpleDaoImpl) GetAllAsMap(tenantId string, tableName string, maxResults int) (map[string]any, error) {
+	var result = make(map[string]any)
 
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
@@ -206,7 +206,7 @@ func (sd simpleDaoImpl) Modify(query string, queryParams ...string) error {
 	return GetDatabaseClient().ModifyXconfData(query, queryParams...)
 }
 
-func (sd simpleDaoImpl) Query(query string, queryParams ...string) ([]map[string]interface{}, error) {
+func (sd simpleDaoImpl) Query(query string, queryParams ...string) ([]map[string]any, error) {
 	rows, err := GetDatabaseClient().QueryXconfDataRows(query, queryParams...)
 	if err != nil {
 		return nil, err
