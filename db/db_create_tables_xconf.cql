@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS log_files (tenant_id text, shard_id int, key text, va
  
 CREATE TABLE IF NOT EXISTS log_file_lists (tenant_id text, shard_id int, key text, value blob, updated timestamp, PRIMARY KEY ((tenant_id, shard_id), key));
   
+CREATE TABLE IF NOT EXISTS log_file_groups (tenant_id text, shard_id int, key text, value blob, updated timestamp, PRIMARY KEY ((tenant_id, shard_id), key));
+
 CREATE TABLE IF NOT EXISTS device_settings (tenant_id text, shard_id int, key text, value blob, updated timestamp, PRIMARY KEY ((tenant_id, shard_id), key));
  
 CREATE TABLE IF NOT EXISTS vod_settings (tenant_id text, shard_id int, key text, value blob, updated timestamp, PRIMARY KEY ((tenant_id, shard_id), key));

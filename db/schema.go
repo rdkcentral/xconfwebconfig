@@ -53,6 +53,7 @@ const (
 	TABLE_LOG_UPLOAD_SETTINGS = "log_upload_settings"
 	TABLE_LOG_FILES           = "log_files"
 	TABLE_LOG_FILE_LISTS      = "log_file_lists"
+	TABLE_LOG_FILE_GROUPS     = "log_file_groups"
 	TABLE_DEVICE_SETTINGS     = "device_settings"
 	TABLE_VOD_SETTINGS        = "vod_settings"
 
@@ -81,6 +82,7 @@ var AllTables = []string{
 	TABLE_LOG_UPLOAD_SETTINGS,
 	TABLE_LOG_FILES,
 	TABLE_LOG_FILE_LISTS,
+	TABLE_LOG_FILE_GROUPS,
 	TABLE_DEVICE_SETTINGS,
 	TABLE_VOD_SETTINGS,
 	TABLE_SETTING_PROFILES,
