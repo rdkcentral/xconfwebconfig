@@ -369,7 +369,7 @@ func (c *CassandraClient) GetXconfData(tenantId string, tableName string, key st
 		return value, err
 	}
 
-	log.Debug(fmt.Sprintf("CassandraClient.GetXconfData: tenantId %s table %s key %s in %v", tenantId, tableName, key, time.Since(start)))
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("CassandraClient.GetXconfData: table %s key %s in %v", tableName, key, time.Since(start)))
 
 	return value, nil
 }
@@ -384,14 +384,14 @@ func (c *CassandraClient) GetAllXconfDataByKeys(tenantId string, tableName strin
 		data, err := c.GetXconfData(tenantId, tableName, key)
 		if err != nil {
 			if !c.IsDbNotFound(err) {
-				log.Warnf("CassandraClient.GetAllXconfDataByKeys: failed to get data for tenantId %s, table %s, key %s: %v", tenantId, tableName, key, err)
+				log.WithFields(log.Fields{"tenantId": tenantId}).Warnf("CassandraClient.GetAllXconfDataByKeys: failed to get data for table %s, key %s: %v", tableName, key, err)
 			}
 			continue
 		}
 		resultData = append(resultData, data)
 	}
 
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataByKeys: tenantId %s table %s keys %v in %v", tenantId, tableName, keys, time.Since(start)))
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataByKeys: table %s keys %v in %v", tableName, keys, time.Since(start)))
 
 	return resultData
 }
@@ -414,7 +414,7 @@ func (c *CassandraClient) GetAllXconfKeys(tenantId string, tableName string) []s
 		resultData.Add(row["key"].(string))
 	}
 
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfKeys: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("CassandraClient.GetAllXconfKeys: table %s in %v", tableName, time.Since(start)))
 
 	return resultData.ToSlice()
 }
@@ -455,7 +455,7 @@ func (c *CassandraClient) GetAllXconfDataAsList(tenantId string, tableName strin
 		resultData = append(resultData, row["value"].([]byte))
 	}
 
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataAsList: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataAsList: table %s in %v", tableName, time.Since(start)))
 
 	return resultData
 }
@@ -484,7 +484,7 @@ func (c *CassandraClient) GetAllXconfDataAsMap(tenantId string, tableName string
 		resultData[row["key"].(string)] = row["value"].([]byte)
 	}
 
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataAsMap: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("CassandraClient.GetAllXconfDataAsMap: table %s in %v", tableName, time.Since(start)))
 
 	return resultData
 }
@@ -540,7 +540,7 @@ func (c *CassandraClient) GetAllXconfData(tenantId string, tableName string, key
 		resultData = append(resultData, row["value"].([]byte))
 	}
 
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfData: tenantId %s table %s key %s in %v", tenantId, tableName, key, time.Since(start)))
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("CassandraClient.GetAllXconfData: table %s key %s in %v", tableName, key, time.Since(start)))
 
 	return resultData
 }
@@ -837,7 +837,7 @@ func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName stri
 	if partsCount > len(partsMap) {
 		err := fmt.Errorf("Inconsistent compressed data for key '%s' from '%s': expected %d record(s) got %d",
 			key, tableName, partsCount, len(partsMap))
-		log.Error(err)
+		log.WithFields(log.Fields{"tenantId": tenantId}).Error(err)
 		return nil, err
 	}
 
@@ -850,14 +850,14 @@ func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName stri
 		} else {
 			err := fmt.Errorf("Inconsistent compressed data for key '%s' from '%s': missing part '%s'",
 				key, tableName, keyName)
-			log.Error(err)
+			log.WithFields(log.Fields{"tenantId": tenantId}).Error(err)
 			return nil, err
 		}
 	}
 
 	resultData := bytes.Join(chunks, []byte(""))
 
-	log.Debug(fmt.Sprintf("CassandraClient.GetXconfCompressedData: tenantId %s table %s key %s in %v", tenantId, tableName, key, time.Since(start)))
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("CassandraClient.GetXconfCompressedData: table %s key %s in %v", tableName, key, time.Since(start)))
 
 	return resultData, nil
 }
@@ -882,7 +882,7 @@ func (c *CassandraClient) GetAllXconfCompressedDataAsMap(tenantId string, tableN
 		resultData[key] = data
 	}
 
-	log.Debug(fmt.Sprintf("CassandraClient.GetAllXconfCompressedDataAsMap: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("CassandraClient.GetAllXconfCompressedDataAsMap: table %s in %v", tableName, time.Since(start)))
 
 	return resultData
 }
@@ -949,15 +949,15 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName s
 	for key, partsMap := range resultData {
 		partsCount := countMap[key]
 		if partsCount != len(partsMap) {
-			log.Warn(fmt.Sprintf("Inconsistent compressed data for tenantId '%s' table '%s' key '%s': expected %v record(s) got %v",
-				tenantId, tableName, key, partsCount, len(partsMap)))
+			log.WithFields(log.Fields{"tenantId": tenantId}).Warn(fmt.Sprintf("Inconsistent compressed data for table '%s' key '%s': expected %v record(s) got %v",
+				tableName, key, partsCount, len(partsMap)))
 
 			// Deleting the wrong data! Need to delete partsmap[key][extra_NamedList_data_part_1,2,3..]
 			// delete(partsMap, key) // Ignored invalid record
 		}
 	}
 
-	log.Debug(fmt.Sprintf("CassandraClient.GetXconfCompressedDataRaw: tenantId %s table %s in %v", tenantId, tableName, time.Since(start)))
+	log.WithFields(log.Fields{"tenantId": tenantId}).Debug(fmt.Sprintf("CassandraClient.GetXconfCompressedDataRaw: table %s in %v", tableName, time.Since(start)))
 
 	return resultData
 }

@@ -144,9 +144,9 @@ func (cd compressingDataDaoImpl) GetAllAsMap(tenantId string, tableName string, 
 	for key, compressedData := range compressedDataMap {
 		jsonData, err := decompress(compressedData)
 		if err != nil {
-			err = fmt.Errorf("failed to decompress tenantId %s table %s key %s: %w", tenantId, tableName, key, err)
+			err = fmt.Errorf("failed to decompress table %s key %s: %w", tableName, key, err)
 			if continueOnError {
-				log.Error(err)
+				log.WithFields(log.Fields{"tenantId": tenantId}).Error(err)
 				continue
 			}
 			return nil, err
