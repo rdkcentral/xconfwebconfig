@@ -4,12 +4,9 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	conversion "github.com/rdkcentral/xconfwebconfig/protobuf"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/go-akka/configuration"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -21,7 +18,6 @@ const (
 type GroupServiceSyncConnector interface {
 	GroupServiceSyncHost() string
 	SetGroupServiceSyncHost(host string)
-	AddSecurityTokenInfo(securityIdenfier string, deviceInfo map[string]string, fields log.Fields) error
 }
 
 type DefaultGroupServiceSync struct {
@@ -47,15 +43,9 @@ func NewGroupServiceSyncConnector(conf *configuration.Config, tlsConfig *tls.Con
 		if util.IsBlank(path) {
 			panic(fmt.Errorf("%s is required", pathKey))
 		}
-		tokenPathKey := fmt.Sprintf("xconfwebconfig.%v.security_token_path", groupServiceSyncServiceName)
-		tokenPath := conf.GetString(tokenPathKey)
-		if util.IsBlank(tokenPath) {
-			panic(fmt.Errorf("%s is required", tokenPathKey))
-		}
 		return &DefaultGroupServiceSync{
-			HttpClient:        NewHttpClient(conf, groupServiceSyncServiceName, tlsConfig),
-			host:              fmt.Sprintf("%s%s", host, path),
-			securityTokenPath: tokenPath,
+			HttpClient: NewHttpClient(conf, groupServiceSyncServiceName, tlsConfig),
+			host:       fmt.Sprintf("%s%s", host, path),
 		}
 	}
 }
@@ -66,24 +56,6 @@ func (c *DefaultGroupServiceSync) GroupServiceSyncHost() string {
 
 func (c *DefaultGroupServiceSync) SetGroupServiceSyncHost(host string) {
 	c.host = host
-}
-
-func (c *DefaultGroupServiceSync) AddSecurityTokenInfo(securityIdenfier string, deviceInfo map[string]string, fields log.Fields) error {
-	url := fmt.Sprintf("%s%s/%s", c.host, c.securityTokenPath, securityIdenfier)
-	message := conversion.XdasHashes{
-		Fields: deviceInfo,
-	}
-	// Serialize the protobuf message to binary data.
-	data, err := proto.Marshal(&message)
-	if err != nil {
-		return err
-	}
-	_, err = c.DoWithRetries("POST", url, protobufHeaders(), data, fields, groupServiceSyncServiceName)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func protobufHeaders() map[string]string {

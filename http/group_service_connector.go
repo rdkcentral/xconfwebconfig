@@ -49,7 +49,6 @@ type GroupServiceConnector interface {
 	GetCpeGroups(cpeMac string, fields log.Fields) ([]string, error)
 	CreateListFromGroupServiceProto(cpeGroup *conversion.CpeGroup) []string
 	GetFeatureTagsHashedItems(name string, fields log.Fields) (map[string]string, error)
-	GetSecurityTokenInfo(securityIdentifier string, fields log.Fields) (map[string]string, error)
 	GetAccountIdData(mac string, fields log.Fields) (*conversion.XBOAccount, error)
 	GetAccountProducts(accountId string, fields log.Fields) (map[string]string, error)
 }
@@ -149,21 +148,6 @@ func (c *DefaultGroupService) CreateListFromGroupServiceProto(cpeGroup *conversi
 
 func (c *DefaultGroupService) GetFeatureTagsHashedItems(name string, fields log.Fields) (map[string]string, error) {
 	url := fmt.Sprintf(getHashesUrlTemplate, c.GroupServiceHost(), name)
-	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, groupServiceName)
-	if err != nil {
-		return nil, err
-	}
-	message := conversion.XdasHashes{}
-	message.ProtoMessage()
-	err = proto.Unmarshal(rbytes, &message)
-	if err != nil {
-		return nil, err
-	}
-	return message.Fields, nil
-}
-
-func (c *DefaultGroupService) GetSecurityTokenInfo(securityIdentifier string, fields log.Fields) (map[string]string, error) {
-	url := fmt.Sprintf(getSecurityTokenUrlTemplate, c.GroupServiceHost(), securityIdentifier)
 	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
