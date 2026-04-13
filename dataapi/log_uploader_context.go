@@ -90,8 +90,10 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 
 		if xAccountId != nil && err == nil {
 			accountId = xAccountId.GetAccountId()
+			accountType := xAccountId.GetAccountType()
 			contextMap[common.ACCOUNT_ID] = accountId
-			log.WithFields(fields).Debugf("AddLogUploaderContext Successfully fetched AcntId='%s' from Grp Svc", accountId)
+			contextMap[common.ACCOUNT_TYPE] = accountType
+			log.WithFields(fields).Debugf("AddLogUploaderContext Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 		}
 
 		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {

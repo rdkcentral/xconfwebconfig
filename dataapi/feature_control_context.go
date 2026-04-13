@@ -137,9 +137,11 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 	}
 	if xAccountId != nil {
 		accountId := xAccountId.GetAccountId()
+		accountType := xAccountId.GetAccountType()
 		contextMap[common.ACCOUNT_ID] = accountId
+		contextMap[common.ACCOUNT_TYPE] = accountType
 		contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
-		log.WithFields(fields).Debugf("AddContextForPods Successfully fetched AcntId='%s' from Grp Svc", accountId)
+		log.WithFields(fields).Debugf("AddContextForPods Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 
 		accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 		if err != nil {
@@ -354,8 +356,10 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 			} else {
 				if xAccountId != nil && xAccountId.GetAccountId() != "" {
 					accountId = xAccountId.GetAccountId()
+					accountType := xAccountId.GetAccountType()
 					contextMap[common.ACCOUNT_ID] = accountId
-					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService Successfully fetched AcntId='%s' from Grp Svc", accountId)
+					contextMap[common.ACCOUNT_TYPE] = accountType
+					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 				}
 
 				accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
