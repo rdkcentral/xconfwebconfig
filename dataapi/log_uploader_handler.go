@@ -171,7 +171,7 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 		if util.IsVersionGreaterOrEqual(contextMap[common.VERSION], 2.1) && len(settingTypes) > 0 {
 			var settingProfiles []logupload.SettingProfiles
 			for _, settingType := range settingTypes {
-				rule := settings.GetSettingsRuleByTypeForContext(contextMap[common.TENANT_ID], settingType, contextMap)
+				rule := settings.GetSettingsRuleByTypeForContext(settingType, contextMap)
 				profile := settings.GetSettingProfileBySettingRule(contextMap[common.TENANT_ID], rule)
 				if profile != nil {
 					settingProfiles = append(settingProfiles, *profile)

@@ -331,7 +331,7 @@ func TestGetSettingRulesBySettingType(t *testing.T) {
 		// Without DB, may return nil
 		if result != nil {
 			assert.IsType(t, []*logupload.SettingRule{}, result)
-		} 
+		}
 	})
 
 	t.Run("GetSettingRulesBySettingType_WithPartnerType", func(t *testing.T) {
@@ -370,8 +370,10 @@ func TestGetSettingRuleAllAsList(t *testing.T) {
 // TestGetSettingsRuleByTypeForContext tests the GetSettingsRuleByTypeForContext function
 func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 	t.Run("GetSettingsRuleByTypeForContext_WithEmptyContext", func(t *testing.T) {
-		contextMap := map[string]string{}
-		result := GetSettingsRuleByTypeForContext(db.GetDefaultTenantId(), "EPON", contextMap)
+		contextMap := map[string]string{
+			"tenantId": db.GetDefaultTenantId(),
+		}
+		result := GetSettingsRuleByTypeForContext("EPON", contextMap)
 
 		// Without DB or matching rules, should return nil
 		assert.Nil(t, result)
@@ -382,8 +384,9 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"model":           "MODEL1",
 			"env":             "PROD",
 			"applicationType": "stb",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
-		result := GetSettingsRuleByTypeForContext(db.GetDefaultTenantId(), "EPON", contextMap)
+		result := GetSettingsRuleByTypeForContext("EPON", contextMap)
 
 		// Without DB, returns nil
 		assert.Nil(t, result)
@@ -395,8 +398,9 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"env":             "QA",
 			"partnerId":       "cox",
 			"applicationType": "stb",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
-		result := GetSettingsRuleByTypeForContext(db.GetDefaultTenantId(), "partnersettings", contextMap)
+		result := GetSettingsRuleByTypeForContext("partnersettings", contextMap)
 
 		assert.Nil(t, result)
 	})
@@ -406,8 +410,9 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"model":           "XG2v2",
 			"firmwareVersion": "2.0.0",
 			"applicationType": "xhome",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
-		result := GetSettingsRuleByTypeForContext(db.GetDefaultTenantId(), "telemetry", contextMap)
+		result := GetSettingsRuleByTypeForContext("telemetry", contextMap)
 
 		assert.Nil(t, result)
 	})
@@ -421,17 +426,19 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"firmwareVersion": "1.2.3",
 			"applicationType": "stb",
 			"capabilities":    "DOCSIS3.0",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
-		result := GetSettingsRuleByTypeForContext(db.GetDefaultTenantId(), "EPON", contextMap)
+		result := GetSettingsRuleByTypeForContext("EPON", contextMap)
 
 		assert.Nil(t, result)
 	})
 
 	t.Run("GetSettingsRuleByTypeForContext_WithEmptySettingType", func(t *testing.T) {
 		contextMap := map[string]string{
-			"model": "MODEL1",
+			"model":    "MODEL1",
+			"tenantId": db.GetDefaultTenantId(),
 		}
-		result := GetSettingsRuleByTypeForContext(db.GetDefaultTenantId(), "", contextMap)
+		result := GetSettingsRuleByTypeForContext("", contextMap)
 
 		assert.Nil(t, result)
 	})
@@ -442,8 +449,9 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"model":           "XG1v3",
 			"env":             "PROD",
 			"applicationType": "stb",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
-		result := GetSettingsRuleByTypeForContext(db.GetDefaultTenantId(), "EPON", contextMap)
+		result := GetSettingsRuleByTypeForContext("EPON", contextMap)
 
 		assert.Nil(t, result)
 	})
@@ -453,8 +461,9 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"ipAddress":       "10.0.0.1",
 			"model":           "XG1v4",
 			"applicationType": "stb",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
-		result := GetSettingsRuleByTypeForContext(db.GetDefaultTenantId(), "partnersettings", contextMap)
+		result := GetSettingsRuleByTypeForContext("partnersettings", contextMap)
 
 		assert.Nil(t, result)
 	})
