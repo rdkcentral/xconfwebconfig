@@ -497,7 +497,7 @@ func UpdateLogCounter(logType string) {
 	metrics.logCounter.With(vals).Inc()
 }
 
-func IncreaseAccountServiceEmptyResponseCounter(model string) {
+func IncreaseAccountServiceEmptyResponseCounter(model, partner string) {
 	if metrics == nil {
 		return
 	}
@@ -505,10 +505,14 @@ func IncreaseAccountServiceEmptyResponseCounter(model string) {
 	if len(model) == 0 {
 		model = "null"
 	}
+	if len(partner) == 0 {
+		partner = "null"
+	}
 
 	labels := prometheus.Labels{
-		"app":   AppName(),
-		"model": model,
+		"app":     AppName(),
+		"partner": partner,
+		"model":   model,
 	}
 	metrics.accountServiceEmptyResponseCounter.With(labels).Inc()
 }
