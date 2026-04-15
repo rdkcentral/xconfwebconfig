@@ -29,8 +29,7 @@ func TestIncreaseAccountServiceEmptyResponseCounter(t *testing.T) {
 	savedMetrics := metrics
 	metrics = nil
 
-	IncreaseAccountServiceEmptyResponseCounter("testModel")
-	IncreaseAccountServiceEmptyResponseCounter("")
+	IncreaseAccountServiceEmptyResponseCounter("testModel", "testpartner")
 
 	metrics = savedMetrics
 }
