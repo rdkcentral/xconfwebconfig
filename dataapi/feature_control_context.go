@@ -162,6 +162,10 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 			contextMap[common.COUNTRY_CODE] = countryCode
 		}
 
+		if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
+			contextMap[common.ACCOUNT_TYPE] = accountType
+		}
+
 		if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
 			var ap map[string]string
 			err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
@@ -383,6 +387,10 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 						contextMap[common.TIME_ZONE] = TimeZone
 					}
 
+					if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
+						contextMap[common.ACCOUNT_TYPE] = accountType
+					}
+
 					if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
 						var ap map[string]string
 						err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
@@ -526,6 +534,10 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 
 				if TimeZone, ok := accountProducts["TimeZone"]; ok {
 					contextMap[common.TIME_ZONE] = TimeZone
+				}
+
+				if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
+					contextMap[common.ACCOUNT_TYPE] = accountType
 				}
 
 				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {

@@ -288,6 +288,10 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					contextMap[common.TIME_ZONE] = TimeZone
 				}
 
+				if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
+					contextMap[common.ACCOUNT_TYPE] = accountType
+				}
+
 				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
 					var ap map[string]string
 					err = json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
