@@ -38,6 +38,23 @@ func TestFitsPercent(t *testing.T) {
 	assert.Assert(t, !isFit)
 }
 
+func TestGetPercentHash(t *testing.T) {
+	// Regression check: this MAC address is expected to hash to approximately 22.1976%.
+	// Use a small tolerance instead of a broad magic-number range so the expectation is explicit.
+	const expectedHash = 22.1976
+	const tolerance = 0.01
+
+	hash, ok := GetPercentHash("7A:86:0A:C2:6D:7B")
+	assert.Assert(t, ok)
+	assert.Assert(t, hash >= 0.0 && hash <= 100.0)
+	assert.Assert(t, hash >= expectedHash-tolerance && hash <= expectedHash+tolerance)
+}
+
+func TestGetPercentHashInvalidType(t *testing.T) {
+	_, ok := GetPercentHash(true)
+	assert.Assert(t, !ok)
+}
+
 func TestFitsStartAndEndPercent1(t *testing.T) {
 	cpeMac := "C2:4B:03:3C:8D:8C" // 84.9997%
 	isFit1 := FitsPercent(cpeMac, float64(50))
