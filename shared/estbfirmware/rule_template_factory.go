@@ -37,7 +37,6 @@ var (
 	RuleFactoryTIME                 = re.NewFreeArg("TIME", common.TIME)
 	RuleFactoryLOCAL_TIME           = re.NewFreeArg("STRING", common.TIME)
 	RuleFactoryCERT_EXPIRY_DURATION = re.NewFreeArg("LONG", common.CERT_EXPIRY_DURATION)
-	RuleFactoryEMPTY                = re.NewFreeArg("STRING", "tag:name")
 	// required for TimeFilter. it must be added after rules matching
 	RuleFactoryFIRMWARE_DOWNLOAD_PROTOCOL = re.NewFreeArg("STRING", common.DOWNLOAD_PROTOCOL) // tftp or http
 	RuleFactoryREBOOT_DECOUPLED           = re.NewFreeArg("ANY", common.REBOOT_DECOUPLED)
@@ -357,13 +356,6 @@ func (f *RuleFactory) NewGlobalPercentFilter(percent float64, ipList string) *re
 
 	}
 	return &rule
-}
-
-// NewTagRule creates the empty rule the exists condition
-func (f *RuleFactory) NewTagRule() re.Rule {
-	rule := re.Rule{}
-	rule.SetCondition(re.NewCondition(RuleFactoryEMPTY, re.StandardOperationExists, re.NewFixedArg("")))
-	return rule
 }
 
 const (
