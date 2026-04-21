@@ -333,7 +333,7 @@ func NewMetrics() *AppMetrics {
 				Name: "AccountService_empty_response_count",
 				Help: "A counter for empty 200 responses from AccountService",
 			},
-			[]string{"app", "model"},
+			[]string{"app", "model", "partner"},
 		),
 		grpServiceAccountDataFetchCounter: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -511,8 +511,8 @@ func IncreaseAccountServiceEmptyResponseCounter(model, partner string) {
 
 	labels := prometheus.Labels{
 		"app":     AppName(),
-		"partner": partner,
 		"model":   model,
+		"partner": partner,
 	}
 	metrics.accountServiceEmptyResponseCounter.With(labels).Inc()
 }
