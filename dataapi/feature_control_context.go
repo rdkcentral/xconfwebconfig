@@ -232,6 +232,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 			}
 
 			if AccountServiceDeviceObject.DeviceData.ServiceAccountUri == "" {
+				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 				log.WithFields(tfields).Infof("No account found in AccountService for XLE device: serialNum=%s", contextMap[common.SERIAL_NUM])
 				return podData, td
 			}
@@ -281,6 +282,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 
 			if AccountServiceDeviceObject.DeviceData.ServiceAccountUri == "" {
 				log.WithFields(tfields).Infof("No account found in AccountService: ecmMac=%s, serialNum=%s", normalizedEcmMac, contextMap[common.SERIAL_NUM])
+				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 				return podData, td
 			}
 			podData = &PodData{
@@ -436,7 +438,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				}
 			}
 			if accountServiceObject.IsEmpty() {
-				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
+				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			} else {
 				xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			}
