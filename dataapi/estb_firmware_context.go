@@ -524,6 +524,8 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 	if estbMac := contextMap[common.ESTB_MAC]; estbMac != "" {
 		if estbHash, ok := re.GetPercentHash(estbMac); ok {
 			fields[common.ESTB_HASH] = estbHash
+		} else {
+			log.WithFields(common.FilterLogFields(fields)).Debug("Failed to compute estbHash")
 		}
 	}
 	log.WithFields(common.FilterLogFields(fields)).Info("EstbFirmwareService XCONF_LOG")
