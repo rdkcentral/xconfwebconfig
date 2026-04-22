@@ -140,16 +140,8 @@ func (f *FeatureControlRuleBase) LogFeatureInfo(context map[string]string, appli
 	}
 	fields["features"] = featureInstances
 	fields["configSetHash"] = f.CalculateHash(features)
-	estbMac := context[common.ESTB_MAC_ADDRESS]
-	if estbMac == "" {
-		estbMac = context[common.ESTB_MAC]
-	}
-	if estbMac != "" {
-		if estbHash, ok := re.GetPercentHash(estbMac); ok {
-			fields[common.ESTB_HASH] = estbHash
-		} else {
-			log.WithFields(common.FilterLogFields(fields)).Debug("Failed to compute estbHash")
-		}
+	if estbHash := context[common.ESTB_HASH]; estbHash != "" {
+		fields[common.ESTB_HASH] = estbHash
 	}
 	log.WithFields(common.FilterLogFields(fields)).Info("FeatureControlRuleBase")
 	http.UpdateLogCounter("FeatureControlRuleBase")
