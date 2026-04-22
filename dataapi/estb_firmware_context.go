@@ -35,7 +35,6 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
-	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -520,13 +519,8 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 			fields["appliedFilters"] = appliedFilters
 		}
 	}
-
-	if estbMac := contextMap[common.ESTB_MAC]; estbMac != "" {
-		if estbHash, ok := re.GetPercentHash(estbMac); ok {
-			fields[common.ESTB_HASH] = estbHash
-		} else {
-			log.WithFields(common.FilterLogFields(fields)).Debug("Failed to compute estbHash")
-		}
+	if estbHash := contextMap[common.ESTB_HASH]; estbHash != "" {
+		fields[common.ESTB_HASH] = estbHash
 	}
 	log.WithFields(common.FilterLogFields(fields)).Info("EstbFirmwareService XCONF_LOG")
 	xhttp.UpdateLogCounter("EstbFirmwareService")
