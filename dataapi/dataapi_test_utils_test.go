@@ -336,7 +336,7 @@ func TestSetupGroupServiceFTMockServerOkResponse(t *testing.T) {
 	xdasHashes := &conversion.XdasHashes{
 		Fields: map[string]string{"key1": "value1"},
 	}
-	path := "/ft/test"
+	path := "/path/test"
 
 	mockServer := SetupGroupServiceFTMockServerOkResponse(t, *server, path, xdasHashes)
 	defer mockServer.Close()
@@ -357,9 +357,9 @@ func TestSetupGroupServiceFTMockServerOkResponseMultipleCalls(t *testing.T) {
 	xdasHashes2 := &conversion.XdasHashes{Fields: map[string]string{"key2": "value2"}}
 	xdasHashes3 := &conversion.XdasHashes{Fields: map[string]string{"key3": "value3"}}
 
-	path1 := "/ft/path1"
-	path2 := "/ft/path2"
-	path3 := "/ft/path3"
+	path1 := "/path/path1"
+	path2 := "/path/path2"
+	path3 := "/path/path3"
 
 	mockServer := SetupGroupServiceFTMockServerOkResponseMultipleCalls(t, *server, path1, path2, path3, xdasHashes1, xdasHashes2, xdasHashes3)
 	defer mockServer.Close()
