@@ -110,6 +110,7 @@ const (
 	TIME                       = "time"
 	APPLICATION_TYPE           = "applicationType"
 	ACCOUNT_ID                 = "accountId"
+	ACCOUNT_TYPE               = "accountType"
 	ACCOUNT_HASH               = "accountHash"
 	ACCOUNT_PRODUCTS           = "accountProducts"
 	ACCOUNT_STATE              = "accountState"
