@@ -53,7 +53,7 @@ func AddGroupServiceFTContextWithDAO(groupServiceDao db.GroupServiceCacheDao, ma
 				return tags
 			}
 
-			log.WithFields(fields).Debugf("Getting all data from GroupService /ft keyspace for partnerId=%s", partner)
+			log.WithFields(fields).Debugf("Getting all data from GroupService keyspace for partnerId=%s", partner)
 
 			if Xc.GroupServiceCacheEnabled {
 				// THIS IS THE KEY DATABASE INTERACTION WE'RE TESTING
