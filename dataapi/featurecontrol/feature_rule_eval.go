@@ -116,8 +116,11 @@ func (f *FeatureControlRuleBase) CalculateHash(features []rfc.FeatureResponse) s
 	return util.CalculateHash(string(arrBytes))
 }
 
-func (f *FeatureControlRuleBase) LogFeatureInfo(context map[string]string, appliedRules []*rfc.FeatureRule, features []rfc.FeatureResponse, isLiveCalculated bool, fields log.Fields) {
+func (f *FeatureControlRuleBase) LogFeatureInfo(context map[string]string, appliedRules []*rfc.FeatureRule, features []rfc.FeatureResponse, isLiveCalculated bool, ruleEval string, fields log.Fields) {
 	fields["isLiveCalculated"] = isLiveCalculated
+	if len(ruleEval) > 0 {
+		fields["ruleEval"] = ruleEval
+	}
 	fields["context"] = context
 	var ruleNames []string
 	for _, rule := range appliedRules {
@@ -139,7 +142,15 @@ func (f *FeatureControlRuleBase) LogFeatureInfo(context map[string]string, appli
 		}
 	}
 	fields["features"] = featureInstances
-	fields["configSetHash"] = f.CalculateHash(features)
+	if calculatedHash, ok := fields["configsetHashCalculated"]; ok {
+		if hashString, ok := calculatedHash.(string); ok && len(hashString) > 0 {
+			fields["configSetHash"] = hashString
+		} else {
+			fields["configSetHash"] = f.CalculateHash(features)
+		}
+	} else {
+		fields["configSetHash"] = f.CalculateHash(features)
+	}
 	log.WithFields(common.FilterLogFields(fields)).Info("FeatureControlRuleBase")
 	http.UpdateLogCounter("FeatureControlRuleBase")
 }

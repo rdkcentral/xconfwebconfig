@@ -90,6 +90,8 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	isRfcPrecook304Enabled := false
 	isRfcPrecookForOfferedFwEnabled := Xc.EnableRfcPrecookForOfferedFw
 	isPrecookLockdownMode := shared.GetBooleanAppSetting(common.PROP_PRECOOK_LOCKDOWN_ENABLED, false)
+	isMacExcludedFromPrecook := false
+	contextHashMatched := true
 	tfields := common.FilterLogFields(fields)
 	// only check values of precook flags if not in precook lockdown mode and mac is not in exclusion
 	if isPrecookLockdownMode {
@@ -97,6 +99,7 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		exclusionMacsSet, _ := shared.GetGenericNamedListSetByType(shared.MAC_LIST)
 		if exclusionMacsSet.Contains(contextMap[common.ESTB_MAC_ADDRESS]) {
+			isMacExcludedFromPrecook = true
 			log.WithFields(tfields).Debugf("Device mac %s is in precook exclusion list, will not deliver precook data.", contextMap[common.ESTB_MAC_ADDRESS])
 			xhttp.IncreasePrecookExcludeMacListCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 		} else {
@@ -117,11 +120,11 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		tfields = common.FilterLogFields(fields)
 		if precookData == nil || len(precookData.RfcHash) == 0 {
 			xhttp.IncreaseNoPrecookDataCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
-			log.WithFields(tfields).Infof("No precook data found")
+			log.WithFields(tfields).Debugf("No precook data found")
 		} else {
 			ctxHash := precookData.CtxHash
 			var err error
-			contextHashMatched, err := CompareHashWithXDAS(contextMap, ctxHash, tags)
+			contextHashMatched, err = CompareHashWithXDAS(contextMap, ctxHash, tags)
 			if err != nil {
 				log.WithFields(tfields).Errorf("Error while comparing hashes: %v", err)
 				contextHashMatched = false
@@ -173,13 +176,15 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	featureControlRuleBase := featurecontrol.NewFeatureControlRuleBase()
 	if isRfcPrecook304Enabled {
 		// if configsetHash from device matches precook, return 304 without running rules engine
 		if matchedHash := getMatchedPrecookHash(configSetHash, precookData, isRfcPrecookForOfferedFwEnabled); matchedHash != "" {
 			xhttp.IncreaseReturn304FromPrecookCounter(common.PARTNER_ID, contextMap[common.MODEL])
-			tfields := common.FilterLogFields(fields)
-			tfields["isLiveCalculated"] = false
-			log.WithFields(tfields).Info("Returning 304 based on precook data")
+			logFields := common.CopyLogFields(fields)
+			logFields["configsetHashCalculated"] = matchedHash
+			ruleEval := deriveRuleEvalReason(false, true, canPrecookRfcResponse, isPrecookLockdownMode, isMacExcludedFromPrecook, contextHashMatched, ipInSameNetwork, isFwVersionMatched, isRfcPrecookForOfferedFwEnabled, isOfferedFwMatched, contextMap, precookData)
+			featureControlRuleBase.LogFeatureInfo(contextMap, nil, nil, false, ruleEval, logFields)
 			headers := map[string]string{
 				common.CONFIG_SET_HASH: matchedHash,
 			}
@@ -194,8 +199,6 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var precookRulesEngineResponse, precookPostProcessingResponse *[]rfc.FeatureResponse
 	var rfcPostProc string
-	featureControlRuleBase := featurecontrol.NewFeatureControlRuleBase()
-
 	isSecuredConnection := IsSecureConnection(clientProtocolHeader)
 	// return response from XPC precook table if possible
 	if canPrecookRfcResponse && precookData != nil {
@@ -221,7 +224,6 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		} else if isRfcPrecookForOfferedFwEnabled && isOfferedFwMatched {
 			fields["configsetHashRulesEngine"] = precookData.OfferedFwRfcRulesEngineHash
 		}
-		log.WithFields(common.FilterLogFields(fields)).Info("Returning precook response")
 		precookResponseList := make([]rfc.FeatureResponse, 0, len(*precookRulesEngineResponse))
 		precookResponseList = append(precookResponseList, *precookRulesEngineResponse...)
 		featureControl.FeatureResponses = precookResponseList
@@ -256,7 +258,8 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	fields["configsetHashCalculated"] = calculatedConfigSetHash
 
 	isLiveCalculated := precookData == nil || precookRulesEngineResponse == nil
-	featureControlRuleBase.LogFeatureInfo(contextMap, appliedFeatureRules, featureControl.FeatureResponses, isLiveCalculated, fields)
+	ruleEval := deriveRuleEvalReason(isLiveCalculated, false, canPrecookRfcResponse, isPrecookLockdownMode, isMacExcludedFromPrecook, contextHashMatched, ipInSameNetwork, isFwVersionMatched, isRfcPrecookForOfferedFwEnabled, isOfferedFwMatched, contextMap, precookData)
+	featureControlRuleBase.LogFeatureInfo(contextMap, appliedFeatureRules, featureControl.FeatureResponses, isLiveCalculated, ruleEval, fields)
 
 	if Ws.Config.GetBoolean("xconfwebconfig.xconf.enable_rfc_penetration_metrics", false) {
 		if !skipPenetrationLogging {
@@ -373,6 +376,59 @@ func UpdatePenetrationMetrics(context map[string]string, AccountServiceData *Acc
 	} else {
 		log.Debugf("No estbMacAddress provided, NOT writing to xconf penetration metrics table.")
 	}
+}
+
+func deriveRuleEvalReason(isLiveCalculated bool, isPrecook304 bool, canPrecookRfcResponse bool, isPrecookLockdownMode bool, isMacExcludedFromPrecook bool, contextHashMatched bool, ipInSameNetwork bool, isFwVersionMatched bool, isRfcPrecookForOfferedFwEnabled bool, isOfferedFwMatched bool, contextMap map[string]string, precookData *PreprocessedData) string {
+	if !isLiveCalculated {
+		if isPrecook304 {
+			return "precook-304"
+		}
+		if isRfcPrecookForOfferedFwEnabled && isOfferedFwMatched {
+			return "precook-offered-firmware"
+		}
+		return "precook-hit"
+	}
+
+	if isPrecookLockdownMode || isMacExcludedFromPrecook {
+		return "precook-off"
+	}
+
+	if precookData == nil || len(precookData.RfcHash) == 0 {
+		return "first-contact"
+	}
+
+	if !contextHashMatched {
+		if contextMap[common.ACCOUNT_ID] != precookData.AccountId {
+			if len(strings.TrimSpace(precookData.AccountId)) == 0 && len(strings.TrimSpace(contextMap[common.ACCOUNT_ID])) > 0 {
+				return "account-new"
+			}
+			if len(strings.TrimSpace(precookData.AccountId)) > 0 && len(strings.TrimSpace(contextMap[common.ACCOUNT_ID])) == 0 {
+				return "account-deleted"
+			}
+			return "account-change"
+		}
+		if contextMap[common.PARTNER_ID] != precookData.PartnerId {
+			return "partner-change"
+		}
+		if contextMap[common.FIRMWARE_VERSION] != precookData.FwVersion {
+			return "firmware-change"
+		}
+		return "context-change"
+	}
+
+	if !ipInSameNetwork {
+		return "ip-change"
+	}
+
+	if !isFwVersionMatched && !(isRfcPrecookForOfferedFwEnabled && isOfferedFwMatched) {
+		return "firmware-change"
+	}
+
+	if !canPrecookRfcResponse {
+		return "precook-off"
+	}
+
+	return "precook-cache-miss"
 }
 
 func getMatchedPrecookHash(configSetHash string, precookData *PreprocessedData, isRfcPrecookForOfferedFwEnabled bool) string {
