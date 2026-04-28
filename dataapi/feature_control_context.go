@@ -796,54 +796,65 @@ func CreatePartnerIdFeature(partnerId string) rfc.Feature {
 	}
 }
 
-func generatePrecookDataChangedMetrics(contextMap map[string]string, precookData *PreprocessedData, fields log.Fields) {
+func generatePrecookDataChangedMetrics(contextMap map[string]string, precookData *PreprocessedData, fields log.Fields) []string {
 	tfields := common.FilterLogFields(fields)
+	var reasons []string
 	if contextMap[common.MODEL] != precookData.Model {
-		log.WithFields(tfields).Infof("Model changed from precook %s to %s", precookData.Model, contextMap[common.MODEL])
+		log.WithFields(tfields).Debugf("Model changed from precook %s to %s", precookData.Model, contextMap[common.MODEL])
 		xhttp.IncreaseModelChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
+		reasons = append(reasons, "model-change")
 	}
 	if contextMap[common.PARTNER_ID] != precookData.PartnerId {
-		log.WithFields(tfields).Infof("PartnerId changed from precook %s to %s", precookData.PartnerId, contextMap[common.PARTNER_ID])
+		log.WithFields(tfields).Debugf("PartnerId changed from precook %s to %s", precookData.PartnerId, contextMap[common.PARTNER_ID])
 		xhttp.IncreasePartnerChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
+		reasons = append(reasons, "partner-change")
 	}
 	if contextMap[common.FIRMWARE_VERSION] != precookData.FwVersion {
-		log.WithFields(tfields).Infof("FirmwareVersion changed from precook %s to %s", precookData.FwVersion, contextMap[common.FIRMWARE_VERSION])
+		log.WithFields(tfields).Debugf("FirmwareVersion changed from precook %s to %s", precookData.FwVersion, contextMap[common.FIRMWARE_VERSION])
 		xhttp.IncreaseFwVersionChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
+		reasons = append(reasons, "firmware-change")
 	}
 
 	if contextMap[common.EXPERIENCE] != precookData.Experience {
-		log.WithFields(tfields).Infof("Experience changed from precook %s to %s", precookData.Experience, contextMap[common.EXPERIENCE])
+		log.WithFields(tfields).Debugf("Experience changed from precook %s to %s", precookData.Experience, contextMap[common.EXPERIENCE])
 		xhttp.IncreaseExperienceChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
+		reasons = append(reasons, "experience-change")
 	}
 
 	if contextMap[common.ACCOUNT_ID] != precookData.AccountId {
-		log.WithFields(tfields).Infof("AccountId changed from precook %s to %s", precookData.AccountId, contextMap[common.ACCOUNT_ID])
+		log.WithFields(tfields).Debugf("AccountId changed from precook %s to %s", precookData.AccountId, contextMap[common.ACCOUNT_ID])
 		xhttp.IncreaseAccountIdChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
+		if util.IsUnknownValue(precookData.AccountId) || precookData.AccountId == "" {
+			reasons = append(reasons, "account-new")
+		} else {
+			reasons = append(reasons, "account-mismatched")
+		}
 	}
+	return reasons
 }
 
 func generatePrecookDataChangedIn200Metrics(contextMap map[string]string, precookData *PreprocessedData, fields log.Fields) {
 	tfields := common.FilterLogFields(fields)
 	if contextMap[common.MODEL] != precookData.Model {
-		log.WithFields(tfields).Infof("Model changed from precook  %s to %s in 200 response", precookData.Model, contextMap[common.MODEL])
+		log.WithFields(tfields).Debugf("Model changed from precook %s to %s in 200 response", precookData.Model, contextMap[common.MODEL])
 		xhttp.IncreaseModelChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}
 	if contextMap[common.PARTNER_ID] != precookData.PartnerId {
-		log.WithFields(tfields).Infof("PartnerId changed from precook %s to %s in 200 response", precookData.PartnerId, contextMap[common.PARTNER_ID])
+		log.WithFields(tfields).Debugf("PartnerId changed from precook %s to %s in 200 response", precookData.PartnerId, contextMap[common.PARTNER_ID])
 		xhttp.IncreasePartnerChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}
 	if contextMap[common.FIRMWARE_VERSION] != precookData.FwVersion {
-		log.WithFields(tfields).Infof("FirmwareVersion changed from precook %s to %s in 200 response", precookData.FwVersion, contextMap[common.FIRMWARE_VERSION])
+		log.WithFields(tfields).Debugf("FirmwareVersion changed from precook %s to %s in 200 response", precookData.FwVersion, contextMap[common.FIRMWARE_VERSION])
 		xhttp.IncreaseFwVersionChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}
 
 	if contextMap[common.EXPERIENCE] != precookData.Experience {
-		log.WithFields(tfields).Infof("Experience changed from precook %s to %s in 200 response", precookData.Experience, contextMap[common.EXPERIENCE])
+		log.WithFields(tfields).Debugf("Experience changed from precook %s to %s in 200 response", precookData.Experience, contextMap[common.EXPERIENCE])
 		xhttp.IncreaseExperienceChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}
 
 	if contextMap[common.ACCOUNT_ID] != precookData.AccountId {
-		log.WithFields(tfields).Infof("AccountId changed fromp precook %s to %s in 200 response", precookData.AccountId, contextMap[common.ACCOUNT_ID])
+		log.WithFields(tfields).Debugf("AccountId changed from precook %s to %s in 200 response", precookData.AccountId, contextMap[common.ACCOUNT_ID])
 		xhttp.IncreaseAccountIdChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}
 }
