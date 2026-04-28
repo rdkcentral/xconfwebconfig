@@ -237,6 +237,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 
 	var xAccountId *conversion.XBOAccount
 	var accountId string
+	var accountType string
 
 	var accountProducts map[string]string
 
@@ -264,8 +265,10 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 
 		if xAccountId != nil && err == nil {
 			accountId = xAccountId.GetAccountId()
+			accountType = xAccountId.GetAccountType()
 			contextMap[common.ACCOUNT_ID] = accountId
-			log.WithFields(fields).Debugf("AddEstbFirmwareContext Successfully fetched AcntId='%s' from Grp Svc", accountId)
+			contextMap[common.ACCOUNT_TYPE] = accountType
+			log.WithFields(fields).Debugf("AddEstbFirmwareContext Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 		}
 
 		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
@@ -285,6 +288,10 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					contextMap[common.TIME_ZONE] = TimeZone
 				}
 
+				if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
+					contextMap[common.ACCOUNT_TYPE] = accountType
+				}
+
 				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
 					var ap map[string]string
 					err = json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
@@ -301,7 +308,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					}
 				}
 				xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-				log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' ,AccntPrd='%v' successfully retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap)
+				log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' AcntType='%s' ,AccntPrd='%v' successfully retrieved from xac/ada", contextMap[common.ACCOUNT_ID], contextMap[common.ACCOUNT_TYPE], contextMap)
 			}
 		} else {
 			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for Mac=%s", macAddress)
@@ -524,7 +531,7 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 }
 
 func GetFirstElementsInContextMap(contextMap map[string]string) {
-	keys := []string{common.ESTB_MAC, common.ENV, common.MODEL, common.FIRMWARE_VERSION, common.ECM_MAC, common.RECEIVER_ID, common.CONTROLLER_ID, common.CHANNEL_MAP_ID, common.VOD_ID, common.ACCOUNT_HASH, common.XCONF_HTTP_HEADER, common.TIME, common.IP_ADDRESS, common.BYPASS_FILTERS, common.FORCE_FILTERS, common.TIME_ZONE_OFFSET, common.PARTNER_ID, common.ACCOUNT_ID}
+	keys := []string{common.ESTB_MAC, common.ENV, common.MODEL, common.FIRMWARE_VERSION, common.ECM_MAC, common.RECEIVER_ID, common.CONTROLLER_ID, common.CHANNEL_MAP_ID, common.VOD_ID, common.ACCOUNT_HASH, common.XCONF_HTTP_HEADER, common.TIME, common.IP_ADDRESS, common.BYPASS_FILTERS, common.FORCE_FILTERS, common.TIME_ZONE_OFFSET, common.PARTNER_ID, common.ACCOUNT_ID, common.ACCOUNT_TYPE}
 	for _, key := range keys {
 		if contextMap[key] != "" {
 			contextMap[key] = strings.Split(contextMap[key], ",")[0]

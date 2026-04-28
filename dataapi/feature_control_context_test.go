@@ -22,7 +22,10 @@ import (
 	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	conversion "github.com/rdkcentral/xconfwebconfig/protobuf"
 	"github.com/rdkcentral/xconfwebconfig/util"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -671,4 +674,54 @@ func TestPrecookData_Structure(t *testing.T) {
 	assert.Equal(t, "MODEL123", precookData.Model)
 	assert.Equal(t, "stb", precookData.ApplicationType)
 	assert.Equal(t, "1.0.0", precookData.FwVersion)
+}
+
+func TestGetAccountInfoFromGrpService_AccountTypePrecedence(t *testing.T) {
+	tests := []struct {
+		name                     string
+		groupServiceAccountType  string
+		accountProductsTypeValue string
+		expectedAccountType      string
+	}{
+		{
+			name:                     "Replaces empty GroupService accountType with non-empty AccountProducts value",
+			groupServiceAccountType:  "",
+			accountProductsTypeValue: "residential",
+			expectedAccountType:      "residential",
+		},
+		{
+			name:                     "Keeps GroupService accountType when AccountProducts value is empty",
+			groupServiceAccountType:  "business",
+			accountProductsTypeValue: "",
+			expectedAccountType:      "business",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ws := &xhttp.XconfServer{
+				GroupServiceConnector: &accountInfoGroupServiceConnector{
+					accountData: &conversion.XBOAccount{
+						AccountId:   "acc-123",
+						AccountType: tt.groupServiceAccountType,
+					},
+					accountProducts: map[string]string{
+						"AccountType": tt.accountProductsTypeValue,
+					},
+				},
+			}
+
+			contextMap := map[string]string{
+				common.SERIAL_NUM: "serial-123",
+				common.MODEL:      "MODEL123",
+			}
+
+			podData, accountServiceData := getAccountInfoFromGrpService(ws, contextMap, log.Fields{})
+
+			assert.NotNil(t, podData)
+			assert.NotNil(t, accountServiceData)
+			assert.Equal(t, "acc-123", contextMap[common.ACCOUNT_ID])
+			assert.Equal(t, tt.expectedAccountType, contextMap[common.ACCOUNT_TYPE])
+		})
+	}
 }

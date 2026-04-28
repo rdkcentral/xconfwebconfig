@@ -412,12 +412,14 @@ func TestGetFirstElementsInContextMap(t *testing.T) {
 				common.ENV:              "PROD,DEV",
 				common.FIRMWARE_VERSION: "1.0.0",
 				common.PARTNER_ID:       "partner1,partner2,partner3",
+				common.ACCOUNT_TYPE:     "residential,business",
 			},
 			expectedContextMap: map[string]string{
 				common.ESTB_MAC:         "AA:BB:CC:DD:EE:FF",
 				common.ENV:              "PROD",
 				common.FIRMWARE_VERSION: "1.0.0",
 				common.PARTNER_ID:       "partner1",
+				common.ACCOUNT_TYPE:     "residential",
 			},
 		},
 		{
