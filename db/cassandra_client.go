@@ -469,13 +469,25 @@ func (c *CassandraClient) GetAllXconfDataAsMap(tenantId string, tableName string
 
 	var resultData = make(map[string][]byte)
 	var stmt string
-	if maxResults > 0 {
-		stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ? LIMIT %v`, tableName, maxResults)
+	var iter *gocql.Iter
+
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		if maxResults > 0 {
+			stmt = fmt.Sprintf(`SELECT key, value FROM "%s" LIMIT %v`, tableName, maxResults)
+		} else {
+			stmt = fmt.Sprintf(`SELECT key, value FROM "%s"`, tableName)
+		}
+		iter = c.Query(stmt).Iter()
 	} else {
-		stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
+		if maxResults > 0 {
+			stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ? LIMIT %v`, tableName, maxResults)
+		} else {
+			stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
+		}
+		iter = c.Query(stmt, tenantId, shardIds).Iter()
 	}
 
-	iter := c.Query(stmt, tenantId, shardIds).Iter()
 	for {
 		row := make(map[string]any)
 		if !iter.MapScan(row) {
@@ -494,12 +506,14 @@ func (c *CassandraClient) DeleteXconfData(tenantId string, tableName string, key
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
-	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, tableName)
-	if err := c.Query(stmt, tenantId, GetShardId(key), key).Exec(); err != nil {
-		return err
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE key = ?`, tableName)
+		return c.Query(stmt, key).Exec()
+	} else {
+		stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, tableName)
+		return c.Query(stmt, tenantId, GetShardId(key), key).Exec()
 	}
-
-	return nil
 }
 
 // DeleteAllXconfData Delete all XconfData for the specified tenant and table
@@ -507,8 +521,14 @@ func (c *CassandraClient) DeleteAllXconfData(tenantId string, tableName string) 
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
-	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
-	return c.Query(stmt, tenantId, shardIds).Exec()
+	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
+	if tenantId == "" {
+		stmt := fmt.Sprintf(`TRUNCATE "%s"`, tableName)
+		return c.Query(stmt).Exec()
+	} else {
+		stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
+		return c.Query(stmt, tenantId, shardIds).Exec()
+	}
 }
 
 // Two keys support

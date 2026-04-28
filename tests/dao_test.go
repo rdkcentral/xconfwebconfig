@@ -218,7 +218,13 @@ func truncateTable(tableName string) error {
 	dbClient := db.GetDatabaseClient()
 	cassandraClient, ok := dbClient.(*db.CassandraClient)
 	if ok {
-		return cassandraClient.DeleteAllXconfData(db.GetDefaultTenantId(), tableName)
+		var tenantId string
+		if tableInfo, err := db.GetTableInfo(tableName); err != nil {
+			return err
+		} else if !tableInfo.TenantAgnostic {
+			tenantId = db.GetDefaultTenantId()
+		}
+		return cassandraClient.DeleteAllXconfData(tenantId, tableName)
 	}
 	return nil
 }
