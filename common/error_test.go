@@ -31,6 +31,7 @@ func Red() error {
 		Message:    "data not found",
 	}
 	return err
+
 }
 
 func Orange() error {
