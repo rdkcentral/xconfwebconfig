@@ -20,8 +20,139 @@ package dataapi
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/stretchr/testify/assert"
 )
+
+func defaultRuleEvalContext() ruleEvalContext {
+	return ruleEvalContext{
+		isLiveCalculated:                true,
+		isPrecook304:                    false,
+		canPrecookRfcResponse:           true,
+		precookDataFetched:              true,
+		isPrecookLockdownMode:           false,
+		isMacExcludedFromPrecook:        false,
+		contextHashMatched:              true,
+		ipInSameNetwork:                 true,
+		isFwVersionMatched:              true,
+		isRfcPrecookForOfferedFwEnabled: false,
+		isOfferedFwMatched:              false,
+		contextMap: map[string]string{
+			common.ACCOUNT_ID:       "acct-1",
+			common.PARTNER_ID:       "partner-a",
+			common.FIRMWARE_VERSION: "fw-1",
+		},
+		precookData: &PreprocessedData{
+			RfcHash:   "hash-1",
+			AccountId: "acct-1",
+			PartnerId: "partner-a",
+			FwVersion: "fw-1",
+		},
+	}
+}
+
+func TestDeriveRuleEvalReason_Precook304(t *testing.T) {
+	evalCtx := defaultRuleEvalContext()
+	evalCtx.isLiveCalculated = false
+	evalCtx.isPrecook304 = true
+
+	assert.Equal(t, "precook-304", deriveRuleEvalReason(evalCtx))
+}
+
+func TestDeriveRuleEvalReason_OfferedFirmwareHit(t *testing.T) {
+	evalCtx := defaultRuleEvalContext()
+	evalCtx.isLiveCalculated = false
+	evalCtx.isRfcPrecookForOfferedFwEnabled = true
+	evalCtx.isOfferedFwMatched = true
+
+	assert.Equal(t, "precook-offered-firmware", deriveRuleEvalReason(evalCtx))
+}
+
+func TestDeriveRuleEvalReason_PrecookDisabledVsFirstContact(t *testing.T) {
+	t.Run("precook disabled", func(t *testing.T) {
+		evalCtx := defaultRuleEvalContext()
+		evalCtx.precookDataFetched = false
+		evalCtx.precookData = nil
+
+		assert.Equal(t, "precook-off", deriveRuleEvalReason(evalCtx))
+	})
+
+	t.Run("first contact", func(t *testing.T) {
+		evalCtx := defaultRuleEvalContext()
+		evalCtx.precookDataFetched = true
+		evalCtx.precookData = nil
+
+		assert.Equal(t, "first-contact", deriveRuleEvalReason(evalCtx))
+	})
+}
+
+func TestDeriveRuleEvalReason_ContextHashMismatchReasons(t *testing.T) {
+	t.Run("account-new", func(t *testing.T) {
+		evalCtx := defaultRuleEvalContext()
+		evalCtx.contextHashMatched = false
+		evalCtx.precookData.AccountId = ""
+		evalCtx.contextMap[common.ACCOUNT_ID] = "acct-new"
+		assert.Equal(t, "account-new", deriveRuleEvalReason(evalCtx))
+	})
+
+	t.Run("account-deleted", func(t *testing.T) {
+		evalCtx := defaultRuleEvalContext()
+		evalCtx.contextHashMatched = false
+		evalCtx.precookData.AccountId = "acct-old"
+		evalCtx.contextMap[common.ACCOUNT_ID] = ""
+		assert.Equal(t, "account-deleted", deriveRuleEvalReason(evalCtx))
+	})
+
+	t.Run("account-change", func(t *testing.T) {
+		evalCtx := defaultRuleEvalContext()
+		evalCtx.contextHashMatched = false
+		evalCtx.precookData.AccountId = "acct-old"
+		evalCtx.contextMap[common.ACCOUNT_ID] = "acct-new"
+		assert.Equal(t, "account-change", deriveRuleEvalReason(evalCtx))
+	})
+
+	t.Run("partner-change", func(t *testing.T) {
+		evalCtx := defaultRuleEvalContext()
+		evalCtx.contextHashMatched = false
+		evalCtx.contextMap[common.ACCOUNT_ID] = evalCtx.precookData.AccountId
+		evalCtx.contextMap[common.PARTNER_ID] = "partner-b"
+		assert.Equal(t, "partner-change", deriveRuleEvalReason(evalCtx))
+	})
+
+	t.Run("firmware-change", func(t *testing.T) {
+		evalCtx := defaultRuleEvalContext()
+		evalCtx.contextHashMatched = false
+		evalCtx.contextMap[common.ACCOUNT_ID] = evalCtx.precookData.AccountId
+		evalCtx.contextMap[common.PARTNER_ID] = evalCtx.precookData.PartnerId
+		evalCtx.contextMap[common.FIRMWARE_VERSION] = "fw-2"
+		assert.Equal(t, "firmware-change", deriveRuleEvalReason(evalCtx))
+	})
+
+	t.Run("context-change", func(t *testing.T) {
+		evalCtx := defaultRuleEvalContext()
+		evalCtx.contextHashMatched = false
+		evalCtx.contextMap[common.ACCOUNT_ID] = evalCtx.precookData.AccountId
+		evalCtx.contextMap[common.PARTNER_ID] = evalCtx.precookData.PartnerId
+		evalCtx.contextMap[common.FIRMWARE_VERSION] = evalCtx.precookData.FwVersion
+		assert.Equal(t, "context-change", deriveRuleEvalReason(evalCtx))
+	})
+}
+
+func TestDeriveRuleEvalReason_IpAndFirmwareChange(t *testing.T) {
+	t.Run("ip-change", func(t *testing.T) {
+		evalCtx := defaultRuleEvalContext()
+		evalCtx.ipInSameNetwork = false
+		assert.Equal(t, "ip-change", deriveRuleEvalReason(evalCtx))
+	})
+
+	t.Run("firmware-change after hash match", func(t *testing.T) {
+		evalCtx := defaultRuleEvalContext()
+		evalCtx.isFwVersionMatched = false
+		evalCtx.isRfcPrecookForOfferedFwEnabled = false
+		evalCtx.isOfferedFwMatched = false
+		assert.Equal(t, "firmware-change", deriveRuleEvalReason(evalCtx))
+	})
+}
 
 func TestGetMatchedPrecookHash_WithMatchingRfcHash(t *testing.T) {
 	precookData := &PreprocessedData{
