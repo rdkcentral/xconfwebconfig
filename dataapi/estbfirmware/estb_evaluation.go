@@ -26,6 +26,8 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	coreef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // EvaluationResult ...
@@ -143,7 +145,10 @@ func DownloadLocationRoundRobinFilterContainsVersion(firmwareVersions string, co
  * @return true if firmware output must be returned, false if must be blocked
  */
 func PercentFilterfilter(evaluationResult *EvaluationResult, context *coreef.ConvertedContext) bool {
-	filterValue, _ := coreef.GetDefaultPercentFilterValueOneDB()
+	filterValue, err := coreef.GetDefaultPercentFilterValueOneDB()
+	if err != nil {
+		log.Errorf("PercentFilterfilter failed to get default percent filter value: %v", err)
+	}
 	matchedEnvModelName := ""
 	if evaluationResult.MatchedRule != nil && firmware.ENV_MODEL_RULE == evaluationResult.MatchedRule.Type {
 		matchedEnvModelName = evaluationResult.MatchedRule.Name
@@ -166,13 +171,19 @@ func PercentFilterfilter(evaluationResult *EvaluationResult, context *coreef.Con
 					context.AddForceFiltersConverted(firmware.REBOOT_IMMEDIATELY_FILTER)
 				}
 				context.AddBypassFiltersConverted(firmware.TIME_FILTER)
-				config, _ := coreef.GetFirmwareConfigOneDB(envModelPercentage.IntermediateVersion)
+				config, err := coreef.GetFirmwareConfigOneDB(envModelPercentage.IntermediateVersion)
+				if err != nil {
+					log.Errorf("PercentFilterfilter failed to get intermediate version firmware config %s: %v", envModelPercentage.IntermediateVersion, err)
+				}
 				if config != nil && context.GetFirmwareVersionConverted() != config.FirmwareVersion {
 					// return IntermediateVersion firmware config
 					evaluationResult.FirmwareConfig = coreef.NewFirmwareConfigFacade(config)
 					evaluationResult.AppliedVersionInfo["firmwareVersionSource"] = "IV,doesntMeetMinCheck"
 				} else {
-					config, _ := coreef.GetFirmwareConfigOneDB(envModelPercentage.LastKnownGood)
+					config, err := coreef.GetFirmwareConfigOneDB(envModelPercentage.LastKnownGood)
+					if err != nil {
+						log.Errorf("PercentFilterfilter failed to get LKG firmware config %s: %v", envModelPercentage.LastKnownGood, err)
+					}
 					if config != nil {
 						// return LKG firmware config
 						evaluationResult.FirmwareConfig = coreef.NewFirmwareConfigFacade(config)
@@ -183,7 +194,10 @@ func PercentFilterfilter(evaluationResult *EvaluationResult, context *coreef.Con
 			}
 			result := fitsPercent(evaluationResult, context, whiteList, percentage)
 			if !result {
-				config, _ := coreef.GetFirmwareConfigOneDB(envModelPercentage.LastKnownGood)
+				config, err := coreef.GetFirmwareConfigOneDB(envModelPercentage.LastKnownGood)
+				if err != nil {
+					log.Errorf("PercentFilterfilter failed to get LKG firmware config %s: %v", envModelPercentage.LastKnownGood, err)
+				}
 				if config != nil && context.GetFirmwareVersionConverted() != config.FirmwareVersion {
 					// return LKG firmware config if versions are different
 					evaluationResult.FirmwareConfig = coreef.NewFirmwareConfigFacade(config)
