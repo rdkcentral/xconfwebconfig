@@ -519,6 +519,9 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 			fields["appliedFilters"] = appliedFilters
 		}
 	}
+	if estbHash := contextMap[common.ESTB_HASH]; estbHash != "" {
+		fields[common.ESTB_HASH] = estbHash
+	}
 	log.WithFields(common.FilterLogFields(fields)).Info("EstbFirmwareService XCONF_LOG")
 	xhttp.UpdateLogCounter("EstbFirmwareService")
 }

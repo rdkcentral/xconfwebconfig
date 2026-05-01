@@ -27,6 +27,7 @@ import (
 	common "github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/util"
 
 	log "github.com/sirupsen/logrus"
@@ -115,6 +116,10 @@ func NormalizeCommonContext(contextMap map[string]string, estbMacKey string, ecm
 		normalizedEstbMac, err := util.MacAddrComplexFormat(estbMac)
 		if err == nil {
 			contextMap[estbMacKey] = normalizedEstbMac
+		}
+		// Compute estbHash and store in contextMap
+		if estbHash, ok := re.GetPercentHash(estbMac); ok {
+			contextMap[common.ESTB_HASH] = strconv.FormatFloat(estbHash, 'f', -1, 64)
 		}
 	}
 	ecmMac := contextMap[ecmMacKey]

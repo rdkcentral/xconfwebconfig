@@ -88,6 +88,7 @@ const (
 	ESTB_IP                    = "estbIP"
 	ESTB_MAC_ADDRESS           = "estbMacAddress"
 	ESTB_MAC                   = "eStbMac"
+	ESTB_HASH                  = "estbHash"
 	ECM_MAC_ADDRESS            = "ecmMacAddress"
 	ECM_MAC                    = "eCMMac"
 	ENV                        = "env"

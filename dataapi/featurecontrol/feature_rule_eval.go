@@ -140,6 +140,9 @@ func (f *FeatureControlRuleBase) LogFeatureInfo(context map[string]string, appli
 	}
 	fields["features"] = featureInstances
 	fields["configSetHash"] = f.CalculateHash(features)
+	if estbHash := context[common.ESTB_HASH]; estbHash != "" {
+		fields[common.ESTB_HASH] = estbHash
+	}
 	log.WithFields(common.FilterLogFields(fields)).Info("FeatureControlRuleBase")
 	http.UpdateLogCounter("FeatureControlRuleBase")
 }
