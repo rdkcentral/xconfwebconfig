@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -65,22 +66,45 @@ func (obj *ApplicationType) Clone() (*ApplicationType, error) {
 	return cloneObj.(*ApplicationType), nil
 }
 
-func isValid(at string) bool {
-	if at == STB || at == XHOME || at == RDKCLOUD || at == SKY {
-		return true
-	}
-	return false
-}
-
 func ValidateApplicationType(applicationType string) error {
 	if applicationType == "" {
 		return common.NewRemoteError(http.StatusBadRequest, "ApplicationType is empty")
 	}
-
-	if applicationType != "" && !isValid(applicationType) {
-		return fmt.Errorf("ApplicationType %s is not valid", applicationType)
+	if !IsValidApplicationType(applicationType) {
+		return common.NewRemoteError(http.StatusBadRequest, fmt.Sprintf("ApplicationType '%s' is invalid or does not exist", applicationType))
 	}
 	return nil
+}
+
+func IsValidApplicationType(applicationType string) bool {
+	if util.IsBlank(applicationType) {
+		return false
+	}
+	allTypes, err := GetAllApplicationTypeList()
+	if err != nil || len(allTypes) == 0 {
+		log.Warn(err)
+		return false
+	}
+	for _, appType := range allTypes {
+		if strings.EqualFold(appType.Name, applicationType) {
+			return true
+		}
+	}
+	return false
+}
+
+func GetAllApplicationTypeList() ([]*ApplicationType, error) {
+	result := []*ApplicationType{}
+	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_APPLICATION_TYPES, 0)
+	if err != nil {
+		log.Warn("no application types found")
+		return result, err
+	}
+	for _, item := range list {
+		appType := item.(*ApplicationType)
+		result = append(result, appType)
+	}
+	return result, nil
 }
 
 const (
@@ -142,6 +166,40 @@ func NewApplicationTypeInf() interface{} {
 // NewEnvironmentInf constructor
 func NewEnvironmentInf() interface{} {
 	return &Environment{}
+}
+
+// InitializeStaticApplicationTypes creates predefined application types on first run only
+func InitializeStaticApplicationTypes() error {
+	dao := db.GetCachedSimpleDao()
+	allTypes, err := dao.GetAllAsList(db.TABLE_APPLICATION_TYPES, 0)
+	if err == nil && len(allTypes) > 0 {
+		log.Info("Application types already initialized, skipping...")
+		return nil
+	}
+
+	log.Info("Creating static application types...")
+	staticTypes := map[string]string{
+		STB:   "Set-Top Box application type",
+		XHOME: "Home security and automation application type",
+		SKY:   "Sky platform application type",
+	}
+
+	timestamp := time.Now().Unix()
+	for name, description := range staticTypes {
+		uid := uuid.New().String()
+		appType := &ApplicationType{
+			ID:          uid,
+			Name:        name,
+			Description: description,
+			CreatedBy:   "system",
+			CreatedAt:   timestamp,
+		}
+		if err := dao.SetOne(db.TABLE_APPLICATION_TYPES, uid, appType); err != nil {
+			return fmt.Errorf("failed to create static application type '%s': %w", name, err)
+		}
+		log.Infof("Created static application type: %s ", name)
+	}
+	return nil
 }
 
 // NewEnvironment ...
