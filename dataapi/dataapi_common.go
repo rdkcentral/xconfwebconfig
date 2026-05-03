@@ -325,6 +325,13 @@ func AddGroupServiceFeatureTags(ws *xhttp.XconfServer, groupName string, context
 	for key, value := range featureTags {
 		if keyWithoutPrefix, ok := RemovePrefix(key, prefixList); ok {
 			if getPrefixData {
+				if Xc.EnableAccountTaggingOverride && strings.HasPrefix(keyWithoutPrefix, "accounttype:") {
+					if accountType, ok := contextMap["accountType"]; ok && accountType != "" {
+						delete(contextMap, common.ACCOUNT_TYPE)
+					}
+					log.WithFields(fields).Debugf("Overriding ACCOUNT_TYPE with value from GroupService tag: %s", keyWithoutPrefix)
+				}
+
 				contextMap[keyWithoutPrefix] = value
 				tags = append(tags, fmt.Sprintf("%s#%s", keyWithoutPrefix, value))
 			}
