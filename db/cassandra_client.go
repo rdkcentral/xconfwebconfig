@@ -787,7 +787,7 @@ func (c *CassandraClient) GetAllXconfKey2s(tenantId string, tableName string, ke
 }
 
 // SetXconfCompressedData Create XconfData for the specified key and values, where values is compressed JSON data
-func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName string, key string, values [][]byte, ttl int) error {
+func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName string, key string, key2FieldName string, values [][]byte, ttl int) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
@@ -797,9 +797,9 @@ func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName stri
 	// Add a record that specifies the number of compressed data chunks
 	var stmt string
 	if ttl > 0 {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?)) USING TTL %d`, tableName, Key2FieldNameForList, ttl)
+		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?)) USING TTL %d`, tableName, key2FieldName, ttl)
 	} else {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?))`, tableName, Key2FieldNameForList)
+		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?))`, tableName, key2FieldName)
 	}
 	batch.Query(stmt, tenantId, shardId, key, NamedListCountColumnValue, len(values))
 
@@ -807,9 +807,9 @@ func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName stri
 		// Add a record for each compressed data chunk where key has the format: NamedListData_part_0, ...
 		partColumnValue := NamedListPartColumnValue + strconv.Itoa(i)
 		if ttl > 0 {
-			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, Key2FieldNameForList, ttl)
+			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
 		} else {
-			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, Key2FieldNameForList)
+			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, key2FieldName)
 		}
 		batch.Query(stmt, tenantId, shardId, key, partColumnValue, value)
 	}
@@ -822,7 +822,7 @@ func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName stri
 }
 
 // GetXconfCompressedData Get one row where return value is compressed JSON data
-func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName string, key string) ([]byte, error) {
+func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName string, key string, key2FieldName string) ([]byte, error) {
 	start := time.Now()
 
 	c.ConcurrentQueries <- true
@@ -831,7 +831,7 @@ func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName stri
 	// Get the number of compressed data chunks
 	var partsCount int
 	shardId := GetShardId(key)
-	stmt := fmt.Sprintf(`SELECT blobAsInt(value) FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ? LIMIT 1`, tableName, Key2FieldNameForList)
+	stmt := fmt.Sprintf(`SELECT blobAsInt(value) FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
 	err := c.Query(stmt, tenantId, shardId, key, NamedListCountColumnValue).Scan(&partsCount)
 	if err != nil {
 		return nil, err
@@ -839,7 +839,7 @@ func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName stri
 
 	// Get all the compressed data chunks
 	var partsMap = make(map[string][]byte)
-	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, Key2FieldNameForList, tableName)
+	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, key2FieldName, tableName)
 	iter := c.Query(stmt, tenantId, shardId, key).Iter()
 	for {
 		row := make(map[string]any)
@@ -847,7 +847,7 @@ func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName stri
 			break
 		}
 
-		partName := row[Key2FieldNameForList].(string)
+		partName := row[key2FieldName].(string)
 		if partName != NamedListCountColumnValue {
 			partsMap[partName] = row["value"].([]byte)
 		}
@@ -883,12 +883,12 @@ func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName stri
 }
 
 // GetAllXconfCompressedDataAsMap Get all rows as a map of key to value, where value is compressed JSON data
-func (c *CassandraClient) GetAllXconfCompressedDataAsMap(tenantId string, tableName string) map[string][]byte {
+func (c *CassandraClient) GetAllXconfCompressedDataAsMap(tenantId string, tableName string, key2FieldName string) map[string][]byte {
 	start := time.Now()
 
 	var resultData = make(map[string][]byte)
 
-	rawData := c.GetXconfCompressedDataRaw(tenantId, tableName)
+	rawData := c.GetXconfCompressedDataRaw(tenantId, tableName, key2FieldName)
 	for key, partsMap := range rawData {
 		// Combine all the compressed data chunks into one
 		partsCount := len(partsMap)
@@ -912,12 +912,12 @@ func (c *CassandraClient) GetAllXconfCompressedDataAsMap(tenantId string, tableN
 //
 // Sample data for one record in GenericXconfNamedList table:
 //
-// tenant_id | shard_id | key               | column1                   | value
+// tenant_id | shard_id | key               | key2                      | value
 // ----------+----------+-------------------+---------------------------+-----------------------------
 // COMCAST   | 0        | Test_Mac_List     |      NamedListData_part_0 | 0x7df05a7b226964223a2241...
 // COMCAST   | 0        | Test_Mac_List     |      NamedListData_part_1 | 0x60f05f7b226964223a2231...
 // COMCAST   | 0        | Test_Mac_List     | NamedListData_parts_count |                  0x00000002
-func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName string) map[string]map[string][]byte {
+func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName string, key2FieldName string) map[string]map[string][]byte {
 	start := time.Now()
 
 	c.ConcurrentQueries <- true
@@ -927,7 +927,7 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName s
 	var countMap = make(map[string]int)
 
 	// Get all the count records
-	stmt := fmt.Sprintf(`SELECT key, blobAsInt(value) as count FROM "%s" where tenant_id = ? AND shard_id IN ? AND %s = ? ALLOW FILTERING`, tableName, Key2FieldNameForList)
+	stmt := fmt.Sprintf(`SELECT key, blobAsInt(value) as count FROM "%s" where tenant_id = ? AND shard_id IN ? AND %s = ? ALLOW FILTERING`, tableName, key2FieldName)
 
 	iter := c.Query(stmt, tenantId, shardIds, NamedListCountColumnValue).Iter()
 	for {
@@ -939,7 +939,7 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName s
 	}
 
 	// Get all the compressed data chunks
-	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, Key2FieldNameForList, tableName)
+	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, key2FieldName, tableName)
 	iter = c.Query(stmt, tenantId, shardIds).Iter()
 	for {
 		row := make(map[string]any)
@@ -947,8 +947,8 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName s
 			break
 		}
 
-		column1 := row[Key2FieldNameForList].(string)
-		if column1 == NamedListCountColumnValue {
+		key2 := row[key2FieldName].(string)
+		if key2 == NamedListCountColumnValue {
 			continue // Ignored count record which has already been processed
 		} else {
 			key := row["key"].(string)
@@ -961,7 +961,7 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName s
 			if len(partsMap) >= count {
 				continue // skip extra data
 			}
-			partsMap[column1] = row["value"].([]byte)
+			partsMap[key2] = row["value"].([]byte)
 		}
 	}
 

@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS models (tenant_id text, shard_id int, key text, value
  
 CREATE TABLE IF NOT EXISTS environments (tenant_id text, shard_id int, key text, value blob, updated timestamp, PRIMARY KEY ((tenant_id, shard_id), key));
  
-CREATE TABLE IF NOT EXISTS generic_named_lists (tenant_id text, shard_id int, key text, column1 text, value blob, updated timestamp, PRIMARY KEY ((tenant_id, shard_id), key, column1));
+CREATE TABLE IF NOT EXISTS generic_named_lists (tenant_id text, shard_id int, key text, key2 text, value blob, updated timestamp, PRIMARY KEY ((tenant_id, shard_id), key, key2));
  
 CREATE TABLE IF NOT EXISTS app_settings (tenant_id text, shard_id int, key text, value blob, updated timestamp, PRIMARY KEY ((tenant_id, shard_id), key));
 
@@ -87,9 +87,9 @@ CREATE TABLE IF NOT EXISTS tag_member_metadata (tenant_id text, shard_id int, ta
  
 CREATE TABLE IF NOT EXISTS tag_members_bucketed (tenant_id text, tag_id text, bucket_id int, member text, PRIMARY KEY ((tag_id, bucket_id), member));
 
-CREATE TABLE IF NOT EXISTS config_change_logs (tenant_id text, shard_id int, key text, column1 text, value blob, PRIMARY KEY ((tenant_id, shard_id), key, column1));
+CREATE TABLE IF NOT EXISTS config_change_logs (tenant_id text, shard_id int, key text, key2 text, value blob, PRIMARY KEY ((tenant_id, shard_id), key, key2));
 
-CREATE TABLE IF NOT EXISTS change_events (key bigint, columnName timeuuid, value blob, PRIMARY KEY (key, columnName));
+CREATE TABLE IF NOT EXISTS change_events (key bigint, key2 timeuuid, value blob, PRIMARY KEY (key, key2));
 
 CREATE TABLE IF NOT EXISTS penetration_data (estb_mac text, ecm_mac text, serial_number text, partner text, model text, fw_filename text, fw_version text, fw_reported_version text, fw_additional_version_info text, fw_applied_rule text, rfc_applied_rules text, rfc_features text, rfc_ts timestamp, fw_ts timestamp, time_zone text, rfc_account_hash text, rfc_account_id text, rfc_account_mgmt text, titan_account_id text, rfc_partner text, titan_partner text, rfc_model text, rfc_fw_reported_version text, rfc_env text, rfc_application_type text, rfc_experience text, rfc_time_zone text, precook_rfc_rules text, rfc_configsethash text, precook_configsethash text, precook_rfc_features text, rfc_post_proc text, rfc_query_params text, rfc_tags text, rfc_estb_ip text, client_cert_expiry text, recovery_cert_expiry text, PRIMARY KEY (estb_mac));
 

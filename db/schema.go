@@ -110,11 +110,11 @@ var AllTables = []string{
 	TABLE_APPLICATION_TYPES,
 }
 
-// Two possible values for Key2FieldName that is used for list types of tables
-// (e.g. config_change_logs, change_events) where we need to specify the column name for the second key
+// For list types of tables (e.g. config_change_logs, change_events), the secondary key is stored in a column named "key2",
+// but for deprecated Logs2 table, the secondary key is stored in a column named "column1"
 const (
-	Key2FieldNameForList        = "column1"
-	Key2FieldNameForChangedKeys = "columnName"
+	DefaultKey2FieldName  = "key2"
+	Key2FieldNameForLogs2 = "column1"
 )
 
 /*
@@ -129,7 +129,7 @@ type TableInfo struct {
 	Cached          bool       // specifies whether to cache the data
 	TenantAgnostic  bool       // tenantId is not part of the partition key
 	TTL             int        // TTL for the data
-	Key2FieldName   string     // column name for list types of tables, e.g. config_change_logs, change_events
+	Key2FieldName   string     // column name for list types of tables, e.g. config_change_logs, change_events, Logs2
 }
 
 // tableConfig is a map of table name to TableInfo

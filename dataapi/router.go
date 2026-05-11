@@ -128,7 +128,7 @@ func RegisterTables() {
 			Compressed:      true,
 			Split:           true,
 			Cached:          true,
-			Key2FieldName:   db.Key2FieldNameForList,
+			Key2FieldName:   db.DefaultKey2FieldName,
 		})
 
 		db.RegisterTableConfig(&db.TableInfo{
@@ -159,7 +159,7 @@ func RegisterTables() {
 			TableName:       db.TABLE_CONFIG_CHANGE_LOGS,
 			ConstructorFunc: sharedef.NewConfigChangeLogInf,
 			Compressed:      true,
-			Key2FieldName:   db.Key2FieldNameForList,
+			Key2FieldName:   db.DefaultKey2FieldName,
 			TTL:             90 * 24 * 60 * 60,
 		})
 
@@ -167,16 +167,18 @@ func RegisterTables() {
 			TableName:       db.TABLE_CHANGE_EVENTS,
 			ConstructorFunc: db.NewChangedDataInf,
 			TenantAgnostic:  true,
-			Key2FieldName:   db.Key2FieldNameForChangedKeys,
+			Key2FieldName:   db.DefaultKey2FieldName,
 			TTL:             86400 * 7, // one week
 		})
 
+		// Logs2 is deprecated and the new table is config_change_logs, but for now we will continue writing
+		// to it and the new config_change_logs table until all data has been migrated, i.e. dual writes
 		db.RegisterTableConfig(&db.TableInfo{
 			TableName:       db.TABLE_LOGS,
 			ConstructorFunc: sharedef.NewConfigChangeLogInf,
 			Compressed:      true,
 			TenantAgnostic:  true,
-			Key2FieldName:   db.Key2FieldNameForList,
+			Key2FieldName:   db.Key2FieldNameForLogs2,
 			TTL:             90 * 24 * 60 * 60,
 		})
 	})

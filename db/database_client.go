@@ -123,9 +123,9 @@ type DatabaseClient interface {
 	GetAllXconfKey2s(tenantId string, tableName string, key string, key2FieldName string) []any
 
 	// Xconf compressed data
-	SetXconfCompressedData(tenantId string, tableName string, key string, values [][]byte, ttl int) error
-	GetXconfCompressedData(tenantId string, tableName string, key string) ([]byte, error)
-	GetAllXconfCompressedDataAsMap(tenantId string, tableName string) map[string][]byte
+	SetXconfCompressedData(tenantId string, tableName string, key string, key2FieldName string, values [][]byte, ttl int) error
+	GetXconfCompressedData(tenantId string, tableName string, key string, key2FieldName string) ([]byte, error)
+	GetAllXconfCompressedDataAsMap(tenantId string, tableName string, key2FieldName string) map[string][]byte
 
 	// Pod table lookup estbMac from pod serialNum
 	GetEcmMacFromPodTable(string) (string, error)
