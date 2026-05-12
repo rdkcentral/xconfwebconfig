@@ -796,6 +796,13 @@ func CreatePartnerIdFeature(partnerId string) rfc.Feature {
 	}
 }
 
+func normalizeAccountIDForPrecookReason(accountID string) string {
+	if accountID == "" || util.IsUnknownValue(accountID) {
+		return ""
+	}
+	return accountID
+}
+
 func generatePrecookDataChangedMetrics(contextMap map[string]string, precookData *PreprocessedData, fields log.Fields) []string {
 	tfields := common.FilterLogFields(fields)
 	reasons := []string{}
@@ -821,12 +828,14 @@ func generatePrecookDataChangedMetrics(contextMap map[string]string, precookData
 		reasons = append(reasons, "experience-change")
 	}
 
-	if contextMap[common.ACCOUNT_ID] != precookData.AccountId {
+	currentAccountID := normalizeAccountIDForPrecookReason(contextMap[common.ACCOUNT_ID])
+	precookAccountID := normalizeAccountIDForPrecookReason(precookData.AccountId)
+	if currentAccountID != precookAccountID {
 		log.WithFields(tfields).Debugf("AccountId changed from precook %s to %s", precookData.AccountId, contextMap[common.ACCOUNT_ID])
 		xhttp.IncreaseAccountIdChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
-		if util.IsUnknownValue(precookData.AccountId) || precookData.AccountId == "" {
+		if precookAccountID == "" {
 			reasons = append(reasons, "account-new")
-		} else if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || contextMap[common.ACCOUNT_ID] == "" {
+		} else if currentAccountID == "" {
 			reasons = append(reasons, "account-deleted")
 		} else {
 			reasons = append(reasons, "account-mismatched")
@@ -855,7 +864,7 @@ func generatePrecookDataChangedIn200Metrics(contextMap map[string]string, precoo
 		xhttp.IncreaseExperienceChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}
 
-	if contextMap[common.ACCOUNT_ID] != precookData.AccountId {
+	if normalizeAccountIDForPrecookReason(contextMap[common.ACCOUNT_ID]) != normalizeAccountIDForPrecookReason(precookData.AccountId) {
 		log.WithFields(tfields).Debugf("AccountId changed from precook %s to %s in 200 response", precookData.AccountId, contextMap[common.ACCOUNT_ID])
 		xhttp.IncreaseAccountIdChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}

@@ -788,3 +788,24 @@ func TestGeneratePrecookDataChangedMetrics_AccountMismatched(t *testing.T) {
 
 	assert.Equal(t, []string{"account-mismatched"}, reasons)
 }
+
+func TestGeneratePrecookDataChangedMetrics_AccountUnknownVsNoAccountNoChange(t *testing.T) {
+	contextMap := map[string]string{
+		common.MODEL:            "MODEL123",
+		common.PARTNER_ID:       "PARTNER1",
+		common.FIRMWARE_VERSION: "1.0.0",
+		common.EXPERIENCE:       "prod",
+		common.ACCOUNT_ID:       "NoAccount",
+	}
+	precookData := &PreprocessedData{
+		Model:      "MODEL123",
+		PartnerId:  "PARTNER1",
+		FwVersion:  "1.0.0",
+		Experience: "prod",
+		AccountId:  "unknown",
+	}
+
+	reasons := generatePrecookDataChangedMetrics(contextMap, precookData, log.Fields{})
+
+	assert.Empty(t, reasons)
+}
