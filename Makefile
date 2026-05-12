@@ -29,6 +29,9 @@ all: build
 build:  ## Build a version
 	go build -v -ldflags="-X ${REPO}/common.BinaryBranch=${BRANCH} -X ${REPO}/common.BinaryVersion=${Version} -X ${REPO}/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfwebconfig-${GOOS}-${GOARCH} main.go
 
+migrate:  ## Build the migration tool
+	go build -v -ldflags="-X ${REPO}/common.BinaryBranch=${BRANCH} -X ${REPO}/common.BinaryVersion=${Version} -X ${REPO}/common.BinaryBuildTime=${BUILDTIME}" -o bin/db-migrate-${GOOS}-${GOARCH} db_migrate.go
+
 linux:
 	GOOS=linux go build -v -ldflags="-X ${REPO}/common.BinaryBranch=${BRANCH} -X ${REPO}/common.BinaryVersion=${Version} -X ${REPO}/common.BinaryBuildTime=${BUILDTIME}" -o bin/xconfwebconfig-linux-amd64 main.go
 
