@@ -725,3 +725,66 @@ func TestGetAccountInfoFromGrpService_AccountTypePrecedence(t *testing.T) {
 		})
 	}
 }
+
+func TestGeneratePrecookDataChangedMetrics_AccountNew(t *testing.T) {
+	contextMap := map[string]string{
+		common.MODEL:            "MODEL123",
+		common.PARTNER_ID:       "PARTNER1",
+		common.FIRMWARE_VERSION: "1.0.0",
+		common.EXPERIENCE:       "prod",
+		common.ACCOUNT_ID:       "acc-001",
+	}
+	precookData := &PreprocessedData{
+		Model:      "MODEL123",
+		PartnerId:  "PARTNER1",
+		FwVersion:  "1.0.0",
+		Experience: "prod",
+		AccountId:  "",
+	}
+
+	reasons := generatePrecookDataChangedMetrics(contextMap, precookData, log.Fields{})
+
+	assert.Equal(t, []string{"account-new"}, reasons)
+}
+
+func TestGeneratePrecookDataChangedMetrics_AccountDeleted(t *testing.T) {
+	contextMap := map[string]string{
+		common.MODEL:            "MODEL123",
+		common.PARTNER_ID:       "PARTNER1",
+		common.FIRMWARE_VERSION: "1.0.0",
+		common.EXPERIENCE:       "prod",
+		common.ACCOUNT_ID:       "unknown",
+	}
+	precookData := &PreprocessedData{
+		Model:      "MODEL123",
+		PartnerId:  "PARTNER1",
+		FwVersion:  "1.0.0",
+		Experience: "prod",
+		AccountId:  "acc-001",
+	}
+
+	reasons := generatePrecookDataChangedMetrics(contextMap, precookData, log.Fields{})
+
+	assert.Equal(t, []string{"account-deleted"}, reasons)
+}
+
+func TestGeneratePrecookDataChangedMetrics_AccountMismatched(t *testing.T) {
+	contextMap := map[string]string{
+		common.MODEL:            "MODEL123",
+		common.PARTNER_ID:       "PARTNER1",
+		common.FIRMWARE_VERSION: "1.0.0",
+		common.EXPERIENCE:       "prod",
+		common.ACCOUNT_ID:       "acc-002",
+	}
+	precookData := &PreprocessedData{
+		Model:      "MODEL123",
+		PartnerId:  "PARTNER1",
+		FwVersion:  "1.0.0",
+		Experience: "prod",
+		AccountId:  "acc-001",
+	}
+
+	reasons := generatePrecookDataChangedMetrics(contextMap, precookData, log.Fields{})
+
+	assert.Equal(t, []string{"account-mismatched"}, reasons)
+}

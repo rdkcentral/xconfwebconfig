@@ -826,6 +826,8 @@ func generatePrecookDataChangedMetrics(contextMap map[string]string, precookData
 		xhttp.IncreaseAccountIdChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 		if util.IsUnknownValue(precookData.AccountId) || precookData.AccountId == "" {
 			reasons = append(reasons, "account-new")
+		} else if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || contextMap[common.ACCOUNT_ID] == "" {
+			reasons = append(reasons, "account-deleted")
 		} else {
 			reasons = append(reasons, "account-mismatched")
 		}
