@@ -1,0 +1,219 @@
+## 0. Infrastructure Setup
+
+- [ ] 0.1 Create db/test_infrastructure.go with TestableDAO interfaces (TestableSimpleDAO, TestableCachedDAO, TestableListingDAO, TestableCompressingDAO, TestableGroupServiceDAO)
+- [ ] 0.2 Implement RealDAO wrappers (RealSimpleDAOWrapper, RealCachedDAOWrapper, RealListingDAOWrapper, RealCompressingDAOWrapper, RealGroupServiceDAOWrapper)
+- [ ] 0.3 Implement Mock DAO structs using testify/mock (MockSimpleDAO, MockCachedDAO, MockListingDAO, MockCompressingDAO, MockGroupServiceDAO)
+- [ ] 0.4 Implement getTestDAO factory function with TEST_MODE support and skip logic
+- [ ] 0.5 Implement getTestMode helper and skipIf* helper functions
+- [ ] 0.6 Add comprehensive documentation and usage examples to db/test_infrastructure.go
+- [ ] 0.7 Verify infrastructure: Run `make test` to confirm no regressions introduced
+- [ ] 0.8 Create db/cleanup_tracker.go with CleanupTracker struct and NewCleanupTracker function
+- [ ] 0.9 Implement CleanupTracker.Insert, InsertListing, Track, and Cleanup methods
+- [ ] 0.10 Implement CleanupTracker.InsertAndTrack and SetVerifyCleanup helper methods
+- [ ] 0.11 Add documentation and anti-pattern examples to db/cleanup_tracker.go
+- [ ] 0.12 Verify CleanupTracker: Create simple test demonstrating tracker usage, run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 0.13 Update Makefile: Add TEST_MODE variable and test-mock, test-real targets
+- [ ] 0.14 Update Makefile: Add cover-mock, cover-real targets generating separate coverage files
+- [ ] 0.15 Update Makefile: Add compare-coverage target displaying side-by-side percentages
+- [ ] 0.16 Update Makefile: Add coverage-report and coverage-compare-report HTML generation targets
+- [ ] 0.17 Verify Makefile targets: Run make test-mock, make test-real, make cover-mock, make cover-real, make compare-coverage
+- [ ] 0.18 Create scripts/verify_coverage.sh supporting function-level coverage reporting
+- [ ] 0.19 Add dual-mode coverage comparison to scripts/verify_coverage.sh
+- [ ] 0.20 Add threshold checking and untested function reporting to scripts/verify_coverage.sh
+- [ ] 0.21 Verify verify_coverage.sh: Run script with different options and confirm correct output
+- [ ] 0.22 Create scripts/verify_idempotency.sh running tests 3 times with different orders
+- [ ] 0.23 Add shuffle and parallel execution to scripts/verify_idempotency.sh
+- [ ] 0.24 Verify verify_idempotency.sh: Run script and confirm tests pass in all modes
+- [ ] 0.25 Record Phase 0 coverage baseline: Run `make cover-mock` and `make cover-real`, document coverage percentages
+
+## 1. Refactor Existing DAO Tests (Phase 1)
+
+- [ ] 1.1 Refactor tests/dao_test.go: Replace direct DAO access with getTestDAO(t, "simple")
+- [ ] 1.2 Refactor tests/dao_test.go: Remove all truncateTable() calls, implement CleanupTracker in TestCRUD
+- [ ] 1.3 Refactor tests/dao_test.go: Implement CleanupTracker in TestGetAllByKeys
+- [ ] 1.4 Refactor tests/dao_test.go: Implement CleanupTracker in TestGetAllAsList
+- [ ] 1.5 Refactor tests/dao_test.go: Implement CleanupTracker in TestGetAllAsMap
+- [ ] 1.6 Refactor tests/dao_test.go: Implement CleanupTracker in TestGetKeys
+- [ ] 1.7 Refactor tests/dao_test.go: Update generateTestModels to generate unique keys (UUID-based)
+- [ ] 1.8 Add mock expectations to all tests/dao_test.go functions for TEST_MODE=mock
+- [ ] 1.9 Verify tests/dao_test.go: Run `TEST_MODE=mock go test ./tests/dao_test.go -v` and confirm all tests pass
+- [ ] 1.10 Verify tests/dao_test.go: Run `TEST_MODE=real go test ./tests/dao_test.go -v` and confirm all tests pass
+- [ ] 1.11 Record coverage for tests/dao_test.go: Run `make cover-mock` and `make cover-real`, document coverage (target: >80% both modes, <5% delta)
+- [ ] 1.12 Refactor tests/cached_simple_dao_test.go: Replace direct DAO access with getTestDAO(t, "cached")
+- [ ] 1.13 Refactor tests/cached_simple_dao_test.go: Remove double cleanup pattern (truncate at start + defer truncate)
+- [ ] 1.14 Refactor tests/cached_simple_dao_test.go: Implement CleanupTracker in all 7 test functions
+- [ ] 1.15 Add mock expectations with cache behavior to tests/cached_simple_dao_test.go
+- [ ] 1.16 Verify tests/cached_simple_dao_test.go: Run `TEST_MODE=mock go test ./tests/cached_simple_dao_test.go -v`
+- [ ] 1.17 Verify tests/cached_simple_dao_test.go: Run `TEST_MODE=real go test ./tests/cached_simple_dao_test.go -v`
+- [ ] 1.18 Record coverage for tests/cached_simple_dao_test.go: Run `make cover-mock` and `make cover-real`, document coverage
+- [ ] 1.19 Verify idempotency: Run `./scripts/verify_idempotency.sh tests/` and confirm all tests pass in random order
+- [ ] 1.20 Record Phase 1 coverage improvement: Compare with Phase 0 baseline, document delta
+
+## 2. Add Missing Core DAO Tests (Phase 1 Continued)
+
+- [ ] 2.1 Create db/cache_dao_test.go with cache hit path test
+- [ ] 2.2 Add cache miss path test to db/cache_dao_test.go
+- [ ] 2.3 Add cache invalidation test to db/cache_dao_test.go
+- [ ] 2.4 Implement mock expectations and CleanupTracker in db/cache_dao_test.go
+- [ ] 2.5 Verify db/cache_dao_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 2.6 Record coverage for db/cache_dao_test.go: Document mock and real mode coverage
+- [ ] 2.7 Create db/listing_dao_test.go with composite key GetOne test
+- [ ] 2.8 Add composite key SetOne test to db/listing_dao_test.go
+- [ ] 2.9 Add GetAll and GetRange tests to db/listing_dao_test.go
+- [ ] 2.10 Implement mock expectations and CleanupTracker in db/listing_dao_test.go
+- [ ] 2.11 Verify db/listing_dao_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 2.12 Record coverage for db/listing_dao_test.go: Document mock and real mode coverage
+- [ ] 2.13 Create db/compressing_data_dao_test.go with small data test (no compression)
+- [ ] 2.14 Add large data with compression test to db/compressing_data_dao_test.go
+- [ ] 2.15 Add split data operations test to db/compressing_data_dao_test.go
+- [ ] 2.16 Implement mock expectations and CleanupTracker in db/compressing_data_dao_test.go
+- [ ] 2.17 Verify db/compressing_data_dao_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 2.18 Record coverage for db/compressing_data_dao_test.go: Document mock and real mode coverage
+- [ ] 2.19 Create db/group_service_dao_test.go with GetGroupServiceFeatureTags test
+- [ ] 2.20 Add SetGroupServiceFeatureTags test to db/group_service_dao_test.go
+- [ ] 2.21 Implement mock expectations and CleanupTracker in db/group_service_dao_test.go
+- [ ] 2.22 Verify db/group_service_dao_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 2.23 Record coverage for db/group_service_dao_test.go: Document mock and real mode coverage
+- [ ] 2.24 Record Phase 1 final coverage: Run full coverage on db/ and tests/ packages, document metrics
+
+## 3. Add DataAPI Handler Tests (Phase 2)
+
+- [ ] 3.1 Review dataapi/estb_firmware_handler.go and identify DAO operations
+- [ ] 3.2 Enhance dataapi/estb_firmware_handler_test.go with DB tests using getTestDAO
+- [ ] 3.3 Implement CleanupTracker in dataapi/estb_firmware_handler_test.go
+- [ ] 3.4 Add mock expectations for all DAO calls in dataapi/estb_firmware_handler_test.go
+- [ ] 3.5 Verify dataapi/estb_firmware_handler_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 3.6 Record coverage for dataapi/estb_firmware_handler_test.go: Document mock and real mode coverage
+- [ ] 3.7 Review dataapi/log_uploader_handler.go and identify DAO operations
+- [ ] 3.8 Create dataapi/log_uploader_handler_test.go (currently missing) with DB tests
+- [ ] 3.9 Implement CleanupTracker and mock expectations in dataapi/log_uploader_handler_test.go
+- [ ] 3.10 Verify dataapi/log_uploader_handler_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 3.11 Record coverage for dataapi/log_uploader_handler_test.go: Document mock and real mode coverage
+- [ ] 3.12 Review dataapi/feature_control_handler.go and identify DAO operations
+- [ ] 3.13 Enhance dataapi/feature_control_handler_test.go (if exists) or create with DB tests
+- [ ] 3.14 Implement CleanupTracker and mock expectations in feature_control_handler tests
+- [ ] 3.15 Verify feature_control_handler tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 3.16 Record coverage for feature_control_handler tests: Document mock and real mode coverage
+- [ ] 3.17 Record Phase 2 coverage: Run coverage on dataapi/ package, document metrics
+
+## 4. Add Shared Package Tests (Phase 3)
+
+- [ ] 4.1 Create shared/estbfirmware/config_change_logs_test.go with GetLastConfigLog test
+- [ ] 4.2 Add SetConfigChangeLog test to shared/estbfirmware/config_change_logs_test.go
+- [ ] 4.3 Implement mock ListingDAO expectations and CleanupTracker
+- [ ] 4.4 Verify shared/estbfirmware/config_change_logs_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 4.5 Record coverage for config_change_logs.go: Document mock and real mode coverage (target: >80%)
+- [ ] 4.6 Create shared/logupload/logupload_test.go with LOG_UPLOAD_SETTINGS table tests
+- [ ] 4.7 Add DCM_RULE retrieval tests to shared/logupload/logupload_test.go
+- [ ] 4.8 Add UPLOAD_REPOSITORY operations tests to shared/logupload/logupload_test.go
+- [ ] 4.9 Implement mock expectations and CleanupTracker in shared/logupload/logupload_test.go
+- [ ] 4.10 Verify shared/logupload/logupload_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 4.11 Record coverage for logupload.go: Document mock and real mode coverage
+- [ ] 4.12 Create shared/firmware/*_test.go files for firmware package DAO operations
+- [ ] 4.13 Add FIRMWARE_CONFIG table operation tests
+- [ ] 4.14 Add FIRMWARE_RULE and FIRMWARE_RULE_TEMPLATE table operation tests
+- [ ] 4.15 Implement mock expectations and CleanupTracker in firmware tests
+- [ ] 4.16 Verify shared/firmware tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 4.17 Record coverage for shared/firmware: Document mock and real mode coverage
+- [ ] 4.18 Create shared/dcm/*_test.go files for DCM package DAO operations
+- [ ] 4.19 Add DEVICE_SETTINGS table operation tests
+- [ ] 4.20 Add LOG_UPLOAD_SETTINGS and VOD_SETTINGS table operation tests
+- [ ] 4.21 Implement mock expectations and CleanupTracker in DCM tests
+- [ ] 4.22 Verify shared/dcm tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 4.23 Record coverage for shared/dcm: Document mock and real mode coverage
+- [ ] 4.24 Create shared/rfc/*_test.go files for RFC package DAO operations
+- [ ] 4.25 Add XCONF_FEATURE table operation tests
+- [ ] 4.26 Add FEATURE_CONTROL_RULE table operation tests
+- [ ] 4.27 Implement mock expectations and CleanupTracker in RFC tests
+- [ ] 4.28 Verify shared/rfc tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 4.29 Record coverage for shared/rfc: Document mock and real mode coverage
+- [ ] 4.30 Record Phase 3 coverage: Run coverage on shared/ package, document metrics
+
+## 5. Add Integration and Utility Tests (Phase 4)
+
+- [ ] 5.1 Create util/common_test.go for database utility function tests
+- [ ] 5.2 Implement CleanupTracker and mock expectations in util/common_test.go
+- [ ] 5.3 Verify util/common_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 5.4 Record coverage for util/common.go: Document mock and real mode coverage
+- [ ] 5.5 Create util/firmware_util_test.go for firmware utility tests
+- [ ] 5.6 Implement CleanupTracker and mock expectations in util/firmware_util_test.go
+- [ ] 5.7 Verify util/firmware_util_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 5.8 Record coverage for util/firmware_util.go: Document mock and real mode coverage
+- [ ] 5.9 Create util/upload_util_test.go for upload utility tests
+- [ ] 5.10 Implement CleanupTracker and mock expectations in util/upload_util_test.go
+- [ ] 5.11 Verify util/upload_util_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 5.12 Record coverage for util/upload_util.go: Document mock and real mode coverage
+- [ ] 5.13 Create rulesengine/legacy_converter_test.go for legacy conversion tests
+- [ ] 5.14 Implement CleanupTracker and mock expectations in rulesengine/legacy_converter_test.go
+- [ ] 5.15 Verify rulesengine/legacy_converter_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 5.16 Record coverage for rulesengine/legacy_converter.go: Document mock and real mode coverage
+- [ ] 5.17 Create rulesengine/rule_processor_test.go for rule processor tests
+- [ ] 5.18 Implement CleanupTracker and mock expectations in rulesengine/rule_processor_test.go
+- [ ] 5.19 Verify rulesengine/rule_processor_test.go: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 5.20 Record coverage for rulesengine/rule_processor.go: Document mock and real mode coverage
+- [ ] 5.21 Create dataapi/dcm/*_test.go files for DCM handler tests (currently missing)
+- [ ] 5.22 Implement CleanupTracker and mock expectations in dataapi/dcm tests
+- [ ] 5.23 Verify dataapi/dcm tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 5.24 Record coverage for dataapi/dcm: Document mock and real mode coverage
+- [ ] 5.25 Record Phase 4 coverage: Run coverage on util/, rulesengine/, and dataapi/dcm packages, document metrics
+
+## 6. Add Untested Table Coverage (Phase 5)
+
+- [ ] 6.1 Create tests for XCONF_WHITELIST_UPDATES table operations
+- [ ] 6.2 Create tests for MAC_LIST table operations
+- [ ] 6.3 Implement CleanupTracker and mock expectations for authentication table tests
+- [ ] 6.4 Verify authentication table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.5 Record coverage for authentication tables: Document mock and real mode coverage
+- [ ] 6.6 Create tests for XCONF_METADATA table operations
+- [ ] 6.7 Create tests for ENV_MODEL_BEAN table operations
+- [ ] 6.8 Create tests for ESTB_FIRMWARE_VERSION_SUPPORT table operations
+- [ ] 6.9 Implement CleanupTracker and mock expectations for metadata table tests
+- [ ] 6.10 Verify metadata table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.11 Record coverage for metadata tables: Document mock and real mode coverage
+- [ ] 6.12 Create tests for NS_LIST table operations
+- [ ] 6.13 Create tests for IP_ADDRESS_GROUP table operations
+- [ ] 6.14 Create tests for GENERIC_NS_LIST table operations
+- [ ] 6.15 Implement CleanupTracker and mock expectations for NS list table tests
+- [ ] 6.16 Verify NS list table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.17 Record coverage for NS list tables: Document mock and real mode coverage
+- [ ] 6.18 Create tests for FIRMWARE_RULE table operations
+- [ ] 6.19 Create tests for FIRMWARE_RULE_TEMPLATE table operations
+- [ ] 6.20 Create tests for FIRMWARE_CONFIG_LOGS table operations
+- [ ] 6.21 Implement CleanupTracker and mock expectations for firmware table tests
+- [ ] 6.22 Verify firmware table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.23 Record coverage for firmware tables: Document mock and real mode coverage
+- [ ] 6.24 Create tests for DEVICE_SETTINGS table operations
+- [ ] 6.25 Create tests for VOD_SETTINGS table operations
+- [ ] 6.26 Create tests for LOG_FILE_LIST table operations
+- [ ] 6.27 Create tests for UPLOAD_REPOSITORY table operations
+- [ ] 6.28 Implement CleanupTracker and mock expectations for DCM table tests
+- [ ] 6.29 Verify DCM table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.30 Record coverage for DCM tables: Document mock and real mode coverage
+- [ ] 6.31 Enhance tests for FEATURE_CONTROL_RULE table (augment existing partial coverage)
+- [ ] 6.32 Enhance tests for XCONF_FEATURE table (augment existing partial coverage)
+- [ ] 6.33 Verify feature control table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.34 Record coverage for feature control tables: Document mock and real mode coverage
+- [ ] 6.35 Record Phase 5 coverage: Run full coverage verification, document all 33 tables now have tests
+
+## 7. Final Verification and Documentation
+
+- [ ] 7.1 Run full test suite with TEST_MODE=mock: `make test-mock` and verify all tests pass
+- [ ] 7.2 Run full test suite with TEST_MODE=real: `make test-real` and verify all tests pass
+- [ ] 7.3 Run idempotency verification: `./scripts/verify_idempotency.sh` and confirm all tests pass in random order
+- [ ] 7.4 Run parallel execution test: `TEST_MODE=mock go test -parallel=4 ./...` and verify no interference
+- [ ] 7.5 Run parallel execution test: `TEST_MODE=real go test -parallel=4 ./...` and verify no interference
+- [ ] 7.6 Generate final coverage reports: `make cover-mock` and `make cover-real`
+- [ ] 7.7 Generate coverage comparison: `make compare-coverage` and document final percentages
+- [ ] 7.8 Generate HTML coverage reports: `make coverage-compare-report` and review for gaps
+- [ ] 7.9 Run zero-coverage detection: `./scripts/verify_coverage.sh -report-untested` and verify all production files have tests
+- [ ] 7.10 Verify all 33 tables have test coverage: Review table list and confirm tests exist for each
+- [ ] 7.11 Verify all 14 previously untested files now have tests: Review file list and confirm
+- [ ] 7.12 Check coverage parity: Verify mock and real coverage are within 10% of each other
+- [ ] 7.13 Update README.md with TEST_MODE usage instructions and examples
+- [ ] 7.14 Update README.md with coverage verification instructions
+- [ ] 7.15 Create TESTING.md guide documenting test patterns, CleanupTracker usage, and best practices
+- [ ] 7.16 Document anti-patterns to avoid (truncateTable, double cleanup, test interdependencies)
+- [ ] 7.17 Create migration guide for updating old tests to new patterns
+- [ ] 7.18 Record final project metrics: Total coverage (mock and real), files tested, tables tested, test count
+- [ ] 7.19 Create before/after comparison showing improvement from baseline
+- [ ] 7.20 Archive coverage reports and metrics for future reference
