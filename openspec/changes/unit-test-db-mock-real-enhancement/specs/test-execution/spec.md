@@ -1,14 +1,14 @@
 ## MODIFIED Requirements
 
 ### Requirement: Test execution supports mode selection
-The test execution system SHALL support running tests with either mock or real database via TEST_MODE environment variable.
+The test execution system SHALL support running tests with either mock or real database via USE_MOCK_DB environment variable.
 
 #### Scenario: Mock mode execution via environment
-- **WHEN** developer runs `TEST_MODE=mock go test ./...`
+- **WHEN** developer runs `USE_MOCK_DB=true go test ./...`
 - **THEN** all tests SHALL execute using mock DAOs
 
 #### Scenario: Real mode execution via environment
-- **WHEN** developer runs `TEST_MODE=real go test ./...`
+- **WHEN** developer runs `USE_MOCK_DB=false go test ./...`
 - **THEN** all tests SHALL execute using real database DAOs
 
 #### Scenario: Makefile target for mock mode
@@ -57,24 +57,24 @@ The test execution workflow SHALL include coverage verification after each task 
 The test execution system SHALL safely support parallel test execution in both modes.
 
 #### Scenario: Parallel mock tests
-- **WHEN** running `TEST_MODE=mock go test -parallel=4 ./...`
+- **WHEN** running `USE_MOCK_DB=true go test -parallel=4 ./...`
 - **THEN** tests SHALL execute concurrently without interference
 
 #### Scenario: Parallel real tests
-- **WHEN** running `TEST_MODE=real go test -parallel=4 ./...`
+- **WHEN** running `USE_MOCK_DB=false go test -parallel=4 ./...`
 - **THEN** tests SHALL execute concurrently with isolated cleanup
 
 ### Requirement: Test execution supports selective targeting
 The test execution system SHALL support running specific tests or packages.
 
 #### Scenario: Single test execution
-- **WHEN** developer runs `TEST_MODE=mock go test -run TestSpecificFunction`
+- **WHEN** developer runs `USE_MOCK_DB=true go test -run TestSpecificFunction`
 - **THEN** only specified test SHALL execute
 
 #### Scenario: Package-level execution
-- **WHEN** developer runs `TEST_MODE=real go test ./db/...`
+- **WHEN** developer runs `USE_MOCK_DB=false go test ./db/...`
 - **THEN** only tests in db package SHALL execute
 
 #### Scenario: Coverage for specific package
-- **WHEN** developer runs `TEST_MODE=mock go test -cover ./shared/estbfirmware/...`
+- **WHEN** developer runs `USE_MOCK_DB=true go test -cover ./shared/estbfirmware/...`
 - **THEN** coverage SHALL be reported for estbfirmware package only

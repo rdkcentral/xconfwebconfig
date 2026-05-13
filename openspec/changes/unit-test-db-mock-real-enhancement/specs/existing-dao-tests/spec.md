@@ -35,7 +35,7 @@ Tests in tests/dao_test.go and tests/cached_simple_dao_test.go SHALL be refactor
 - **WHEN** refactoring cached DAO tests
 - **THEN** remove both `truncate at start` AND `defer truncate at end` patterns, replace with single tracker defer
 
-### Requirement: Existing DAO tests support TEST_MODE
+### Requirement: Existing DAO tests support USE_MOCK_DB
 Tests in tests/dao_test.go and tests/cached_simple_dao_test.go SHALL support both mock and real database execution.
 
 #### Scenario: Replace direct DAO access with getTestDAO
@@ -43,11 +43,11 @@ Tests in tests/dao_test.go and tests/cached_simple_dao_test.go SHALL support bot
 - **THEN** tests SHALL obtain DAO via `dao := getTestDAO(t, "simple")` instead of `db.GetSimpleDao()`
 
 #### Scenario: Mock expectations in existing tests
-- **WHEN** TEST_MODE=mock
+- **WHEN** USE_MOCK_DB=true
 - **THEN** existing tests SHALL set up mock expectations for all DAO calls
 
 #### Scenario: Real DB execution preserved
-- **WHEN** TEST_MODE=real
+- **WHEN** USE_MOCK_DB=false
 - **THEN** existing tests SHALL execute against real database as they currently do
 
 ### Requirement: Existing DAO tests are idempotent

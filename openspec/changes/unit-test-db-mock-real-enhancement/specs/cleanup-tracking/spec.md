@@ -15,20 +15,20 @@ The system SHALL provide a `CleanupTracker` struct that records all data inserte
 - **WHEN** test uses ListingDAO with `tracker.InsertListing(table, rowKey, colName, data)`
 - **THEN** tracker SHALL record composite key for cleanup
 
-### Requirement: Automated Cleanup with Defer
-The system SHALL support automatic cleanup using Go's defer mechanism.
+### Requirement: Explicit Cleanup Pattern
+The system SHALL support explicit cleanup execution at test completion without using defer.
 
-#### Scenario: Defer cleanup registration
-- **WHEN** test sets up tracker with `defer tracker.Cleanup(t)`
-- **THEN** cleanup SHALL execute after test completes regardless of test outcome
+#### Scenario: Cleanup at test end
+- **WHEN** test completes execution
+- **THEN** test SHALL explicitly call `tracker.Cleanup(t)` before returning
 
-#### Scenario: Cleanup executes on test failure
-- **WHEN** test fails before manual cleanup
-- **THEN** deferred cleanup SHALL still remove inserted data
+#### Scenario: Cleanup after test assertions
+- **WHEN** all test assertions complete
+- **THEN** test SHALL execute cleanup as final statement
 
-#### Scenario: Cleanup executes on test panic
-- **WHEN** test panics
-- **THEN** deferred cleanup SHALL still execute before panic propagates
+#### Scenario: Cleanup on test failure
+- **WHEN** test fails before cleanup
+- **THEN** cleanup SHALL NOT execute automatically (test framework handles partial state)
 
 ### Requirement: Surgical Data Deletion
 The system SHALL delete ONLY data inserted during the test, preserving all other table data.
@@ -67,19 +67,19 @@ The system SHALL support multiple cleanup trackers within a single test function
 - **WHEN** test uses separate trackers for different tables
 - **THEN** each tracker SHALL independently track and clean its data
 
-#### Scenario: Cleanup order preservation
-- **WHEN** multiple defers registered
-- **THEN** cleanup SHALL execute in LIFO order (Go defer semantics)
+#### Scenario: Cleanup order control
+- **WHEN** multiple trackers used in single test
+- **THEN** test SHALL explicitly call cleanup in desired order (first-created first-cleaned)
 
 ### Requirement: Real vs Mock Mode Cleanup
 The system SHALL execute cleanup operations appropriate to the test mode.
 
 #### Scenario: Mock mode cleanup
-- **WHEN** `TEST_MODE=mock`
+- **WHEN** `USE_MOCK_DB=true`
 - **THEN** cleanup SHALL call mock DAO delete methods (verified via mock assertions)
 
 #### Scenario: Real mode cleanup
-- **WHEN** `TEST_MODE=real`
+- **WHEN** `USE_MOCK_DB=false`
 - **THEN** cleanup SHALL execute actual database DELETE operations
 
 ### Requirement: Cleanup Verification
@@ -102,7 +102,7 @@ The system SHALL eliminate all usage of `truncateTable()` and table-wide DELETE 
 
 #### Scenario: No double cleanup pattern
 - **WHEN** reviewing test code
-- **THEN** no test SHALL have both cleanup-at-start AND defer-cleanup-at-end
+- **THEN** no test SHALL have both cleanup-at-start AND cleanup-at-end patterns
 
 ### Requirement: CleanupTracker Helper Methods
 The system SHALL provide convenience methods for common cleanup patterns.
@@ -116,12 +116,12 @@ The system SHALL provide convenience methods for common cleanup patterns.
 - **THEN** test MAY call `tracker.Track(table, key)` to register for cleanup without insertion
 
 ### Requirement: CleanupTracker Documentation
-The system SHALL provide clear documentation with examples in `db/cleanup_tracker.go`.
+The system SHALL provide clear documentation with examples in `db/test_helpers_test.go`.
 
 #### Scenario: Usage example
-- **WHEN** developer reads cleanup_tracker.go
-- **THEN** file SHALL contain commented example of tracker initialization and defer pattern
+- **WHEN** developer reads test_helpers_test.go
+- **THEN** file SHALL contain commented example of tracker initialization and explicit cleanup pattern
 
 #### Scenario: Anti-pattern documentation
-- **WHEN** developer reads cleanup_tracker.go
-- **THEN** file SHALL document why truncateTable is unsafe and how tracker solves it
+- **WHEN** developer reads test_helpers_test.go
+- **THEN** file SHALL document why truncateTable is unsafe, why defer should be avoided, and how tracker solves it

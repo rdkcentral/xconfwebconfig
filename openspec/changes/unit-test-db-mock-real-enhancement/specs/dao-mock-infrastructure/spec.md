@@ -123,23 +123,23 @@ The system SHALL provide a `MockGroupServiceDAO` struct that implements `Testabl
 - **THEN** `GetGroupServiceFeatureTags` SHALL return configured map
 
 ### Requirement: getTestDAO Factory Function
-The system SHALL provide a `getTestDAO(t *testing.T, daoType string)` function that returns appropriate DAO implementation based on TEST_MODE.
+The system SHALL provide a `getTestDAO(t *testing.T, daoType string)` function that returns appropriate DAO implementation based on USE_MOCK_DB.
 
 #### Scenario: Mock mode returns mock
-- **WHEN** `TEST_MODE=mock` and test calls `getTestDAO(t, "simple")`
+- **WHEN** `USE_MOCK_DB=true` and test calls `getTestDAO(t, "simple")`
 - **THEN** function SHALL return `MockSimpleDAO` instance
 
 #### Scenario: Real mode returns real DAO
-- **WHEN** `TEST_MODE=real` and test calls `getTestDAO(t, "simple")`
+- **WHEN** `USE_MOCK_DB=false` and test calls `getTestDAO(t, "simple")`
 - **THEN** function SHALL return wrapper around `db.GetSimpleDao()`
 
 #### Scenario: Real mode without DB skips test
-- **WHEN** `TEST_MODE=real` but `!db.IsCassandraClient()`
+- **WHEN** `USE_MOCK_DB=false` but `!db.IsCassandraClient()`
 - **THEN** function SHALL call `t.Skip("Real DB not available")`
 
 #### Scenario: Default mode
-- **WHEN** `TEST_MODE` not set
-- **THEN** function SHALL default to `real` mode for backward compatibility
+- **WHEN** `USE_MOCK_DB` not set
+- **THEN** function SHALL default to `false` (real mode) for backward compatibility
 
 ### Requirement: RealDAOWrapper Implementations
 The system SHALL provide wrapper structs (`RealSimpleDAOWrapper`, `RealCachedDAOWrapper`, etc.) that implement Testable interfaces by delegating to production DAOs.

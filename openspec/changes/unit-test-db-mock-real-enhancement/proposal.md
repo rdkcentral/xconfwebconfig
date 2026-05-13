@@ -6,9 +6,9 @@ Currently, 113 test files exist across the xconfwebconfig codebase, but only 13 
 
 - **Add DAO Interface Abstraction**: Create `TestableDAO` interfaces for all DAO types (SimpleDAO, CachedDAO, ListingDAO, CompressingDAO, GroupServiceDAO) to enable dependency injection in tests
 - **Mock Infrastructure**: Implement complete mock implementations for all DAO types to enable testing without a real database
-- **TEST_MODE Environment Variable**: Add command-line control to run tests with either mock or real database via `make test TEST_MODE=mock` or `make test TEST_MODE=real`
+- **USE_MOCK_DB Environment Variable**: Add command-line control to run tests with either mock or real database via `make test USE_MOCK_DB=true` or `make test USE_MOCK_DB=false`
 - **Cleanup Tracking System**: Implement `CleanupTracker` to track all data insertions per test and delete ONLY test-inserted data (no more full table truncates)
-- **Idempotent Test Pattern**: Refactor all database tests to be self-contained with unique test data and automatic cleanup via defer patterns
+- **Idempotent Test Pattern**: Refactor all database tests to be self-contained with unique test data and explicit cleanup at test completion
 - **Coverage Verification Loop**: Establish per-function verification protocol to ensure coverage with mock matches real DB and no regression occurs
 - **New Test Files**: Create 14 new test files for production code that currently has zero database test coverage
 - **Makefile Enhancements**: Add `test-mock`, `test-real`, `cover-mock`, `cover-real`, and `compare-coverage` targets
@@ -25,12 +25,12 @@ Currently, 113 test files exist across the xconfwebconfig codebase, but only 13 
 
 ### Modified Capabilities
 - `existing-dao-tests`: All 13 existing test files using database operations will be refactored to use new infrastructure (requirements: support both mock and real DB, eliminate table truncates, track cleanup)
-- `test-execution`: Makefile test targets enhanced with TEST_MODE support (requirement: backward compatible, default to real DB)
+- `test-execution`: Makefile test targets enhanced with USE_MOCK_DB support (requirement: backward compatible, default to real DB)
 
 ## Impact
 
 **Affected Code**:
-- **Test Files**: All 113 test files will support TEST_MODE toggle (13 actively refactored, 100 enhanced)
+- **Test Files**: All 113 test files will support USE_MOCK_DB toggle (13 actively refactored, 100 enhanced)
 - **Build System**: Makefile updated with new test targets
 - **New Files Created**: 
   - `db/test_infrastructure.go` (DAO interfaces, mocks, cleanup tracker)

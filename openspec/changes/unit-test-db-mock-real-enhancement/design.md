@@ -18,7 +18,7 @@ Current test infrastructure in `db/setup_teardown_db.go` provides `SetUp()` and 
 ## Goals / Non-Goals
 
 **Goals:**
-- Enable all 113 tests to run with either mock or real database via `TEST_MODE` environment variable
+- Enable all 113 tests to run with either mock or real database via `USE_MOCK_DB` environment variable
 - Provide complete mock implementations for all DAO types
 - Eliminate all table-level truncation in favor of targeted cleanup
 - Achieve 100% idempotent tests (run in any order, no shared state)
@@ -51,12 +51,12 @@ Current test infrastructure in `db/setup_teardown_db.go` provides `SetUp()` and 
 - ❌ Use reflection/monkey patching: Fragile, breaks with Go updates, poor error messages
 - ❌ Test-only wrapper functions: Adds indirection, harder to maintain
 
-### Decision 2: TEST_MODE Environment Variable
+### Decision 2: USE_MOCK_DB Environment Variable
 
-**Choice**: Single environment variable `TEST_MODE=mock|real` controls test execution mode
+**Choice**: Single environment variable `USE_MOCK_DB=true|false` controls test execution mode
 
 **Rationale**:
-- Simple, explicit control: `make test TEST_MODE=mock`
+- Simple, explicit control: `make test USE_MOCK_DB=true`
 - Follows 12-factor app principles (config via env vars)
 - Easy to integrate with CI/CD pipelines
 - Default to `real` maintains backward compatibility
@@ -72,7 +72,8 @@ Current test infrastructure in `db/setup_teardown_db.go` provides `SetUp()` and 
 
 **Rationale**:
 - Surgical cleanup: Only removes what the test inserted
-- Defer pattern ensures cleanup even on test failure
+- Explicit cleanup at test end ensures visibility of cleanup operations
+- No automatic defer hides test failure state for debugging
 - Tracks composite keys (for ListingDAO)
 - Simple API: `tracker.Track(table, key)`
 
@@ -126,8 +127,8 @@ func (ct *CleanupTracker) Cleanup() {
 **Process**:
 1. Record baseline coverage (real DB, before changes)
 2. Refactor function to use DAO interface + CleanupTracker
-3. Run with TEST_MODE=mock, record coverage
-4. Run with TEST_MODE=real, record coverage
+3. Run with USE_MOCK_DB=true, record coverage
+4. Run with USE_MOCK_DB=false, record coverage
 5. Assert: real >= baseline AND mock ≈ real
 6. Document in task completion notes
 
@@ -238,12 +239,12 @@ mockDAO.On("GetOne", "TABLE_MODEL", "test-id").Return(testModel, nil)
 
 **Trade-off**: Comprehensive coverage takes time but risk is front-loaded
 
-### Risk 5: TEST_MODE Environment Variable Conflicts
-**Risk**: Existing tests or environment may use TEST_MODE for different purpose
+### Risk 5: USE_MOCK_DB Environment Variable Conflicts
+**Risk**: Existing tests or environment may use USE_MOCK_DB for different purpose
 
 **Mitigation**:
-- Grep codebase for TEST_MODE before implementation (verify no conflicts)
-- Use namespaced variable `XCONF_TEST_MODE` if conflict found
+- Grep codebase for USE_MOCK_DB before implementation (verify no conflicts)
+- Use namespaced variable `XCONF_USE_MOCK_DB` if conflict found
 - Document in README and test guidelines
 - Makefile provides clean interface, hides implementation
 

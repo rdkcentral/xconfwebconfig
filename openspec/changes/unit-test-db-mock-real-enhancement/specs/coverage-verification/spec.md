@@ -20,7 +20,7 @@ The system SHALL execute coverage verification in both mock and real DB modes an
 
 #### Scenario: verify_coverage.sh runs both modes
 - **WHEN** developer runs `./scripts/verify_coverage.sh`
-- **THEN** script SHALL run tests with TEST_MODE=mock and TEST_MODE=real and display both coverage percentages
+- **THEN** script SHALL run tests with USE_MOCK_DB=true and USE_MOCK_DB=false and display both coverage percentages
 
 #### Scenario: Coverage delta reporting
 - **WHEN** script completes dual-mode coverage
