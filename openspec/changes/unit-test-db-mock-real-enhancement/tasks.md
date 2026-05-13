@@ -1,17 +1,17 @@
 ## 0. Infrastructure Setup
 
-- [ ] 0.1 Create db/test_infrastructure.go with TestableDAO interfaces (TestableSimpleDAO, TestableCachedDAO, TestableListingDAO, TestableCompressingDAO, TestableGroupServiceDAO)
-- [ ] 0.2 Implement RealDAO wrappers (RealSimpleDAOWrapper, RealCachedDAOWrapper, RealListingDAOWrapper, RealCompressingDAOWrapper, RealGroupServiceDAOWrapper)
-- [ ] 0.3 Implement Mock DAO structs using testify/mock (MockSimpleDAO, MockCachedDAO, MockListingDAO, MockCompressingDAO, MockGroupServiceDAO)
-- [ ] 0.4 Implement getTestDAO factory function with TEST_MODE support and skip logic
-- [ ] 0.5 Implement getTestMode helper and skipIf* helper functions
-- [ ] 0.6 Add comprehensive documentation and usage examples to db/test_infrastructure.go
+- [ ] 0.1 Create db/test_helpers_test.go with TestableDAO interfaces (TestableSimpleDAO, TestableCachedDAO, TestableListingDAO, TestableCompressingDAO, TestableGroupServiceDAO)
+- [ ] 0.2 Implement RealDAO wrappers in db/test_helpers_test.go (RealSimpleDAOWrapper, RealCachedDAOWrapper, RealListingDAOWrapper, RealCompressingDAOWrapper, RealGroupServiceDAOWrapper)
+- [ ] 0.3 Implement Mock DAO structs using testify/mock in db/test_helpers_test.go (MockSimpleDAO, MockCachedDAO, MockListingDAO, MockCompressingDAO, MockGroupServiceDAO)
+- [ ] 0.4 Implement getTestDAO factory function with TEST_MODE support and skip logic in db/test_helpers_test.go
+- [ ] 0.5 Implement getTestMode helper and skipIf* helper functions in db/test_helpers_test.go
+- [ ] 0.6 Add comprehensive documentation and usage examples to db/test_helpers_test.go
 - [ ] 0.7 Verify infrastructure: Run `make test` to confirm no regressions introduced
-- [ ] 0.8 Create db/cleanup_tracker.go with CleanupTracker struct and NewCleanupTracker function
-- [ ] 0.9 Implement CleanupTracker.Insert, InsertListing, Track, and Cleanup methods
-- [ ] 0.10 Implement CleanupTracker.InsertAndTrack and SetVerifyCleanup helper methods
-- [ ] 0.11 Add documentation and anti-pattern examples to db/cleanup_tracker.go
-- [ ] 0.12 Verify CleanupTracker: Create simple test demonstrating tracker usage, run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 0.8 Add CleanupTracker struct and NewCleanupTracker function to db/test_helpers_test.go
+- [ ] 0.9 Implement CleanupTracker.Insert, InsertListing, Track, and Cleanup methods in db/test_helpers_test.go
+- [ ] 0.10 Implement CleanupTracker.InsertAndTrack and SetVerifyCleanup helper methods in db/test_helpers_test.go
+- [ ] 0.11 Add documentation and anti-pattern examples to db/test_helpers_test.go
+- [ ] 0.12 Verify CleanupTracker: Create simple test in db/cleanup_tracker_demo_test.go demonstrating tracker usage, run with TEST_MODE=mock and TEST_MODE=real
 - [ ] 0.13 Update Makefile: Add TEST_MODE variable and test-mock, test-real targets
 - [ ] 0.14 Update Makefile: Add cover-mock, cover-real targets generating separate coverage files
 - [ ] 0.15 Update Makefile: Add compare-coverage target displaying side-by-side percentages
@@ -25,6 +25,8 @@
 - [ ] 0.23 Add shuffle and parallel execution to scripts/verify_idempotency.sh
 - [ ] 0.24 Verify verify_idempotency.sh: Run script and confirm tests pass in all modes
 - [ ] 0.25 Record Phase 0 coverage baseline: Run `make cover-mock` and `make cover-real`, document coverage percentages
+- [ ] 0.26 Check go.mod for testify/mock dependency: Run `go list -m github.com/stretchr/testify` or add with `go get github.com/stretchr/testify`
+- [ ] 0.27 Verify infrastructure compiles: Run `go test -c ./db` to ensure test infrastructure compiles without errors
 
 ## 1. Refactor Existing DAO Tests (Phase 1)
 
@@ -109,12 +111,13 @@
 - [ ] 4.9 Implement mock expectations and CleanupTracker in shared/logupload/logupload_test.go
 - [ ] 4.10 Verify shared/logupload/logupload_test.go: Run with TEST_MODE=mock and TEST_MODE=real
 - [ ] 4.11 Record coverage for logupload.go: Document mock and real mode coverage
-- [ ] 4.12 Create shared/firmware/*_test.go files for firmware package DAO operations
-- [ ] 4.13 Add FIRMWARE_CONFIG table operation tests
-- [ ] 4.14 Add FIRMWARE_RULE and FIRMWARE_RULE_TEMPLATE table operation tests
-- [ ] 4.15 Implement mock expectations and CleanupTracker in firmware tests
-- [ ] 4.16 Verify shared/firmware tests: Run with TEST_MODE=mock and TEST_MODE=real
-- [ ] 4.17 Record coverage for shared/firmware: Document mock and real mode coverage
+- [ ] 4.12 Create shared/firmware/firmwarerule_test.go with GetFirmwareRuleOneDB test
+- [ ] 4.13 Add FIRMWARE_RULE CRUD tests (CreateFirmwareRuleOneDB, DeleteOneFirmwareRule, GetFirmwareRuleAllAsListDB)
+- [ ] 4.14 Add FIRMWARE_RULE_TEMPLATE tests (GetFirmwareRuleTemplateOneDB, CreateFirmwareRuleTemplateOneDB, GetFirmwareRuleTemplateAllAsListDB)
+- [ ] 4.15 Create shared/estbfirmware/firmware_config_test.go with GetFirmwareConfigOneDB, CreateFirmwareConfigOneDB, DeleteOneFirmwareConfig tests
+- [ ] 4.16 Implement mock expectations and CleanupTracker in all shared/firmware and shared/estbfirmware tests
+- [ ] 4.17 Verify shared/firmware tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 4.18 Record coverage for shared/firmware: Document mock and real mode coverage
 - [ ] 4.18 Create shared/dcm/*_test.go files for DCM package DAO operations
 - [ ] 4.19 Add DEVICE_SETTINGS table operation tests
 - [ ] 4.20 Add LOG_UPLOAD_SETTINGS and VOD_SETTINGS table operation tests
@@ -159,41 +162,54 @@
 
 ## 6. Add Untested Table Coverage (Phase 5)
 
-- [ ] 6.1 Create tests for XCONF_WHITELIST_UPDATES table operations
-- [ ] 6.2 Create tests for MAC_LIST table operations
-- [ ] 6.3 Implement CleanupTracker and mock expectations for authentication table tests
-- [ ] 6.4 Verify authentication table tests: Run with TEST_MODE=mock and TEST_MODE=real
-- [ ] 6.5 Record coverage for authentication tables: Document mock and real mode coverage
-- [ ] 6.6 Create tests for XCONF_METADATA table operations
-- [ ] 6.7 Create tests for ENV_MODEL_BEAN table operations
-- [ ] 6.8 Create tests for ESTB_FIRMWARE_VERSION_SUPPORT table operations
-- [ ] 6.9 Implement CleanupTracker and mock expectations for metadata table tests
-- [ ] 6.10 Verify metadata table tests: Run with TEST_MODE=mock and TEST_MODE=real
-- [ ] 6.11 Record coverage for metadata tables: Document mock and real mode coverage
-- [ ] 6.12 Create tests for NS_LIST table operations
-- [ ] 6.13 Create tests for IP_ADDRESS_GROUP table operations
-- [ ] 6.14 Create tests for GENERIC_NS_LIST table operations
-- [ ] 6.15 Implement CleanupTracker and mock expectations for NS list table tests
-- [ ] 6.16 Verify NS list table tests: Run with TEST_MODE=mock and TEST_MODE=real
-- [ ] 6.17 Record coverage for NS list tables: Document mock and real mode coverage
-- [ ] 6.18 Create tests for FIRMWARE_RULE table operations
-- [ ] 6.19 Create tests for FIRMWARE_RULE_TEMPLATE table operations
-- [ ] 6.20 Create tests for FIRMWARE_CONFIG_LOGS table operations
-- [ ] 6.21 Implement CleanupTracker and mock expectations for firmware table tests
-- [ ] 6.22 Verify firmware table tests: Run with TEST_MODE=mock and TEST_MODE=real
-- [ ] 6.23 Record coverage for firmware tables: Document mock and real mode coverage
-- [ ] 6.24 Create tests for DEVICE_SETTINGS table operations
-- [ ] 6.25 Create tests for VOD_SETTINGS table operations
-- [ ] 6.26 Create tests for LOG_FILE_LIST table operations
-- [ ] 6.27 Create tests for UPLOAD_REPOSITORY table operations
-- [ ] 6.28 Implement CleanupTracker and mock expectations for DCM table tests
-- [ ] 6.29 Verify DCM table tests: Run with TEST_MODE=mock and TEST_MODE=real
-- [ ] 6.30 Record coverage for DCM tables: Document mock and real mode coverage
-- [ ] 6.31 Enhance tests for FEATURE_CONTROL_RULE table (augment existing partial coverage)
-- [ ] 6.32 Enhance tests for XCONF_FEATURE table (augment existing partial coverage)
-- [ ] 6.33 Verify feature control table tests: Run with TEST_MODE=mock and TEST_MODE=real
-- [ ] 6.34 Record coverage for feature control tables: Document mock and real mode coverage
-- [ ] 6.35 Record Phase 5 coverage: Run full coverage verification, document all 33 tables now have tests
+- [ ] 6.1 Identify production code using XCONF_WHITELIST_UPDATES table: Search codebase for table usage
+- [ ] 6.2 Create tests for XCONF_WHITELIST_UPDATES table operations in appropriate location
+- [ ] 6.3 Identify production code using MAC_LIST table: Search codebase for table usage
+- [ ] 6.4 Create tests for MAC_LIST table operations in appropriate location
+- [ ] 6.5 Implement CleanupTracker and mock expectations for authentication table tests
+- [ ] 6.6 Verify authentication table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.7 Record coverage for authentication tables: Document mock and real mode coverage
+- [ ] 6.8 Identify production code using XCONF_METADATA table: Search codebase for table usage
+- [ ] 6.9 Create tests for XCONF_METADATA table operations in appropriate location
+- [ ] 6.10 Identify production code using ENV_MODEL_BEAN table: Search codebase for table usage
+- [ ] 6.11 Create tests for ENV_MODEL_BEAN table operations in appropriate location
+- [ ] 6.12 Identify production code using ESTB_FIRMWARE_VERSION_SUPPORT table: Search codebase for table usage  
+- [ ] 6.13 Create tests for ESTB_FIRMWARE_VERSION_SUPPORT table operations in appropriate location
+- [ ] 6.14 Implement CleanupTracker and mock expectations for metadata table tests
+- [ ] 6.15 Verify metadata table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.16 Record coverage for metadata tables: Document mock and real mode coverage
+- [ ] 6.17 Identify production code using NS_LIST table: Search codebase for table usage
+- [ ] 6.18 Create tests for NS_LIST table operations in appropriate location
+- [ ] 6.19 Identify production code using IP_ADDRESS_GROUP table: Search codebase for table usage
+- [ ] 6.20 Create tests for IP_ADDRESS_GROUP table operations in appropriate location
+- [ ] 6.21 Identify production code using GENERIC_NS_LIST table: Search codebase for table usage
+- [ ] 6.22 Create tests for GENERIC_NS_LIST table operations in appropriate location
+- [ ] 6.23 Implement CleanupTracker and mock expectations for NS list table tests
+- [ ] 6.24 Verify NS list table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.25 Record coverage for NS list tables: Document mock and real mode coverage
+- [ ] 6.26 Create tests for FIRMWARE_RULE table operations (shared/firmware/firmwarerule_test.go - extend existing)
+- [ ] 6.27 Create tests for FIRMWARE_RULE_TEMPLATE table operations (shared/firmware/firmwarerule_test.go - extend existing)
+- [ ] 6.28 Identify production code using FIRMWARE_CONFIG_LOGS table: Search codebase for table usage
+- [ ] 6.29 Create tests for FIRMWARE_CONFIG_LOGS table operations in appropriate location
+- [ ] 6.30 Implement CleanupTracker and mock expectations for firmware table tests
+- [ ] 6.31 Verify firmware table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.32 Record coverage for firmware tables: Document mock and real mode coverage
+- [ ] 6.33 Identify production code using DEVICE_SETTINGS table: Search codebase for table usage (likely in shared/dcm)
+- [ ] 6.34 Create tests for DEVICE_SETTINGS table operations in appropriate location
+- [ ] 6.35 Identify production code using VOD_SETTINGS table: Search codebase for table usage (likely in shared/dcm)
+- [ ] 6.36 Create tests for VOD_SETTINGS table operations in appropriate location
+- [ ] 6.37 Identify production code using LOG_FILE_LIST table: Search codebase for table usage (likely in shared/dcm)
+- [ ] 6.38 Create tests for LOG_FILE_LIST table operations in appropriate location
+- [ ] 6.39 Identify production code using UPLOAD_REPOSITORY table: Search codebase for table usage (likely in shared/logupload)
+- [ ] 6.40 Create tests for UPLOAD_REPOSITORY table operations in appropriate location
+- [ ] 6.41 Implement CleanupTracker and mock expectations for DCM table tests
+- [ ] 6.42 Verify DCM table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.43 Record coverage for DCM tables: Document mock and real mode coverage
+- [ ] 6.44 Enhance tests for FEATURE_CONTROL_RULE table (augment existing partial coverage in shared/rfc)
+- [ ] 6.45 Enhance tests for XCONF_FEATURE table (augment existing partial coverage in shared/rfc)
+- [ ] 6.46 Verify feature control table tests: Run with TEST_MODE=mock and TEST_MODE=real
+- [ ] 6.47 Record coverage for feature control tables: Document mock and real mode coverage
+- [ ] 6.48 Record Phase 5 coverage: Run full coverage verification, document all 33 tables now have tests
 
 ## 7. Final Verification and Documentation
 
@@ -209,8 +225,8 @@
 - [ ] 7.10 Verify all 33 tables have test coverage: Review table list and confirm tests exist for each
 - [ ] 7.11 Verify all 14 previously untested files now have tests: Review file list and confirm
 - [ ] 7.12 Check coverage parity: Verify mock and real coverage are within 10% of each other
-- [ ] 7.13 Update README.md with TEST_MODE usage instructions and examples
-- [ ] 7.14 Update README.md with coverage verification instructions
+- [ ] 7.13 Update README.md with TEST_MODE usage instructions and examples (mock vs real mode)
+- [ ] 7.14 Update README.md with coverage verification instructions and Makefile targets
 - [ ] 7.15 Create TESTING.md guide documenting test patterns, CleanupTracker usage, and best practices
 - [ ] 7.16 Document anti-patterns to avoid (truncateTable, double cleanup, test interdependencies)
 - [ ] 7.17 Create migration guide for updating old tests to new patterns
