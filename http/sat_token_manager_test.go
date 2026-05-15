@@ -26,6 +26,55 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// MockSatServiceConnector is a test-only mock that returns fake SAT tokens without making HTTP requests
+type MockSatServiceConnector struct {
+	name                    string
+	host                    string
+	consumerHost            string
+	tokenUrlTemplate        string
+	tokenPartnerUrlTemplate string
+}
+
+func (m *MockSatServiceConnector) SatServiceName() string {
+	return "mock_sat_service"
+}
+
+func (m *MockSatServiceConnector) SatServiceHost() string {
+	return m.host
+}
+
+func (m *MockSatServiceConnector) ConsumerHost() string {
+	return m.consumerHost
+}
+
+func (m *MockSatServiceConnector) SetSatServiceName(name string) {
+	m.name = name
+}
+
+func (m *MockSatServiceConnector) SetSatServiceHost(host string) {
+	m.host = host
+}
+
+func (m *MockSatServiceConnector) SetTokenUrlTemplate(template string) {
+	m.tokenUrlTemplate = template
+}
+
+func (m *MockSatServiceConnector) SetTokenPartnerUrlTemplate(template string) {
+	m.tokenPartnerUrlTemplate = template
+}
+
+func (m *MockSatServiceConnector) GetSatTokenFromSatService(fields log.Fields, vargs ...string) (*SatServiceResponse, error) {
+	// Return mock data without making HTTP requests - URL templates don't matter
+	return &SatServiceResponse{
+		AccessToken:  "mock_test_token_12345",
+		ExpiresIn:    86400,
+		Scope:        "scope1 scope2",
+		TokenType:    "Bearer",
+		ResponseCode: 200,
+		Description:  "Mock token for testing",
+	}, nil
+}
+
 // Test SatTokenMgr getter/setter functions
 func TestSatTokenMgr_TestOnly_Default(t *testing.T) {
 	mgr := NewSatTokenMgr()
@@ -190,6 +239,8 @@ func TestGetSatToken_WithMockInfrastructure(t *testing.T) {
 	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
 	server := NewXconfServer(sc, true, nil)
 	server.SetupMocks() // Use existing mock infrastructure
+	// Replace with mock SAT connector that doesn't require URL templates
+	server.SatServiceConnector = &MockSatServiceConnector{}
 	InitSatTokenManager(server)
 
 	manager := GetSatTokenManager()
@@ -205,6 +256,8 @@ func TestGetLocalSatToken_WithMockInfrastructure(t *testing.T) {
 	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
 	server := NewXconfServer(sc, true, nil)
 	server.SetupMocks() // Use existing mock infrastructure
+	// Replace with mock SAT connector that doesn't require URL templates
+	server.SatServiceConnector = &MockSatServiceConnector{}
 	InitSatTokenManager(server)
 
 	fields := log.Fields{"test": "GetLocalSatToken"}
@@ -219,6 +272,8 @@ func TestSetLocalSatToken_WithMockInfrastructure(t *testing.T) {
 	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
 	server := NewXconfServer(sc, true, nil)
 	server.SetupMocks() // Use existing mock infrastructure
+	// Replace with mock SAT connector that doesn't require URL templates
+	server.SatServiceConnector = &MockSatServiceConnector{}
 	InitSatTokenManager(server)
 
 	fields := log.Fields{"test": "SetLocalSatToken"}
@@ -237,6 +292,8 @@ func TestGetSatTokenFromSatService_WithMockInfrastructure(t *testing.T) {
 	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
 	server := NewXconfServer(sc, true, nil)
 	server.SetupMocks() // Use existing mock infrastructure
+	// Replace with mock SAT connector that doesn't require URL templates
+	server.SatServiceConnector = &MockSatServiceConnector{}
 	InitSatTokenManager(server)
 
 	fields := log.Fields{"test": "GetSatTokenFromSatService"}

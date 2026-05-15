@@ -31,15 +31,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const (
-	getCpeGroupsUrlTemplate     = "%s/v2/cg/%s"
-	getRfcPrecookUrlTemplate    = "%s/v2/xd/%s"
-	getHashesUrlTemplate        = "%s/v2/ft/%s"
-	getSecurityTokenUrlTemplate = "%s/v2/st/%s"
-	getAccountIdTemplate        = "%s/v2/xac/%s"
-	getAccountProductsTemplate  = "%s/v2/ada/%s"
-)
-
 type GroupServiceConnector interface {
 	GroupServiceHost() string
 	SetGroupServiceHost(host string)
@@ -55,8 +46,14 @@ type GroupServiceConnector interface {
 
 type DefaultGroupService struct {
 	*HttpClient
-	host        string
-	groupPrefix string
+	host                          string
+	groupPrefix                   string
+	getCpeGroupsUrlTemplate       string
+	getRfcPrecookUrlTemplate      string
+	getHashesUrlTemplate          string
+	getSecurityTokenUrlTemplate   string
+	getAccountIdUrlTemplate       string
+	getAccountProductsUrlTemplate string
 }
 
 var groupServiceName string
@@ -72,10 +69,36 @@ func NewGroupServiceConnector(conf *configuration.Config, tlsConfig *tls.Config,
 			panic(fmt.Errorf("%s is required", confKey))
 		}
 		groupPrefix := conf.GetString("xconfwebconfig.xconf.group_prefix")
+
+		// Read URL path templates from config
+		getCpeGroupsUrlKey := fmt.Sprintf("xconfwebconfig.%v.cpe_group_url_template", groupServiceName)
+		getCpeGroupsUrlTemplate := conf.GetString(getCpeGroupsUrlKey)
+
+		getRfcPrecookUrlKey := fmt.Sprintf("xconfwebconfig.%v.rfc_precook_url_template", groupServiceName)
+		getRfcPrecookUrlTemplate := conf.GetString(getRfcPrecookUrlKey)
+
+		getHashesUrlKey := fmt.Sprintf("xconfwebconfig.%v.feature_url_template", groupServiceName)
+		getHashesUrlTemplate := conf.GetString(getHashesUrlKey)
+
+		getSecurityTokenUrlKey := fmt.Sprintf("xconfwebconfig.%v.security_token_url_template", groupServiceName)
+		getSecurityTokenUrlTemplate := conf.GetString(getSecurityTokenUrlKey)
+
+		getAccountIdUrlKey := fmt.Sprintf("xconfwebconfig.%v.account_id_url_template", groupServiceName)
+		getAccountIdUrlTemplate := conf.GetString(getAccountIdUrlKey)
+
+		getAccountProductsUrlKey := fmt.Sprintf("xconfwebconfig.%v.account_products_url_template", groupServiceName)
+		getAccountProductsUrlTemplate := conf.GetString(getAccountProductsUrlKey)
+
 		return &DefaultGroupService{
-			HttpClient:  NewHttpClient(conf, groupServiceName, tlsConfig),
-			host:        host,
-			groupPrefix: groupPrefix,
+			HttpClient:                    NewHttpClient(conf, groupServiceName, tlsConfig),
+			host:                          host,
+			groupPrefix:                   groupPrefix,
+			getCpeGroupsUrlTemplate:       getCpeGroupsUrlTemplate,
+			getRfcPrecookUrlTemplate:      getRfcPrecookUrlTemplate,
+			getHashesUrlTemplate:          getHashesUrlTemplate,
+			getSecurityTokenUrlTemplate:   getSecurityTokenUrlTemplate,
+			getAccountIdUrlTemplate:       getAccountIdUrlTemplate,
+			getAccountProductsUrlTemplate: getAccountProductsUrlTemplate,
 		}
 	}
 }
@@ -97,7 +120,7 @@ func (c *DefaultGroupService) SetGroupPrefix(prefix string) {
 }
 
 func (c *DefaultGroupService) GetRfcPrecookDetails(cpeMac string, fields log.Fields) (*conversion.XconfDevice, error) {
-	url := fmt.Sprintf(getRfcPrecookUrlTemplate, c.GroupServiceHost(), cpeMac)
+	url := fmt.Sprintf(c.getRfcPrecookUrlTemplate, c.GroupServiceHost(), cpeMac)
 	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
@@ -113,7 +136,7 @@ func (c *DefaultGroupService) GetRfcPrecookDetails(cpeMac string, fields log.Fie
 }
 
 func (c *DefaultGroupService) GetCpeGroups(cpeMac string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(getCpeGroupsUrlTemplate, c.GroupServiceHost(), cpeMac)
+	url := fmt.Sprintf(c.getCpeGroupsUrlTemplate, c.GroupServiceHost(), cpeMac)
 	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
@@ -147,7 +170,7 @@ func (c *DefaultGroupService) CreateListFromGroupServiceProto(cpeGroup *conversi
 }
 
 func (c *DefaultGroupService) GetFeatureTagsHashedItems(name string, fields log.Fields) (map[string]string, error) {
-	url := fmt.Sprintf(getHashesUrlTemplate, c.GroupServiceHost(), name)
+	url := fmt.Sprintf(c.getHashesUrlTemplate, c.GroupServiceHost(), name)
 	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
@@ -162,7 +185,7 @@ func (c *DefaultGroupService) GetFeatureTagsHashedItems(name string, fields log.
 }
 
 func (c *DefaultGroupService) GetAccountIdData(mac string, fields log.Fields) (*conversion.XBOAccount, error) {
-	url := fmt.Sprintf(getAccountIdTemplate, c.host, mac)
+	url := fmt.Sprintf(c.getAccountIdUrlTemplate, c.host, mac)
 	rbytes, err := c.DoWithRetries(http.MethodGet, url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
@@ -178,7 +201,7 @@ func (c *DefaultGroupService) GetAccountIdData(mac string, fields log.Fields) (*
 }
 
 func (c *DefaultGroupService) GetAccountProducts(accountId string, fields log.Fields) (map[string]string, error) {
-	url := fmt.Sprintf(getAccountProductsTemplate, c.GroupServiceHost(), accountId)
+	url := fmt.Sprintf(c.getAccountProductsUrlTemplate, c.GroupServiceHost(), accountId)
 	rbytes, err := c.DoWithRetries(http.MethodGet, url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err

@@ -29,8 +29,7 @@ func TestIncreaseAccountServiceEmptyResponseCounter(t *testing.T) {
 	savedMetrics := metrics
 	metrics = nil
 
-	IncreaseAccountServiceEmptyResponseCounter("testModel")
-	IncreaseAccountServiceEmptyResponseCounter("")
+	IncreaseAccountServiceEmptyResponseCounter("testModel", "testpartner")
 
 	metrics = savedMetrics
 }
@@ -310,13 +309,12 @@ func TestIncreaseIpNotInSameNetworkIn200Counter(t *testing.T) {
 	metrics = savedMetrics
 }
 
-func TestIncreaseTitanEmptyResponseCounter(t *testing.T) {
+func TestIncreaseAccountEmptyResponseCounter(t *testing.T) {
 	// Test with nil metrics - should not panic
 	savedMetrics := metrics
 	metrics = nil
 
-	IncreaseTitanEmptyResponseCounter("testModel")
-	IncreaseTitanEmptyResponseCounter("")
+	IncreaseAccountServiceEmptyResponseCounter("testModel", "testpartner")
 
 	metrics = savedMetrics
 }
