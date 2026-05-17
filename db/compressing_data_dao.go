@@ -59,7 +59,7 @@ func (cd compressingDataDaoImpl) GetOne(tenantId string, tableName string, key s
 	}
 
 	// Get data from DB as compressed JSON []byte
-	compressedData, err := GetDatabaseClient().GetXconfCompressedData(tenantId, tableName, key, tableInfo.Key2FieldName)
+	compressedData, err := GetDatabaseClient().GetXconfCompressedData(tenantId, tableName, key)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (cd compressingDataDaoImpl) SetOne(tenantId string, tableName string, key s
 	compressedData := compress(value)
 	values := split(compressedData, CompressionChunkSize)
 
-	err = GetDatabaseClient().SetXconfCompressedData(tenantId, tableName, key, tableInfo.Key2FieldName, values, tableInfo.TTL)
+	err = GetDatabaseClient().SetXconfCompressedData(tenantId, tableName, key, values, tableInfo.TTL)
 	return err
 }
 
@@ -140,7 +140,7 @@ func (cd compressingDataDaoImpl) GetAllAsMap(tenantId string, tableName string, 
 	}
 
 	// Get data from DB as a map of key and compressed JSON []byte
-	compressedDataMap := GetDatabaseClient().GetAllXconfCompressedDataAsMap(tenantId, tableName, tableInfo.Key2FieldName)
+	compressedDataMap := GetDatabaseClient().GetAllXconfCompressedDataAsMap(tenantId, tableName)
 	for key, compressedData := range compressedDataMap {
 		jsonData, err := decompress(compressedData)
 		if err != nil {

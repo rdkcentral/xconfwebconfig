@@ -114,18 +114,18 @@ type DatabaseClient interface {
 
 	// Xconf TwoKeys
 	GetAllXconfData(tenantId string, tableName string, key string) [][]byte
-	GetAllXconfDataTwoKeysRange(tenantId string, tableName string, key any, key2FieldName string, rangeInfo *RangeInfo) [][]byte
-	GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, key string, key2FieldName string, key2List []any) map[any][]byte
-	SetXconfDataTwoKeys(tenantId string, tableName string, key any, key2FieldName string, key2 any, value []byte, ttl int) error
-	GetXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 any) ([]byte, error)
-	DeleteXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 any) error
-	GetAllXconfTwoKeys(tenantId string, tableName string, key2FieldName string) []TwoKeys
-	GetAllXconfKey2s(tenantId string, tableName string, key string, key2FieldName string) []any
+	GetAllXconfDataTwoKeysRange(tenantId string, tableName string, key any, rangeInfo *RangeInfo) [][]byte
+	GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, key string, key2List []any) map[any][]byte
+	SetXconfDataTwoKeys(tenantId string, tableName string, key any, key2 any, value []byte, ttl int) error
+	GetXconfDataTwoKeys(tenantId string, tableName string, key string, key2 any) ([]byte, error)
+	DeleteXconfDataTwoKeys(tenantId string, tableName string, key string, key2 any) error
+	GetAllXconfTwoKeys(tenantId string, tableName string) []TwoKeys
+	GetAllXconfKey2s(tenantId string, tableName string, key string) []any
 
 	// Xconf compressed data
-	SetXconfCompressedData(tenantId string, tableName string, key string, key2FieldName string, values [][]byte, ttl int) error
-	GetXconfCompressedData(tenantId string, tableName string, key string, key2FieldName string) ([]byte, error)
-	GetAllXconfCompressedDataAsMap(tenantId string, tableName string, key2FieldName string) map[string][]byte
+	SetXconfCompressedData(tenantId string, tableName string, key string, values [][]byte, ttl int) error
+	GetXconfCompressedData(tenantId string, tableName string, key string) ([]byte, error)
+	GetAllXconfCompressedDataAsMap(tenantId string, tableName string) map[string][]byte
 
 	// Pod table lookup estbMac from pod serialNum
 	GetEcmMacFromPodTable(string) (string, error)

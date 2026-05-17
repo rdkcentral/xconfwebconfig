@@ -196,8 +196,18 @@ var initOnce sync.Once
 var grpCacheLoadFunc cache.LoaderFunc
 var defaultTenantId = "COMCAST"
 
+// If true, write operations will be performed on both old and new Logs2 & PenetrationMetrics,
+// while read operations will only read from the old tables; which is used for gradual migration.
+// When data from those two tables are fully migrated, this can be set to false to only write
+// to the new tables and read from the new tables.
+var dualWriteEnabled bool
+
 func GetDefaultTenantId() string {
 	return defaultTenantId
+}
+
+func IsDualWriteEnabled() bool {
+	return dualWriteEnabled
 }
 
 // GetCacheManager Initializes a CacheManager
@@ -233,6 +243,7 @@ func GetCacheManager() *CacheManager {
 			cacheManager.settings.groupServiceExpireAfterAccess = Conf.GetInt64(fmt.Sprintf("xconfwebconfig.%v.cache_expire_after_access_in_mins", Conf.GetString("xconfwebconfig.xconf.group_service_name")))
 			cacheManager.settings.groupServiceRefreshAfterWrite = Conf.GetInt64(fmt.Sprintf("xconfwebconfig.%v.cache_refresh_after_write_in_mins", Conf.GetString("xconfwebconfig.xconf.group_service_name")))
 
+			dualWriteEnabled = Conf.GetBoolean("xconfwebconfig.xconf.dual_write_enabled", true)
 			defaultTenantId = strings.ToUpper(Conf.GetString("xconfwebconfig.xconf.default_tenant_id"))
 			if util.IsBlank(defaultTenantId) {
 				panic("missing required configuration: xconfwebconfig.xconf.default_tenant_id")

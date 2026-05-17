@@ -277,7 +277,7 @@ func (c *CassandraClient) GetPenetrationMetrics(estbMac string) (map[string]any,
 	dict := util.Dict{}
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
-	stmt := fmt.Sprintf("SELECT * FROM \"%s\" WHERE %s=?", PenetrationMetricsTable, EstbMacColumnValue)
+	stmt := fmt.Sprintf("SELECT * FROM %s WHERE %s=?", PenetrationMetricsTable, EstbMacColumnValue)
 	qry := c.Query(stmt, estbMac)
 	err := qry.MapScan(dict)
 
@@ -290,7 +290,7 @@ func (c *CassandraClient) GetPenetrationMetrics(estbMac string) (map[string]any,
 
 func (c *CassandraClient) SetPenetrationMetrics(pMetrics *PenetrationMetrics) error {
 	values := []any{pMetrics.EstbMac, pMetrics.Partner, pMetrics.Model, pMetrics.FwVersion, pMetrics.FwReportedVersion, pMetrics.FwAdditionalVersionInfo, pMetrics.FwAppliedRule, pMetrics.FwTs, pMetrics.RfcAppliedRules, pMetrics.RfcFeatures, pMetrics.RfcTs}
-	stmt := fmt.Sprintf(`INSERT INTO "%s" (estb_mac,partner,model,fw_version,fw_reported_version,fw_additional_version_info,fw_applied_rule,fw_ts,rfc_features,rfc_applied_rules,rfc_ts) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, PenetrationMetricsTable)
+	stmt := fmt.Sprintf(`INSERT INTO %s (estb_mac,partner,model,fw_version,fw_reported_version,fw_additional_version_info,fw_applied_rule,fw_ts,rfc_features,rfc_applied_rules,rfc_ts) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, PenetrationMetricsTable)
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 	qry := c.Query(stmt, values...)
@@ -342,9 +342,9 @@ func (c *CassandraClient) SetXconfData(tenantId string, tableName string, key st
 
 	var stmt string
 	if ttl > 0 {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, value) VALUES(?,?,?,?) USING TTL %d`, tableName, ttl)
+		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, value) VALUES(?,?,?,?) USING TTL %d`, tableName, ttl)
 	} else {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, value) VALUES(?,?,?,?)`, tableName)
+		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, value) VALUES(?,?,?,?)`, tableName)
 	}
 
 	if err := c.Query(stmt, tenantId, GetShardId(key), key, value).Exec(); err != nil {
@@ -363,7 +363,7 @@ func (c *CassandraClient) GetXconfData(tenantId string, tableName string, key st
 
 	var value []byte
 
-	stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? LIMIT 1`, tableName)
+	stmt := fmt.Sprintf(`SELECT value FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ? LIMIT 1`, tableName)
 	err := c.Query(stmt, tenantId, GetShardId(key), key).Scan(&value)
 	if err != nil {
 		return value, err
@@ -404,7 +404,7 @@ func (c *CassandraClient) GetAllXconfKeys(tenantId string, tableName string) []s
 	defer func() { <-c.ConcurrentQueries }()
 
 	resultData := util.Set{}
-	stmt := fmt.Sprintf(`SELECT key FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
+	stmt := fmt.Sprintf(`SELECT key FROM %s WHERE tenant_id = ? AND shard_id IN ?`, tableName)
 	iter := c.Query(stmt, tenantId, shardIds).Iter()
 	for {
 		row := make(map[string]any)
@@ -433,16 +433,16 @@ func (c *CassandraClient) GetAllXconfDataAsList(tenantId string, tableName strin
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
 		if maxResults > 0 {
-			stmt = fmt.Sprintf(`SELECT value FROM "%s" LIMIT %v`, tableName, maxResults)
+			stmt = fmt.Sprintf(`SELECT value FROM %s LIMIT %v`, tableName, maxResults)
 		} else {
-			stmt = fmt.Sprintf(`SELECT value FROM "%s"`, tableName)
+			stmt = fmt.Sprintf(`SELECT value FROM %s`, tableName)
 		}
 		iter = c.Query(stmt).Iter()
 	} else {
 		if maxResults > 0 {
-			stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id IN ? LIMIT %v`, tableName, maxResults)
+			stmt = fmt.Sprintf(`SELECT value FROM %s WHERE tenant_id = ? AND shard_id IN ? LIMIT %v`, tableName, maxResults)
 		} else {
-			stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
+			stmt = fmt.Sprintf(`SELECT value FROM %s WHERE tenant_id = ? AND shard_id IN ?`, tableName)
 		}
 		iter = c.Query(stmt, tenantId, shardIds).Iter()
 	}
@@ -474,16 +474,16 @@ func (c *CassandraClient) GetAllXconfDataAsMap(tenantId string, tableName string
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
 		if maxResults > 0 {
-			stmt = fmt.Sprintf(`SELECT key, value FROM "%s" LIMIT %v`, tableName, maxResults)
+			stmt = fmt.Sprintf(`SELECT key, value FROM %s LIMIT %v`, tableName, maxResults)
 		} else {
-			stmt = fmt.Sprintf(`SELECT key, value FROM "%s"`, tableName)
+			stmt = fmt.Sprintf(`SELECT key, value FROM %s`, tableName)
 		}
 		iter = c.Query(stmt).Iter()
 	} else {
 		if maxResults > 0 {
-			stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ? LIMIT %v`, tableName, maxResults)
+			stmt = fmt.Sprintf(`SELECT key, value FROM %s WHERE tenant_id = ? AND shard_id IN ? LIMIT %v`, tableName, maxResults)
 		} else {
-			stmt = fmt.Sprintf(`SELECT key, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
+			stmt = fmt.Sprintf(`SELECT key, value FROM %s WHERE tenant_id = ? AND shard_id IN ?`, tableName)
 		}
 		iter = c.Query(stmt, tenantId, shardIds).Iter()
 	}
@@ -506,12 +506,16 @@ func (c *CassandraClient) DeleteXconfData(tenantId string, tableName string, key
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+	}
+
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
-		stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE key = ?`, tableName)
+		stmt := fmt.Sprintf(`DELETE FROM %s WHERE key = ?`, tableName)
 		return c.Query(stmt, key).Exec()
 	} else {
-		stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, tableName)
+		stmt := fmt.Sprintf(`DELETE FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ?`, tableName)
 		return c.Query(stmt, tenantId, GetShardId(key), key).Exec()
 	}
 }
@@ -521,12 +525,16 @@ func (c *CassandraClient) DeleteAllXconfData(tenantId string, tableName string) 
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+	}
+
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
-		stmt := fmt.Sprintf(`TRUNCATE "%s"`, tableName)
+		stmt := fmt.Sprintf(`TRUNCATE %s`, tableName)
 		return c.Query(stmt).Exec()
 	} else {
-		stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, tableName)
+		stmt := fmt.Sprintf(`DELETE FROM %s WHERE tenant_id = ? AND shard_id IN ?`, tableName)
 		return c.Query(stmt, tenantId, shardIds).Exec()
 	}
 }
@@ -543,12 +551,16 @@ func (c *CassandraClient) GetAllXconfData(tenantId string, tableName string, key
 	var resultData [][]byte
 	var iter *gocql.Iter
 
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+	}
+
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
-		stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ?`, tableName)
+		stmt := fmt.Sprintf(`SELECT value FROM %s WHERE key = ?`, tableName)
 		iter = c.Query(stmt, key).Iter()
 	} else {
-		stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, tableName)
+		stmt := fmt.Sprintf(`SELECT value FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ?`, tableName)
 		iter = c.Query(stmt, tenantId, GetShardId(key), key).Iter()
 	}
 
@@ -566,7 +578,7 @@ func (c *CassandraClient) GetAllXconfData(tenantId string, tableName string, key
 }
 
 // GetAllXconfDataTwoKeysRange Get multiple rows for the specified key and key2 range as list of values, where value is JSON data
-func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tenantId string, tableName string, key any, key2FieldName string, rangeInfo *RangeInfo) [][]byte {
+func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tenantId string, tableName string, key any, rangeInfo *RangeInfo) [][]byte {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
@@ -581,43 +593,49 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tenantId string, tableName
 		nilEndValue = rangeInfo.IsNilEndValue()
 	}
 
+	key2FieldName := DefaultKey2FieldName
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+		key2FieldName = Key2FieldNameForLogs2
+	}
+
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
 		if nilStartValue && nilEndValue {
-			stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? ALLOW FILTERING`, tableName)
+			stmt = fmt.Sprintf(`SELECT value FROM %s WHERE key = ? ALLOW FILTERING`, tableName)
 			iter = c.Query(stmt, key).Iter()
 		} else {
 			if nilStartValue {
 				if !nilEndValue {
-					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName)
+					stmt = fmt.Sprintf(`SELECT value FROM %s WHERE key = ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName)
 					iter = c.Query(stmt, key, rangeInfo.EndValue).Iter()
 				}
 			} else {
 				if nilEndValue {
-					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? and %s > ? ALLOW FILTERING`, tableName, key2FieldName)
+					stmt = fmt.Sprintf(`SELECT value FROM %s WHERE key = ? and %s > ? ALLOW FILTERING`, tableName, key2FieldName)
 					iter = c.Query(stmt, key, rangeInfo.StartValue).Iter()
 				} else {
-					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? and %s > ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName, key2FieldName)
+					stmt = fmt.Sprintf(`SELECT value FROM %s WHERE key = ? and %s > ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName, key2FieldName)
 					iter = c.Query(stmt, key, rangeInfo.StartValue, rangeInfo.EndValue).Iter()
 				}
 			}
 		}
 	} else {
 		if nilStartValue && nilEndValue {
-			stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? ALLOW FILTERING`, tableName)
+			stmt = fmt.Sprintf(`SELECT value FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ? ALLOW FILTERING`, tableName)
 			iter = c.Query(stmt, tenantId, GetShardId(key), key).Iter()
 		} else {
 			if nilStartValue {
 				if !nilEndValue {
-					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName)
+					stmt = fmt.Sprintf(`SELECT value FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName)
 					iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.EndValue).Iter()
 				}
 			} else {
 				if nilEndValue {
-					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s > ? ALLOW FILTERING`, tableName, key2FieldName)
+					stmt = fmt.Sprintf(`SELECT value FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s > ? ALLOW FILTERING`, tableName, key2FieldName)
 					iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.StartValue).Iter()
 				} else {
-					stmt = fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s > ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName, key2FieldName)
+					stmt = fmt.Sprintf(`SELECT value FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s > ? and %s < ? ALLOW FILTERING`, tableName, key2FieldName, key2FieldName)
 					iter = c.Query(stmt, tenantId, GetShardId(key), key, rangeInfo.StartValue, rangeInfo.EndValue).Iter()
 				}
 			}
@@ -636,19 +654,25 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tenantId string, tableName
 }
 
 // GetAllXconfDataTwoKeysAsMap Get multiple rows for the specified key and key2 list as map of values, where value is JSON data
-func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, key string, key2FieldName string, key2List []any) map[any][]byte {
+func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, key string, key2List []any) map[any][]byte {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData = make(map[any][]byte)
 	var iter *gocql.Iter
 
+	key2FieldName := DefaultKey2FieldName
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+		key2FieldName = Key2FieldNameForLogs2
+	}
+
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
-		stmt := fmt.Sprintf(`SELECT %s, value FROM "%s" WHERE key = ? and %s IN ?`, key2FieldName, tableName, key2FieldName)
+		stmt := fmt.Sprintf(`SELECT %s, value FROM %s WHERE key = ? and %s IN ?`, key2FieldName, tableName, key2FieldName)
 		iter = c.Query(stmt, key, key2List).Iter()
 	} else {
-		stmt := fmt.Sprintf(`SELECT %s, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s IN ?`, key2FieldName, tableName, key2FieldName)
+		stmt := fmt.Sprintf(`SELECT %s, value FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ? and %s IN ?`, key2FieldName, tableName, key2FieldName)
 		iter = c.Query(stmt, tenantId, GetShardId(key), key, key2List).Iter()
 	}
 
@@ -664,26 +688,32 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tenantId string, tableName
 }
 
 // SetXconfDataTwoKeys Create XconfData for the specified two keys and value, where value is JSON data
-func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string, key any, key2FieldName string, key2 any, value []byte, ttl int) error {
+func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string, key any, key2 any, value []byte, ttl int) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
 	var stmt string
 
+	key2FieldName := DefaultKey2FieldName
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+		key2FieldName = Key2FieldNameForLogs2
+	}
+
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
 		if ttl > 0 {
-			stmt = fmt.Sprintf(`INSERT INTO "%s"(key, %s, value) VALUES(?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
+			stmt = fmt.Sprintf(`INSERT INTO %s(key, %s, value) VALUES(?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
 		} else {
-			stmt = fmt.Sprintf(`INSERT INTO "%s"(key, %s, value) VALUES(?,?,?)`, tableName, key2FieldName)
+			stmt = fmt.Sprintf(`INSERT INTO %s(key, %s, value) VALUES(?,?,?)`, tableName, key2FieldName)
 		}
 
 		return c.Query(stmt, key, key2, value).Exec()
 	} else {
 		if ttl > 0 {
-			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
+			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
 		} else {
-			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, key2FieldName)
+			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, key2FieldName)
 		}
 
 		return c.Query(stmt, tenantId, GetShardId(key), key, key2, value).Exec()
@@ -691,19 +721,25 @@ func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string,
 }
 
 // GetXconfDataTwoKeys Get one row where return value is JSON data
-func (c *CassandraClient) GetXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 any) ([]byte, error) {
+func (c *CassandraClient) GetXconfDataTwoKeys(tenantId string, tableName string, key string, key2 any) ([]byte, error) {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
 	var value []byte
 	var err error
 
+	key2FieldName := DefaultKey2FieldName
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+		key2FieldName = Key2FieldNameForLogs2
+	}
+
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
-		stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
+		stmt := fmt.Sprintf(`SELECT value FROM %s WHERE key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
 		err = c.Query(stmt, key, key2).Scan(&value)
 	} else {
-		stmt := fmt.Sprintf(`SELECT value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
+		stmt := fmt.Sprintf(`SELECT value FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
 		err = c.Query(stmt, tenantId, GetShardId(key), key, key2).Scan(&value)
 	}
 
@@ -711,34 +747,46 @@ func (c *CassandraClient) GetXconfDataTwoKeys(tenantId string, tableName string,
 }
 
 // DeleteXconfDataTwoKeys Delete XconfData for the specified two keys
-func (c *CassandraClient) DeleteXconfDataTwoKeys(tenantId string, tableName string, key string, key2FieldName string, key2 any) error {
+func (c *CassandraClient) DeleteXconfDataTwoKeys(tenantId string, tableName string, key string, key2 any) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
+	key2FieldName := DefaultKey2FieldName
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+		key2FieldName = Key2FieldNameForLogs2
+	}
+
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
-		stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE key = ? AND %s = ?`, tableName, key2FieldName)
+		stmt := fmt.Sprintf(`DELETE FROM %s WHERE key = ? AND %s = ?`, tableName, key2FieldName)
 		return c.Query(stmt, key, key2).Exec()
 	} else {
-		stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ?`, tableName, key2FieldName)
+		stmt := fmt.Sprintf(`DELETE FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ?`, tableName, key2FieldName)
 		return c.Query(stmt, tenantId, GetShardId(key), key, key2).Exec()
 	}
 }
 
 // GetAllXconfTwoKeys Get all TwoKeys
-func (c *CassandraClient) GetAllXconfTwoKeys(tenantId string, tableName string, key2FieldName string) []TwoKeys {
+func (c *CassandraClient) GetAllXconfTwoKeys(tenantId string, tableName string) []TwoKeys {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData []TwoKeys
 	var iter *gocql.Iter
 
+	key2FieldName := DefaultKey2FieldName
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+		key2FieldName = Key2FieldNameForLogs2
+	}
+
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
-		stmt := fmt.Sprintf(`SELECT key, "%s" FROM "%s"`, key2FieldName, tableName)
+		stmt := fmt.Sprintf(`SELECT key, %s FROM %s`, key2FieldName, tableName)
 		iter = c.Query(stmt).Iter()
 	} else {
-		stmt := fmt.Sprintf(`SELECT key, "%s" FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, key2FieldName, tableName)
+		stmt := fmt.Sprintf(`SELECT key, %s FROM %s WHERE tenant_id = ? AND shard_id IN ?`, key2FieldName, tableName)
 		iter = c.Query(stmt, tenantId, shardIds).Iter()
 	}
 
@@ -759,19 +807,25 @@ func (c *CassandraClient) GetAllXconfTwoKeys(tenantId string, tableName string, 
 }
 
 // GetAllXconfKey2s Get a list of Xconf key2 for the specified key
-func (c *CassandraClient) GetAllXconfKey2s(tenantId string, tableName string, key string, key2FieldName string) []any {
+func (c *CassandraClient) GetAllXconfKey2s(tenantId string, tableName string, key string) []any {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
 	var resultData []any
 	var iter *gocql.Iter
 
+	key2FieldName := DefaultKey2FieldName
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+		key2FieldName = Key2FieldNameForLogs2
+	}
+
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
-		stmt := fmt.Sprintf(`SELECT %s FROM "%s" WHERE key = ?`, key2FieldName, tableName)
+		stmt := fmt.Sprintf(`SELECT %s FROM %s WHERE key = ?`, key2FieldName, tableName)
 		iter = c.Query(stmt, key).Iter()
 	} else {
-		stmt := fmt.Sprintf(`SELECT %s FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, key2FieldName, tableName)
+		stmt := fmt.Sprintf(`SELECT %s FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ?`, key2FieldName, tableName)
 		iter = c.Query(stmt, tenantId, GetShardId(key), key).Iter()
 	}
 
@@ -787,9 +841,15 @@ func (c *CassandraClient) GetAllXconfKey2s(tenantId string, tableName string, ke
 }
 
 // SetXconfCompressedData Create XconfData for the specified key and values, where values is compressed JSON data
-func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName string, key string, key2FieldName string, values [][]byte, ttl int) error {
+func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName string, key string, values [][]byte, ttl int) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
+
+	key2FieldName := DefaultKey2FieldName
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+		key2FieldName = Key2FieldNameForLogs2
+	}
 
 	shardId := GetShardId(key)
 	batch := c.NewBatch(LoggedBatch)
@@ -797,9 +857,9 @@ func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName stri
 	// Add a record that specifies the number of compressed data chunks
 	var stmt string
 	if ttl > 0 {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?)) USING TTL %d`, tableName, key2FieldName, ttl)
+		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?)) USING TTL %d`, tableName, key2FieldName, ttl)
 	} else {
-		stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?))`, tableName, key2FieldName)
+		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?))`, tableName, key2FieldName)
 	}
 	batch.Query(stmt, tenantId, shardId, key, NamedListCountColumnValue, len(values))
 
@@ -807,9 +867,9 @@ func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName stri
 		// Add a record for each compressed data chunk where key has the format: NamedListData_part_0, ...
 		partColumnValue := NamedListPartColumnValue + strconv.Itoa(i)
 		if ttl > 0 {
-			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
+			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
 		} else {
-			stmt = fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, key2FieldName)
+			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, key2FieldName)
 		}
 		batch.Query(stmt, tenantId, shardId, key, partColumnValue, value)
 	}
@@ -822,16 +882,22 @@ func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName stri
 }
 
 // GetXconfCompressedData Get one row where return value is compressed JSON data
-func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName string, key string, key2FieldName string) ([]byte, error) {
+func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName string, key string) ([]byte, error) {
 	start := time.Now()
 
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
+	key2FieldName := DefaultKey2FieldName
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+		key2FieldName = Key2FieldNameForLogs2
+	}
+
 	// Get the number of compressed data chunks
 	var partsCount int
 	shardId := GetShardId(key)
-	stmt := fmt.Sprintf(`SELECT blobAsInt(value) FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
+	stmt := fmt.Sprintf(`SELECT blobAsInt(value) FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ? AND %s = ? LIMIT 1`, tableName, key2FieldName)
 	err := c.Query(stmt, tenantId, shardId, key, NamedListCountColumnValue).Scan(&partsCount)
 	if err != nil {
 		return nil, err
@@ -839,7 +905,7 @@ func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName stri
 
 	// Get all the compressed data chunks
 	var partsMap = make(map[string][]byte)
-	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND key = ?`, key2FieldName, tableName)
+	stmt = fmt.Sprintf(`SELECT key, %s, value FROM %s WHERE tenant_id = ? AND shard_id = ? AND key = ?`, key2FieldName, tableName)
 	iter := c.Query(stmt, tenantId, shardId, key).Iter()
 	for {
 		row := make(map[string]any)
@@ -883,12 +949,12 @@ func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName stri
 }
 
 // GetAllXconfCompressedDataAsMap Get all rows as a map of key to value, where value is compressed JSON data
-func (c *CassandraClient) GetAllXconfCompressedDataAsMap(tenantId string, tableName string, key2FieldName string) map[string][]byte {
+func (c *CassandraClient) GetAllXconfCompressedDataAsMap(tenantId string, tableName string) map[string][]byte {
 	start := time.Now()
 
 	var resultData = make(map[string][]byte)
 
-	rawData := c.GetXconfCompressedDataRaw(tenantId, tableName, key2FieldName)
+	rawData := c.GetXconfCompressedDataRaw(tenantId, tableName)
 	for key, partsMap := range rawData {
 		// Combine all the compressed data chunks into one
 		partsCount := len(partsMap)
@@ -917,17 +983,23 @@ func (c *CassandraClient) GetAllXconfCompressedDataAsMap(tenantId string, tableN
 // COMCAST   | 0        | Test_Mac_List     |      NamedListData_part_0 | 0x7df05a7b226964223a2241...
 // COMCAST   | 0        | Test_Mac_List     |      NamedListData_part_1 | 0x60f05f7b226964223a2231...
 // COMCAST   | 0        | Test_Mac_List     | NamedListData_parts_count |                  0x00000002
-func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName string, key2FieldName string) map[string]map[string][]byte {
+func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName string) map[string]map[string][]byte {
 	start := time.Now()
 
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
+	key2FieldName := DefaultKey2FieldName
+	if tableName == TABLE_LOGS {
+		tableName = c.getLogs2TableName(tableName)
+		key2FieldName = Key2FieldNameForLogs2
+	}
+
 	var resultData = make(map[string]map[string][]byte)
 	var countMap = make(map[string]int)
 
 	// Get all the count records
-	stmt := fmt.Sprintf(`SELECT key, blobAsInt(value) as count FROM "%s" where tenant_id = ? AND shard_id IN ? AND %s = ? ALLOW FILTERING`, tableName, key2FieldName)
+	stmt := fmt.Sprintf(`SELECT key, blobAsInt(value) as count FROM %s where tenant_id = ? AND shard_id IN ? AND %s = ? ALLOW FILTERING`, tableName, key2FieldName)
 
 	iter := c.Query(stmt, tenantId, shardIds, NamedListCountColumnValue).Iter()
 	for {
@@ -939,7 +1011,7 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName s
 	}
 
 	// Get all the compressed data chunks
-	stmt = fmt.Sprintf(`SELECT key, %s, value FROM "%s" WHERE tenant_id = ? AND shard_id IN ?`, key2FieldName, tableName)
+	stmt = fmt.Sprintf(`SELECT key, %s, value FROM %s WHERE tenant_id = ? AND shard_id IN ?`, key2FieldName, tableName)
 	iter = c.Query(stmt, tenantId, shardIds).Iter()
 	for {
 		row := make(map[string]any)
@@ -1087,7 +1159,7 @@ func (c *CassandraClient) SetTenant(tenant *Tenant) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
-	stmt := fmt.Sprintf(`INSERT INTO "%s"(id, name, updated) VALUES(?,?,?)`, TABLE_TENANTS)
+	stmt := fmt.Sprintf(`INSERT INTO %s(id, name, updated) VALUES(?,?,?)`, TABLE_TENANTS)
 	if err := c.Query(stmt, tenant.ID, tenant.Name, tenant.Updated).Exec(); err != nil {
 		return err
 	}
@@ -1098,7 +1170,7 @@ func (c *CassandraClient) DeleteTenant(tenantId string) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
-	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE id = ?`, TABLE_TENANTS)
+	stmt := fmt.Sprintf(`DELETE FROM %s WHERE id = ?`, TABLE_TENANTS)
 	if err := c.Query(stmt, tenantId).Exec(); err != nil {
 		return err
 	}
@@ -1114,7 +1186,7 @@ func (c *CassandraClient) AcquireLock(tenantId string, lockName string, lockedBy
 
 	// First, try to insert a new lock (if no lock exists)
 	existingLock := make(map[string]any)
-	stmt := fmt.Sprintf(`INSERT INTO "%s"(tenant_id, shard_id, name, locked_by, locked_at, expires_at) VALUES(?,?,?,?,?,?) IF NOT EXISTS`, TABLE_LOCKS)
+	stmt := fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, name, locked_by, locked_at, expires_at) VALUES(?,?,?,?,?,?) IF NOT EXISTS`, TABLE_LOCKS)
 	applied, err := c.Query(stmt, tenantId, GetShardId(lockName), lockName, lockedBy, lockedAt, expiresAt).MapScanCAS(existingLock)
 	if err != nil {
 		return fmt.Errorf("failed to acquire lock '%s': %w", lockName, err)
@@ -1131,7 +1203,7 @@ func (c *CassandraClient) AcquireLock(tenantId string, lockName string, lockedBy
 		}
 	}
 
-	stmt = fmt.Sprintf(`UPDATE "%s" SET locked_by = ?, locked_at = ?, expires_at = ? WHERE tenant_id = ? AND shard_id = ? AND name = ? IF expires_at < ?`, TABLE_LOCKS)
+	stmt = fmt.Sprintf(`UPDATE %s SET locked_by = ?, locked_at = ?, expires_at = ? WHERE tenant_id = ? AND shard_id = ? AND name = ? IF expires_at < ?`, TABLE_LOCKS)
 	applied, err = c.Query(stmt, lockedBy, lockedAt, expiresAt, tenantId, GetShardId(lockName), lockName, lockedAt).MapScanCAS(existingLock)
 	if err != nil {
 		return fmt.Errorf("failed to acquire expired lock '%s': %w", lockName, err)
@@ -1150,7 +1222,7 @@ func (c *CassandraClient) ReleaseLock(tenantId string, lockName string, lockedBy
 
 	// Try to release the lock by deleting the record only if it is held by the specified lockHolder
 	existingLock := make(map[string]any)
-	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id = ? AND shard_id = ? AND name = ? IF locked_by = ?`, TABLE_LOCKS)
+	stmt := fmt.Sprintf(`DELETE FROM %s WHERE tenant_id = ? AND shard_id = ? AND name = ? IF locked_by = ?`, TABLE_LOCKS)
 	applied, err := c.Query(stmt, tenantId, GetShardId(lockName), lockName, lockedBy).MapScanCAS(existingLock)
 	if err != nil {
 		return fmt.Errorf("failed to release lock '%s': %w", lockName, err)
@@ -1168,7 +1240,7 @@ func (c *CassandraClient) GetLockInfo(tenantId string, lockName string) (map[str
 	defer func() { <-c.ConcurrentQueries }()
 
 	dict := util.Dict{}
-	stmt := fmt.Sprintf(`SELECT * FROM "%s" WHERE tenant_id = ? and shard_id = ? AND name=?`, TABLE_LOCKS)
+	stmt := fmt.Sprintf(`SELECT * FROM %s WHERE tenant_id = ? and shard_id = ? AND name=?`, TABLE_LOCKS)
 	qry := c.Query(stmt, tenantId, GetShardId(lockName), lockName)
 	err := qry.MapScan(dict)
 	if err != nil {
@@ -1350,4 +1422,9 @@ func forEachShard(fn func(shardId int) error) error {
 		}
 	}
 	return nil
+}
+
+// Get Logs2 fully-qualified table name
+func (c *CassandraClient) getLogs2TableName(tableName string) string {
+	return fmt.Sprintf("\"%s\".\"%s\"", c.GetLogKeyspace(), tableName)
 }

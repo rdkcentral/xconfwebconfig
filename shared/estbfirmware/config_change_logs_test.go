@@ -143,8 +143,8 @@ func TestGetChangeLogsOnly(t *testing.T) {
 	assert.Equal(t, len(lastConfigLogs), 0)
 }
 
-func TestGetCurrentId(t *testing.T) {
-	id, err := GetCurrentId(db.GetDefaultTenantId(), "testMac")
+func TestGetCurrentChangeLogId(t *testing.T) {
+	id, err := GetCurrentChangeLogId(db.GetDefaultTenantId(), db.TABLE_CONFIG_CHANGE_LOGS, "testMac")
 	assert.Equal(t, id, "")
 	assert.Equal(t, err != nil, true)
 }

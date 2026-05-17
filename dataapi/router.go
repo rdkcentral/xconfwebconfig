@@ -128,7 +128,6 @@ func RegisterTables() {
 			Compressed:      true,
 			Split:           true,
 			Cached:          true,
-			Key2FieldName:   db.DefaultKey2FieldName,
 		})
 
 		db.RegisterTableConfig(&db.TableInfo{
@@ -159,7 +158,6 @@ func RegisterTables() {
 			TableName:       db.TABLE_CONFIG_CHANGE_LOGS,
 			ConstructorFunc: sharedef.NewConfigChangeLogInf,
 			Compressed:      true,
-			Key2FieldName:   db.DefaultKey2FieldName,
 			TTL:             90 * 24 * 60 * 60,
 		})
 
@@ -167,7 +165,6 @@ func RegisterTables() {
 			TableName:       db.TABLE_CHANGE_EVENTS,
 			ConstructorFunc: db.NewChangedDataInf,
 			TenantAgnostic:  true,
-			Key2FieldName:   db.DefaultKey2FieldName,
 			TTL:             86400 * 7, // one week
 		})
 
@@ -178,7 +175,6 @@ func RegisterTables() {
 			ConstructorFunc: sharedef.NewConfigChangeLogInf,
 			Compressed:      true,
 			TenantAgnostic:  true,
-			Key2FieldName:   db.Key2FieldNameForLogs2,
 			TTL:             90 * 24 * 60 * 60,
 		})
 	})

@@ -108,6 +108,8 @@ var AllTables = []string{
 	TABLE_CONFIG_CHANGE_LOGS,
 	TABLE_CHANGE_EVENTS,
 	TABLE_APPLICATION_TYPES,
+	TABLE_TENANTS,
+	TABLE_LOGS,
 }
 
 // For list types of tables (e.g. config_change_logs, change_events), the secondary key is stored in a column named "key2",
@@ -129,7 +131,6 @@ type TableInfo struct {
 	Cached          bool       // specifies whether to cache the data
 	TenantAgnostic  bool       // tenantId is not part of the partition key
 	TTL             int        // TTL for the data
-	Key2FieldName   string     // column name for list types of tables, e.g. config_change_logs, change_events, Logs2
 }
 
 // tableConfig is a map of table name to TableInfo
