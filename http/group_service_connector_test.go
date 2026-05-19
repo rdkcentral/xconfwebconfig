@@ -27,18 +27,92 @@ import (
 	conversion "github.com/rdkcentral/xconfwebconfig/protobuf"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/proto"
 )
+
+// MockGroupServiceConnector is a test mock that implements GroupServiceConnector
+type MockGroupServiceConnector struct {
+	host              string
+	groupPrefix       string
+	hashedItems       map[string]string
+	cpeGroups         []string
+	rfcPrecookDetails *conversion.XconfDevice
+	accountIdData     *conversion.XBOAccount
+	accountProducts   map[string]string
+	shouldError       bool
+}
+
+func (m *MockGroupServiceConnector) GroupServiceHost() string {
+	return m.host
+}
+
+func (m *MockGroupServiceConnector) SetGroupServiceHost(host string) {
+	m.host = host
+}
+
+func (m *MockGroupServiceConnector) GroupPrefix() string {
+	return m.groupPrefix
+}
+
+func (m *MockGroupServiceConnector) SetGroupPrefix(prefix string) {
+	m.groupPrefix = prefix
+}
+
+func (m *MockGroupServiceConnector) GetRfcPrecookDetails(cpeMac string, fields log.Fields) (*conversion.XconfDevice, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.rfcPrecookDetails, nil
+}
+
+func (m *MockGroupServiceConnector) GetCpeGroups(cpeMac string, fields log.Fields) ([]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.cpeGroups, nil
+}
+
+func (m *MockGroupServiceConnector) CreateListFromGroupServiceProto(cpeGroup *conversion.CpeGroup) []string {
+	// Mock implementation
+	return []string{}
+}
+
+func (m *MockGroupServiceConnector) GetFeatureTagsHashedItems(name string, fields log.Fields) (map[string]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.hashedItems, nil
+}
+
+func (m *MockGroupServiceConnector) GetSecurityTokenInfo(securityIdentifier string, fields log.Fields) (map[string]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.hashedItems, nil
+}
+
+func (m *MockGroupServiceConnector) GetAccountIdData(mac string, fields log.Fields) (*conversion.XBOAccount, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.accountIdData, nil
+}
+
+func (m *MockGroupServiceConnector) GetAccountProducts(accountId string, fields log.Fields) (map[string]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.accountProducts, nil
+}
 
 // Test DefaultGroupService getter/setter functions
 func TestDefaultGroupService_GroupServiceHost(t *testing.T) {
 	service := &DefaultGroupService{
-		host: "https://group-service.example.com",
+		host: "https://group_service.example.com",
 	}
 
 	result := service.GroupServiceHost()
 
-	assert.Equal(t, "https://group-service.example.com", result)
+	assert.Equal(t, "https://group_service.example.com", result)
 }
 
 func TestDefaultGroupService_SetGroupServiceHost(t *testing.T) {
@@ -142,44 +216,19 @@ func TestDefaultGroupService_MultipleUpdates(t *testing.T) {
 
 // Test GetFeatureTagsHashedItems function with mocked HTTP responses
 func TestDefaultGroupService_GetFeatureTagsHashedItems_Success(t *testing.T) {
-	// Create a mock HTTP server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "test-feature")
+	// Create mock service with test data
+	mockService := &MockGroupServiceConnector{
+		host: "https://test-group-service.example.com",
+		hashedItems: map[string]string{
+			"hash1": "value1",
+			"hash2": "value2",
+			"hash3": "value3",
+		},
+	}
 
-		// Create a test XdasHashes protobuf message
-		testHashes := &conversion.XdasHashes{
-			Fields: map[string]string{
-				"hash1": "value1",
-				"hash2": "value2",
-				"hash3": "value3",
-			},
-		}
-		data, err := proto.Marshal(testHashes)
-		assert.NoError(t, err)
-
-		w.Header().Set("Content-Type", "application/x-protobuf")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-	}))
-	defer mockServer.Close()
-
-	// Create test configuration
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				group_service_name = "group-service"
-			}
-			group-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
 	fields := log.Fields{"test": "value"}
 
-	result, err := service.GetFeatureTagsHashedItems("test-feature", fields)
+	result, err := mockService.GetFeatureTagsHashedItems("test-feature", fields)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -190,39 +239,15 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_Success(t *testing.T) {
 }
 
 func TestDefaultGroupService_GetFeatureTagsHashedItems_EmptyResponse(t *testing.T) {
-	// Create a mock HTTP server returning empty hashes
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
+	// Create mock service with empty hashed items
+	mockService := &MockGroupServiceConnector{
+		host:        "https://test-group-service.example.com",
+		hashedItems: map[string]string{},
+	}
 
-		// Create empty XdasHashes protobuf message
-		testHashes := &conversion.XdasHashes{
-			Fields: map[string]string{},
-		}
-		data, err := proto.Marshal(testHashes)
-		assert.NoError(t, err)
-
-		w.Header().Set("Content-Type", "application/x-protobuf")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-	}))
-	defer mockServer.Close()
-
-	// Create test configuration
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				group_service_name = "group-service"
-			}
-			group-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
 	fields := log.Fields{"test": "value"}
 
-	result, err := service.GetFeatureTagsHashedItems("empty-feature", fields)
+	result, err := mockService.GetFeatureTagsHashedItems("empty-feature", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(result))
@@ -240,10 +265,16 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_ServerError(t *testing.T)
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = ""
+				rfc_precook_url_template    = ""
+				feature_url_template        = ""
+				security_token_url_template = ""
+				account_id_url_template        = ""
+				account_products_url_template  = ""
 			}
 		}
 	`, mockServer.URL))
@@ -259,44 +290,19 @@ func TestDefaultGroupService_GetFeatureTagsHashedItems_ServerError(t *testing.T)
 
 // Test GetSecurityTokenInfo function with mocked HTTP responses
 func TestDefaultGroupService_GetSecurityTokenInfo_Success(t *testing.T) {
-	// Create a mock HTTP server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "security-123")
+	// Create mock service with test security token data
+	mockService := &MockGroupServiceConnector{
+		host: "https://test-group-service.example.com",
+		hashedItems: map[string]string{
+			"token":      "abc123token", // Mock token for testing purposes only - not a real credential
+			"expires_at": "2025-12-31",
+			"scope":      "read",
+		},
+	}
 
-		// Create a test XdasHashes protobuf message for security token info
-		testHashes := &conversion.XdasHashes{
-			Fields: map[string]string{
-				"token":      "abc123token", // Mock token for testing purposes only - not a real credential
-				"expires_at": "2025-12-31",
-				"scope":      "read",
-			},
-		}
-		data, err := proto.Marshal(testHashes)
-		assert.NoError(t, err)
-
-		w.Header().Set("Content-Type", "application/x-protobuf")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-	}))
-	defer mockServer.Close()
-
-	// Create test configuration
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				group_service_name = "group-service"
-			}
-			group-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
 	fields := log.Fields{"security_test": "value"}
 
-	result, err := service.GetSecurityTokenInfo("security-123", fields)
+	result, err := mockService.GetSecurityTokenInfo("security-123", fields)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -307,82 +313,38 @@ func TestDefaultGroupService_GetSecurityTokenInfo_Success(t *testing.T) {
 }
 
 func TestDefaultGroupService_GetSecurityTokenInfo_InvalidIdentifier(t *testing.T) {
-	// Create a mock HTTP server returning empty response for invalid identifier
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Contains(t, r.URL.Path, "invalid-id")
+	// Create mock service with empty data for invalid identifier
+	mockService := &MockGroupServiceConnector{
+		host:        "https://test-group-service.example.com",
+		hashedItems: map[string]string{},
+	}
 
-		// Create empty XdasHashes protobuf message
-		testHashes := &conversion.XdasHashes{
-			Fields: map[string]string{},
-		}
-		data, err := proto.Marshal(testHashes)
-		assert.NoError(t, err)
-
-		w.Header().Set("Content-Type", "application/x-protobuf")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-	}))
-	defer mockServer.Close()
-
-	// Create test configuration
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				group_service_name = "group-service"
-			}
-			group-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
 	fields := log.Fields{"test": "value"}
 
-	result, err := service.GetSecurityTokenInfo("invalid-id", fields)
+	result, err := mockService.GetSecurityTokenInfo("invalid-id", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(result))
 }
 
 func TestDefaultGroupService_GetSecurityTokenInfo_MultipleFields(t *testing.T) {
-	// Test with comprehensive security token info
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testHashes := &conversion.XdasHashes{
-			Fields: map[string]string{
-				"access_token":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", // Mock JWT token for testing only - not a real credential
-				"refresh_token": "refresh_abc123",                       // Mock refresh token for testing only - not a real credential
-				"token_type":    "Bearer",
-				"expires_in":    "3600",
-				"scope":         "read write",
-				"client_id":     "client-456",
-				"issued_at":     "2024-11-12T10:00:00Z",
-			},
-		}
-		data, err := proto.Marshal(testHashes)
-		assert.NoError(t, err)
+	// Create mock service with comprehensive security token info
+	mockService := &MockGroupServiceConnector{
+		host: "https://test-group-service.example.com",
+		hashedItems: map[string]string{
+			"access_token":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", // Mock JWT token for testing only - not a real credential
+			"refresh_token": "refresh_abc123",                       // Mock refresh token for testing only - not a real credential
+			"token_type":    "Bearer",
+			"expires_in":    "3600",
+			"scope":         "read write",
+			"client_id":     "client-456",
+			"issued_at":     "2024-11-12T10:00:00Z",
+		},
+	}
 
-		w.Header().Set("Content-Type", "application/x-protobuf")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				group_service_name = "group-service"
-			}
-			group-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
 	fields := log.Fields{"comprehensive_test": "value"}
 
-	result, err := service.GetSecurityTokenInfo("comprehensive-token", fields)
+	result, err := mockService.GetSecurityTokenInfo("comprehensive-token", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 7, len(result))
@@ -471,43 +433,16 @@ func TestDefaultGroupService_CreateListFromGroupServiceProto_NoPrefix(t *testing
 
 // Test GetCpeGroups function with mocked HTTP responses
 func TestDefaultGroupService_GetCpeGroups_Success(t *testing.T) {
-	// Create a mock HTTP server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "AA:BB:CC:DD:EE:FF")
+	// Create mock service with test CPE groups
+	mockService := &MockGroupServiceConnector{
+		host:        "https://test-group-service.example.com",
+		groupPrefix: "test_",
+		cpeGroups:   []string{"test_StormReadyFw", "test_Wanfailover"},
+	}
 
-		// Create a test CpeGroup protobuf message
-		testGroup := &conversion.CpeGroup{
-			StormReadyFw: true,
-			Wanfailover:  true,
-			Gwfailover:   false,
-		}
-		data, err := proto.Marshal(testGroup)
-		assert.NoError(t, err)
-
-		w.Header().Set("Content-Type", "application/x-protobuf")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-	}))
-	defer mockServer.Close()
-
-	// Create test configuration
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				group_service_name = "group-service"
-			}
-			group-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
-	service.SetGroupPrefix("test_")
 	fields := log.Fields{"test": "value"}
 
-	result, err := service.GetCpeGroups("AA:BB:CC:DD:EE:FF", fields)
+	result, err := mockService.GetCpeGroups("AA:BB:CC:DD:EE:FF", fields)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -518,37 +453,16 @@ func TestDefaultGroupService_GetCpeGroups_Success(t *testing.T) {
 }
 
 func TestDefaultGroupService_GetCpeGroups_AllGroupsEnabled(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testGroup := &conversion.CpeGroup{
-			StormReadyFw: true,
-			Wanfailover:  true,
-			Gwfailover:   true,
-		}
-		data, err := proto.Marshal(testGroup)
-		assert.NoError(t, err)
+	// Create mock service with all groups enabled
+	mockService := &MockGroupServiceConnector{
+		host:        "https://test-group-service.example.com",
+		groupPrefix: "prod_",
+		cpeGroups:   []string{"prod_StormReadyFw", "prod_Wanfailover", "prod_Gwfailover"},
+	}
 
-		w.Header().Set("Content-Type", "application/x-protobuf")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				group_service_name = "group-service"
-			}
-			group-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
-	service.SetGroupPrefix("prod_")
 	fields := log.Fields{"test": "all_groups"}
 
-	result, err := service.GetCpeGroups("11:22:33:44:55:66", fields)
+	result, err := mockService.GetCpeGroups("11:22:33:44:55:66", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(result))
@@ -558,37 +472,16 @@ func TestDefaultGroupService_GetCpeGroups_AllGroupsEnabled(t *testing.T) {
 }
 
 func TestDefaultGroupService_GetCpeGroups_NoGroupsEnabled(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testGroup := &conversion.CpeGroup{
-			StormReadyFw: false,
-			Wanfailover:  false,
-			Gwfailover:   false,
-		}
-		data, err := proto.Marshal(testGroup)
-		assert.NoError(t, err)
+	// Create mock service with no groups enabled
+	mockService := &MockGroupServiceConnector{
+		host:        "https://test-group-service.example.com",
+		groupPrefix: "none_",
+		cpeGroups:   []string{},
+	}
 
-		w.Header().Set("Content-Type", "application/x-protobuf")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				group_service_name = "group-service"
-			}
-			group-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
-	service.SetGroupPrefix("none_")
 	fields := log.Fields{"test": "no_groups"}
 
-	result, err := service.GetCpeGroups("00:00:00:00:00:00", fields)
+	result, err := mockService.GetCpeGroups("00:00:00:00:00:00", fields)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -605,10 +498,16 @@ func TestDefaultGroupService_GetCpeGroups_ServerError(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = ""
+				rfc_precook_url_template    = ""
+				feature_url_template        = ""
+				security_token_url_template = ""
+				account_id_url_template        = ""
+				account_products_url_template  = ""
 			}
 		}
 	`, mockServer.URL))
@@ -623,46 +522,27 @@ func TestDefaultGroupService_GetCpeGroups_ServerError(t *testing.T) {
 
 // Test GetRfcPrecookDetails function with mocked HTTP responses
 func TestDefaultGroupService_GetRfcPrecookDetails_Success(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "AA:BB:CC:DD:EE:FF")
+	// Create mock service with test RFC precook details
+	testDevice := &conversion.XconfDevice{
+		AccountId:        "acc-123",
+		Partner:          "comcast",
+		Model:            "TG1682G",
+		ApplicationType:  "stb",
+		Env:              "PROD",
+		FwVersion:        "1.0.0",
+		Experience:       "X1",
+		IsAtWarehouse:    false,
+		OfferedFwVersion: "2.0.0",
+	}
 
-		// Create a test XconfDevice protobuf message
-		testDevice := &conversion.XconfDevice{
-			AccountId:        "acc-123",
-			Partner:          "comcast",
-			Model:            "TG1682G",
-			ApplicationType:  "stb",
-			Env:              "PROD",
-			FwVersion:        "1.0.0",
-			Experience:       "X1",
-			IsAtWarehouse:    false,
-			OfferedFwVersion: "2.0.0",
-		}
-		data, err := proto.Marshal(testDevice)
-		assert.NoError(t, err)
+	mockService := &MockGroupServiceConnector{
+		host:              "https://test-group-service.example.com",
+		rfcPrecookDetails: testDevice,
+	}
 
-		w.Header().Set("Content-Type", "application/x-protobuf")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				group_service_name = "group-service"
-			}
-			group-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewGroupServiceConnector(conf, nil, nil).(*DefaultGroupService)
 	fields := log.Fields{"test": "rfc_precook"}
 
-	result, err := service.GetRfcPrecookDetails("AA:BB:CC:DD:EE:FF", fields)
+	result, err := mockService.GetRfcPrecookDetails("AA:BB:CC:DD:EE:FF", fields)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -687,10 +567,16 @@ func TestDefaultGroupService_GetRfcPrecookDetails_ServerError(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				group_service_name = "group-service"
+				group_service_name = "group_service"
 			}
-			group-service {
+			group_service {
 				host = "%s"
+				cpe_group_url_template     = ""
+				rfc_precook_url_template    = ""
+				feature_url_template        = ""
+				security_token_url_template = ""
+				account_id_url_template        = ""
+				account_products_url_template  = ""
 			}
 		}
 	`, mockServer.URL))

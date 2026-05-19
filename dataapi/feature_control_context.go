@@ -41,6 +41,7 @@ const (
 	DEFAULT_OFFSET   = "UTC+2:00"
 	DTGR_PARTNER_ID  = "dt-gr"
 	GR_PREFIX        = "GR"
+	SN_PREFIX        = "sn-"
 )
 
 type PodData struct {
@@ -125,30 +126,22 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 
 	var xAccountId *conversion.XBOAccount
 	var err error
-	var macAddress string
-	if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
-		macAddress = contextMap[common.ESTB_MAC_ADDRESS]
-		macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC_ADDRESS])
-		xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
-	}
 
-	if xAccountId == nil && err != nil {
-		if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-			macAddress = contextMap[common.ECM_MAC_ADDRESS]
-			macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ECM_MAC_ADDRESS])
-			xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
-		}
-	}
+	snURL := SN_PREFIX + contextMap[common.SERIAL_NUM]
+	xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(snURL, fields)
+
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
+		log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for serialNum=%s", contextMap[common.SERIAL_NUM])
 		xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
 		return nil, nil
 	}
 	if xAccountId != nil {
 		accountId := xAccountId.GetAccountId()
+		accountType := xAccountId.GetAccountType()
 		contextMap[common.ACCOUNT_ID] = accountId
+		contextMap[common.ACCOUNT_TYPE] = accountType
 		contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
-		log.WithFields(fields).Debugf("AddContextForPods Successfully fetched AcntId='%s' from Grp Svc", accountId)
+		log.WithFields(fields).Debugf("AddContextForPods Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 
 		accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 		if err != nil {
@@ -167,6 +160,10 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 
 		if countryCode, ok := accountProducts["CountryCode"]; ok {
 			contextMap[common.COUNTRY_CODE] = countryCode
+		}
+
+		if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
+			contextMap[common.ACCOUNT_TYPE] = accountType
 		}
 
 		if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
@@ -235,6 +232,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 			}
 
 			if AccountServiceDeviceObject.DeviceData.ServiceAccountUri == "" {
+				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 				log.WithFields(tfields).Infof("No account found in AccountService for XLE device: serialNum=%s", contextMap[common.SERIAL_NUM])
 				return podData, td
 			}
@@ -284,6 +282,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 
 			if AccountServiceDeviceObject.DeviceData.ServiceAccountUri == "" {
 				log.WithFields(tfields).Infof("No account found in AccountService: ecmMac=%s, serialNum=%s", normalizedEcmMac, contextMap[common.SERIAL_NUM])
+				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 				return podData, td
 			}
 			podData = &PodData{
@@ -358,13 +357,15 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 			}
 
 			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for ecmMac=%s", macAddress)
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for Mac=%s", macAddress)
 				xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
 			} else {
 				if xAccountId != nil && xAccountId.GetAccountId() != "" {
 					accountId = xAccountId.GetAccountId()
+					accountType := xAccountId.GetAccountType()
 					contextMap[common.ACCOUNT_ID] = accountId
-					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService Successfully fetched AcntId='%s' from Grp Svc", accountId)
+					contextMap[common.ACCOUNT_TYPE] = accountType
+					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 				}
 
 				accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
@@ -386,6 +387,10 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 
 					if TimeZone, ok := accountProducts["TimeZone"]; ok {
 						contextMap[common.TIME_ZONE] = TimeZone
+					}
+
+					if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
+						contextMap[common.ACCOUNT_TYPE] = accountType
 					}
 
 					if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
@@ -433,7 +438,9 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				}
 			}
 			if accountServiceObject.IsEmpty() {
-				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL])
+				xhttp.IncreaseAccountServiceEmptyResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
+			} else {
+				xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			}
 
 			if err != nil {
@@ -448,7 +455,6 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				if util.IsUnknownValue(contextMap[common.ACCOUNT_HASH]) && accountServiceObject.DeviceData.ServiceAccountUri != "" {
 					contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountServiceObject.DeviceData.ServiceAccountUri)
 				}
-				xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			}
 
 			if Xc.RfcReturnCountryCode {
@@ -529,6 +535,10 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 
 				if TimeZone, ok := accountProducts["TimeZone"]; ok {
 					contextMap[common.TIME_ZONE] = TimeZone
+				}
+
+				if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
+					contextMap[common.ACCOUNT_TYPE] = accountType
 				}
 
 				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
@@ -785,54 +795,65 @@ func CreatePartnerIdFeature(partnerId string) rfc.Feature {
 	}
 }
 
-func generatePrecookDataChangedMetrics(contextMap map[string]string, precookData *PreprocessedData, fields log.Fields) {
+func generatePrecookDataChangedMetrics(contextMap map[string]string, precookData *PreprocessedData, fields log.Fields) []string {
 	tfields := common.FilterLogFields(fields)
+	reasons := []string{}
 	if contextMap[common.MODEL] != precookData.Model {
-		log.WithFields(tfields).Infof("Model changed from precook %s to %s", precookData.Model, contextMap[common.MODEL])
+		log.WithFields(tfields).Debugf("Model changed from precook %s to %s", precookData.Model, contextMap[common.MODEL])
 		xhttp.IncreaseModelChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
+		reasons = append(reasons, "model-change")
 	}
 	if contextMap[common.PARTNER_ID] != precookData.PartnerId {
-		log.WithFields(tfields).Infof("PartnerId changed from precook %s to %s", precookData.PartnerId, contextMap[common.PARTNER_ID])
+		log.WithFields(tfields).Debugf("PartnerId changed from precook %s to %s", precookData.PartnerId, contextMap[common.PARTNER_ID])
 		xhttp.IncreasePartnerChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
+		reasons = append(reasons, "partner-change")
 	}
 	if contextMap[common.FIRMWARE_VERSION] != precookData.FwVersion {
-		log.WithFields(tfields).Infof("FirmwareVersion changed from precook %s to %s", precookData.FwVersion, contextMap[common.FIRMWARE_VERSION])
+		log.WithFields(tfields).Debugf("FirmwareVersion changed from precook %s to %s", precookData.FwVersion, contextMap[common.FIRMWARE_VERSION])
 		xhttp.IncreaseFwVersionChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
+		reasons = append(reasons, "firmware-change")
 	}
 
 	if contextMap[common.EXPERIENCE] != precookData.Experience {
-		log.WithFields(tfields).Infof("Experience changed from precook %s to %s", precookData.Experience, contextMap[common.EXPERIENCE])
+		log.WithFields(tfields).Debugf("Experience changed from precook %s to %s", precookData.Experience, contextMap[common.EXPERIENCE])
 		xhttp.IncreaseExperienceChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
+		reasons = append(reasons, "experience-change")
 	}
 
 	if contextMap[common.ACCOUNT_ID] != precookData.AccountId {
-		log.WithFields(tfields).Infof("AccountId changed from precook %s to %s", precookData.AccountId, contextMap[common.ACCOUNT_ID])
+		log.WithFields(tfields).Debugf("AccountId changed from precook %s to %s", precookData.AccountId, contextMap[common.ACCOUNT_ID])
 		xhttp.IncreaseAccountIdChangedCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
+		if util.IsUnknownValue(precookData.AccountId) || precookData.AccountId == "" {
+			reasons = append(reasons, "account-new")
+		} else {
+			reasons = append(reasons, "account-mismatched")
+		}
 	}
+	return reasons
 }
 
 func generatePrecookDataChangedIn200Metrics(contextMap map[string]string, precookData *PreprocessedData, fields log.Fields) {
 	tfields := common.FilterLogFields(fields)
 	if contextMap[common.MODEL] != precookData.Model {
-		log.WithFields(tfields).Infof("Model changed from precook  %s to %s in 200 response", precookData.Model, contextMap[common.MODEL])
+		log.WithFields(tfields).Debugf("Model changed from precook %s to %s in 200 response", precookData.Model, contextMap[common.MODEL])
 		xhttp.IncreaseModelChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}
 	if contextMap[common.PARTNER_ID] != precookData.PartnerId {
-		log.WithFields(tfields).Infof("PartnerId changed from precook %s to %s in 200 response", precookData.PartnerId, contextMap[common.PARTNER_ID])
+		log.WithFields(tfields).Debugf("PartnerId changed from precook %s to %s in 200 response", precookData.PartnerId, contextMap[common.PARTNER_ID])
 		xhttp.IncreasePartnerChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}
 	if contextMap[common.FIRMWARE_VERSION] != precookData.FwVersion {
-		log.WithFields(tfields).Infof("FirmwareVersion changed from precook %s to %s in 200 response", precookData.FwVersion, contextMap[common.FIRMWARE_VERSION])
+		log.WithFields(tfields).Debugf("FirmwareVersion changed from precook %s to %s in 200 response", precookData.FwVersion, contextMap[common.FIRMWARE_VERSION])
 		xhttp.IncreaseFwVersionChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}
 
 	if contextMap[common.EXPERIENCE] != precookData.Experience {
-		log.WithFields(tfields).Infof("Experience changed from precook %s to %s in 200 response", precookData.Experience, contextMap[common.EXPERIENCE])
+		log.WithFields(tfields).Debugf("Experience changed from precook %s to %s in 200 response", precookData.Experience, contextMap[common.EXPERIENCE])
 		xhttp.IncreaseExperienceChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}
 
 	if contextMap[common.ACCOUNT_ID] != precookData.AccountId {
-		log.WithFields(tfields).Infof("AccountId changed fromp precook %s to %s in 200 response", precookData.AccountId, contextMap[common.ACCOUNT_ID])
+		log.WithFields(tfields).Debugf("AccountId changed from precook %s to %s in 200 response", precookData.AccountId, contextMap[common.ACCOUNT_ID])
 		xhttp.IncreaseAccountIdChangedIn200Counter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
 	}
 }

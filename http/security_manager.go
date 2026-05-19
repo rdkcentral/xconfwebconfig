@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
@@ -40,17 +39,15 @@ const (
 var SecurityTokenCustomBase64Encoding = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_").WithPadding(base64.NoPadding)
 
 type SecurityTokenPathConfig struct {
-	UrlPathMap             map[string]bool
-	UrlHostKeywordMap      map[string]bool
-	TimestampKey           string
-	FilenameInTokenEnabled bool
+	UrlPathMap        map[string]bool
+	UrlHostKeywordMap map[string]bool
+	TimestampKey      string
 }
 
 type SecurityTokenConfig struct {
 	SecurityTokenOnlyForNewOfferedFwEnabled bool
 	SkipSecurityTokenClientProtocolSet      util.Set
 	SecurityTokenHostKeyword                string
-	SecurityTokenGroupServiceEnabled        bool
 }
 
 func NewSecurityTokenConfig(conf *configuration.Config) *SecurityTokenConfig {
@@ -63,13 +60,11 @@ func NewSecurityTokenConfig(conf *configuration.Config) *SecurityTokenConfig {
 		}
 	}
 	hostKeyword := conf.GetString("xconfwebconfig.xconf.security_token_host_keyword")
-	securityTokenGroupServiceEnabled := conf.GetBoolean("xconfwebconfig.xconf.security_token_group_service_enabled")
 
 	return &SecurityTokenConfig{
 		SecurityTokenOnlyForNewOfferedFwEnabled: securityTokenOnlyForNewOfferedFwEnabled,
 		SkipSecurityTokenClientProtocolSet:      clientProtocolSet,
 		SecurityTokenHostKeyword:                hostKeyword,
-		SecurityTokenGroupServiceEnabled:        securityTokenGroupServiceEnabled,
 	}
 }
 
@@ -78,10 +73,9 @@ func NewFirmwareNonMtlSsrTokenPathConfig(conf *configuration.Config) *SecurityTo
 	hostKeywordEnabledMap := util.CreateConfigMapStringBool(conf, "xconfwebconfig.xconf.firmware_ssr_token_host_keywords")
 	// firmware download API requires filename to be validated in token
 	return &SecurityTokenPathConfig{
-		UrlPathMap:             pathEnabledMap,
-		UrlHostKeywordMap:      hostKeywordEnabledMap,
-		TimestampKey:           SECURITY_TOKEN_FW_DOWNLOAD_TS,
-		FilenameInTokenEnabled: true,
+		UrlPathMap:        pathEnabledMap,
+		UrlHostKeywordMap: hostKeywordEnabledMap,
+		TimestampKey:      SECURITY_TOKEN_FW_DOWNLOAD_TS,
 	}
 }
 
@@ -90,10 +84,9 @@ func NewLogUploaderNonMtlSsrTokenPathConfig(conf *configuration.Config) *Securit
 	hostKeywordEnabledMap := util.CreateConfigMapStringBool(conf, "xconfwebconfig.xconf.loguploader_ssr_token_host_keywords")
 	// loguploader API does not require filename to be validated in token
 	return &SecurityTokenPathConfig{
-		UrlPathMap:             pathEnabledMap,
-		UrlHostKeywordMap:      hostKeywordEnabledMap,
-		TimestampKey:           SECURITY_TOKEN_LOG_UPLOAD_TS,
-		FilenameInTokenEnabled: false,
+		UrlPathMap:        pathEnabledMap,
+		UrlHostKeywordMap: hostKeywordEnabledMap,
+		TimestampKey:      SECURITY_TOKEN_LOG_UPLOAD_TS,
 	}
 }
 
@@ -112,17 +105,7 @@ func (s *SecurityTokenPathConfig) getSecurityToken(deviceInfo map[string]string,
 		log.WithFields(fields).Errorf("Mac address is missing, not generating security token")
 		return ""
 	}
-	if Ws.SecurityTokenConfig.SecurityTokenGroupServiceEnabled {
-		// add token info to Group Service to look up later, if disabled, we will get the info from Cassandra Penetration Metrics table (will be written later in existing flow)
-		deviceInfo[s.TimestampKey] = fmt.Sprintf("%d", time.Now().Unix())
-		// removing macAddress from deviceInfo since it's already present as the key
-		delete(deviceInfo, SECURITY_TOKEN_ESTB_MAC)
-		log.WithFields(fields).Debugf("Adding security token to group service")
-		err := Ws.GroupServiceSyncConnector.AddSecurityTokenInfo(token, deviceInfo, fields)
-		if err != nil {
-			log.WithFields(fields).Errorf("Error adding security token to group service, err=%+v", err)
-		}
-	}
+
 	return token
 }
 
