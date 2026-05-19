@@ -141,6 +141,7 @@ type DatabaseClient interface {
 	SetRfcPenetrationData(pMetrics *RfcPenetrationData, is304FromPrecook bool) error
 	GetRfcPenetrationData(string) (*RfcPenetrationData, error)
 	GetEstbIp(string) (string, error)
+	GetSecurityTokenFields(string) (*SecurityTokenDeviceInfo, error)
 
 	SetRecookingStatus(module string, partitionId string, state int) error
 	GetRecookingStatus(module string, partitionId string) (int, time.Time, error)

@@ -55,7 +55,7 @@ func contains(carray []conditionCount, cond Condition) int {
 	return -1
 }
 
-func FitsPercent(itf interface{}, percent float64) bool {
+func hashCodeFromValue(itf interface{}) (float64, bool) {
 	var bbytes []byte
 
 	switch ty := itf.(type) {
@@ -65,10 +65,28 @@ func FitsPercent(itf interface{}, percent float64) bool {
 		bbytes = make([]byte, 8)
 		binary.LittleEndian.PutUint64(bbytes, uint64(ty))
 	default:
-		return false
+		return 0, false
 	}
 
 	hashCode := float64(int64(siphash.Sum64(bbytes, &SipHashKey))) + voffset
+	return hashCode, true
+}
+
+func GetPercentHash(itf interface{}) (float64, bool) {
+	hashCode, ok := hashCodeFromValue(itf)
+	if !ok {
+		return 0, false
+	}
+
+	return (hashCode / vrange) * 100, true
+}
+
+func FitsPercent(itf interface{}, percent float64) bool {
+	hashCode, ok := hashCodeFromValue(itf)
+	if !ok {
+		return false
+	}
+
 	limit := percent / 100 * vrange
 	return hashCode <= limit
 }
