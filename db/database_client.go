@@ -82,13 +82,6 @@ func (ri *RangeInfo) IsNilEndValue() bool {
 	return ri.EndValue == nil || ri.EndValue == "" || ri.EndValue == 0
 }
 
-// Tenants table object
-type Tenant struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Updated int64  `json:"updated"`
-}
-
 type DatabaseClient interface {
 	SetUp() error
 	TearDown() error

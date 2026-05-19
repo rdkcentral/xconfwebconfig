@@ -35,12 +35,15 @@
 //
 //	migrate [-f <config_file>] \
 //	        [-table <OldTableName>] \
+//	        [-clear] \
 //	        [-dry-run]
 //
 // Flags:
 //
 //	-f: Path to xconfwebconfig config file (default: /app/xconfwebconfig/xconfwebconfig.conf).
 //	-table: Migrate only the specified legacy table name from tableMappings.
+//	-clear: TRUNCATE each destination table before migrating so the run starts on a clean slate.
+//	        Combine with -dry-run to log which tables would be truncated without touching the DB.
 //	-dry-run: Read/count rows and log planned writes without writing destination rows.
 package main
 
@@ -123,6 +126,7 @@ var tableMappings = []tableMapping{
 func main() {
 	configFile := flag.String("f", defaultConfigFile, "config file")
 	tableName := flag.String("table", "", "Migrate only this old table name; omit to migrate all tables")
+	clear := flag.Bool("clear", false, "TRUNCATE destination tables before migrating (allows re-running on existing data)")
 	dryRun := flag.Bool("dry-run", false, "Count rows without writing to the destination")
 	flag.Parse()
 
@@ -156,6 +160,9 @@ func main() {
 	if *dryRun {
 		log.Println("Dry run — no rows will be written.")
 	}
+	if *clear {
+		log.Println("Clear mode — destination tables will be truncated before migration.")
+	}
 
 	// Validate all destination tables exist before starting migration
 	log.Println("Validating destination tables...")
@@ -164,6 +171,13 @@ func main() {
 		log.Fatalf("ERROR: %v", err)
 	}
 	log.Printf("All %d destination table(s) validated in keyspace %q.", len(mappings), dstKeyspace)
+
+	// Optionally truncate destination tables so migration starts from a clean state.
+	if *clear {
+		if err := clearDestinationTables(dbClient.Session, dstKeyspace, mappings, *dryRun); err != nil {
+			log.Fatalf("ERROR deleting data from destination tables: %v", err)
+		}
+	}
 
 	tenantID := db.GetDefaultTenantId()
 	srcKeyspace := dbClient.GetLogKeyspace() // old tables are in ApplicationsDiscoveryDataService keyspace
@@ -188,6 +202,24 @@ func main() {
 	if totalErrors > 0 {
 		os.Exit(1)
 	}
+}
+
+// clearDestinationTables truncates every destination table listed in mappings so that
+// the migration can be re-run on a clean database.  When dryRun is true the TRUNCATE
+// statements are logged but not executed.
+func clearDestinationTables(session *gocql.Session, keyspace string, mappings []tableMapping, dryRun bool) error {
+	for _, m := range mappings {
+		if dryRun {
+			log.Printf("  dry-run: would TRUNCATE %q.%q", keyspace, m.newName)
+			continue
+		}
+		log.Printf("  TRUNCATE %q.%q ...", keyspace, m.newName)
+		stmt := fmt.Sprintf(`TRUNCATE "%s"."%s"`, keyspace, m.newName)
+		if err := session.Query(stmt).Exec(); err != nil {
+			return fmt.Errorf("truncate %q: %w", m.newName, err)
+		}
+	}
+	return nil
 }
 
 // validateDestinationTables checks that all destination tables exist before migration.
