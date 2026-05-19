@@ -153,7 +153,7 @@ func GetLastConfigLog(tenantId string, mac string) *ConfigChangeLog {
 	tableName := db.TABLE_CONFIG_CHANGE_LOGS
 	if db.IsDualWriteEnabled() {
 		// When dual write is enabled, read from old Logs2 table for backward compatibility,
-		// until Logs2 table is fully migrated and can be removed
+		// until Logs2 table is fully migrated
 		tableName = db.TABLE_LOGS
 	}
 	data, err := db.GetListingDao().GetOne(tenantId, tableName, mac, LAST_CONFIG_LOG_ID)
@@ -171,7 +171,7 @@ func GetConfigChangeLogsOnly(tenantId string, mac string) []*ConfigChangeLog {
 	tableName := db.TABLE_CONFIG_CHANGE_LOGS
 	if db.IsDualWriteEnabled() {
 		// When dual write is enabled, read from old Logs2 table for backward compatibility,
-		// until Logs2 table is fully migrated and can be removed
+		// until Logs2 table is fully migrated
 		tableName = db.TABLE_LOGS
 	}
 	data, err := db.GetListingDao().GetAll(tenantId, tableName, mac)

@@ -386,7 +386,8 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 				fwAppliedRule = evaluationResult.MatchedRule.GetName()
 			}
 
-			pTable := &db.FwPenetrationMetrics{
+			pData := &db.FwPenetrationData{
+				TenantId:                contextMap[common.TENANT_ID],
 				EstbMac:                 mac,
 				Partner:                 partner,
 				Model:                   contextMap[common.MODEL],
@@ -400,7 +401,7 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 				RecoveryCertExpiry:      contextMap[common.RECOVERY_CERT_EXPIRY],
 			}
 
-			err := db.GetDatabaseClient().SetFwPenetrationMetrics(pTable)
+			err := db.GetDatabaseClient().SetFwPenetrationData(pData)
 			if err != nil {
 				log.Error(fmt.Sprintf("Can't save FW penetration metrics, estbMac=%s, error=%+v", mac, err))
 			}

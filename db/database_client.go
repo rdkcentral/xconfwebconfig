@@ -133,14 +133,13 @@ type DatabaseClient interface {
 	// not found
 	IsDbNotFound(error) bool
 
-	// Penetration Metrics
-	GetPenetrationMetrics(macAddress string) (map[string]any, error)
-	SetPenetrationMetrics(penetrationmetrics *PenetrationMetrics) error
-	SetFwPenetrationMetrics(*FwPenetrationMetrics) error
-	GetFwPenetrationMetrics(string) (*FwPenetrationMetrics, error)
-	SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetrics, is304FromPrecook bool) error
-	GetRfcPenetrationMetrics(string) (*RfcPenetrationMetrics, error)
-	UpdateFwPenetrationMetrics(map[string]string) error
+	// Penetration Data
+	GetPenetrationData(macAddress string) (map[string]any, error)
+	SetPenetrationData(map[string]string) error
+	SetFwPenetrationData(*FwPenetrationData) error
+	GetFwPenetrationData(string) (*FwPenetrationData, error)
+	SetRfcPenetrationData(pMetrics *RfcPenetrationData, is304FromPrecook bool) error
+	GetRfcPenetrationData(string) (*RfcPenetrationData, error)
 	GetEstbIp(string) (string, error)
 
 	SetRecookingStatus(module string, partitionId string, state int) error

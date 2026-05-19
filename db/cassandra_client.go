@@ -86,20 +86,6 @@ type CassandraClient struct {
 	xconfRecookingStatusTableName string
 }
 
-type PenetrationMetrics struct {
-	EstbMac                 string
-	Partner                 string
-	Model                   string
-	FwVersion               string
-	FwReportedVersion       string
-	FwAdditionalVersionInfo string
-	FwAppliedRule           string
-	FwTs                    time.Time
-	RfcAppliedRules         string
-	RfcFeatures             string
-	RfcTs                   time.Time
-}
-
 type DistributedLockSettings struct {
 	retries      int
 	retryInMsecs int
@@ -272,35 +258,6 @@ func (c *CassandraClient) XconfRecookingStatusTableName() string {
 }
 
 // Cassandra Impl of DatabaseClient
-
-func (c *CassandraClient) GetPenetrationMetrics(estbMac string) (map[string]any, error) {
-	dict := util.Dict{}
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-	stmt := fmt.Sprintf("SELECT * FROM %s WHERE %s=?", PenetrationMetricsTable, EstbMacColumnValue)
-	qry := c.Query(stmt, estbMac)
-	err := qry.MapScan(dict)
-
-	if err != nil {
-		return dict, err
-	}
-
-	return dict, nil
-}
-
-func (c *CassandraClient) SetPenetrationMetrics(pMetrics *PenetrationMetrics) error {
-	values := []any{pMetrics.EstbMac, pMetrics.Partner, pMetrics.Model, pMetrics.FwVersion, pMetrics.FwReportedVersion, pMetrics.FwAdditionalVersionInfo, pMetrics.FwAppliedRule, pMetrics.FwTs, pMetrics.RfcAppliedRules, pMetrics.RfcFeatures, pMetrics.RfcTs}
-	stmt := fmt.Sprintf(`INSERT INTO %s (estb_mac,partner,model,fw_version,fw_reported_version,fw_additional_version_info,fw_applied_rule,fw_ts,rfc_features,rfc_applied_rules,rfc_ts) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, PenetrationMetricsTable)
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-	qry := c.Query(stmt, values...)
-	err := qry.Exec()
-
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 func (c *CassandraClient) Sleep() {
 	time.Sleep(time.Duration(c.SleepTime) * time.Millisecond)
@@ -507,7 +464,7 @@ func (c *CassandraClient) DeleteXconfData(tenantId string, tableName string, key
 	defer func() { <-c.ConcurrentQueries }()
 
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 	}
 
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
@@ -526,7 +483,7 @@ func (c *CassandraClient) DeleteAllXconfData(tenantId string, tableName string) 
 	defer func() { <-c.ConcurrentQueries }()
 
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 	}
 
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
@@ -552,7 +509,7 @@ func (c *CassandraClient) GetAllXconfData(tenantId string, tableName string, key
 	var iter *gocql.Iter
 
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 	}
 
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
@@ -595,7 +552,7 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysRange(tenantId string, tableName
 
 	key2FieldName := DefaultKey2FieldName
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 		key2FieldName = Key2FieldNameForLogs2
 	}
 
@@ -663,7 +620,7 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tenantId string, tableName
 
 	key2FieldName := DefaultKey2FieldName
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 		key2FieldName = Key2FieldNameForLogs2
 	}
 
@@ -696,7 +653,7 @@ func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string,
 
 	key2FieldName := DefaultKey2FieldName
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 		key2FieldName = Key2FieldNameForLogs2
 	}
 
@@ -730,7 +687,7 @@ func (c *CassandraClient) GetXconfDataTwoKeys(tenantId string, tableName string,
 
 	key2FieldName := DefaultKey2FieldName
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 		key2FieldName = Key2FieldNameForLogs2
 	}
 
@@ -753,7 +710,7 @@ func (c *CassandraClient) DeleteXconfDataTwoKeys(tenantId string, tableName stri
 
 	key2FieldName := DefaultKey2FieldName
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 		key2FieldName = Key2FieldNameForLogs2
 	}
 
@@ -777,7 +734,7 @@ func (c *CassandraClient) GetAllXconfTwoKeys(tenantId string, tableName string) 
 
 	key2FieldName := DefaultKey2FieldName
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 		key2FieldName = Key2FieldNameForLogs2
 	}
 
@@ -816,7 +773,7 @@ func (c *CassandraClient) GetAllXconfKey2s(tenantId string, tableName string, ke
 
 	key2FieldName := DefaultKey2FieldName
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 		key2FieldName = Key2FieldNameForLogs2
 	}
 
@@ -847,7 +804,7 @@ func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName stri
 
 	key2FieldName := DefaultKey2FieldName
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 		key2FieldName = Key2FieldNameForLogs2
 	}
 
@@ -890,7 +847,7 @@ func (c *CassandraClient) GetXconfCompressedData(tenantId string, tableName stri
 
 	key2FieldName := DefaultKey2FieldName
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 		key2FieldName = Key2FieldNameForLogs2
 	}
 
@@ -991,7 +948,7 @@ func (c *CassandraClient) GetXconfCompressedDataRaw(tenantId string, tableName s
 
 	key2FieldName := DefaultKey2FieldName
 	if tableName == TABLE_LOGS {
-		tableName = c.getLogs2TableName(tableName)
+		tableName = c.getTableNameFromLogKeyspace(tableName)
 		key2FieldName = Key2FieldNameForLogs2
 	}
 
@@ -1424,7 +1381,7 @@ func forEachShard(fn func(shardId int) error) error {
 	return nil
 }
 
-// Get Logs2 fully-qualified table name
-func (c *CassandraClient) getLogs2TableName(tableName string) string {
+// Get fully-qualified table name from log keyspace
+func (c *CassandraClient) getTableNameFromLogKeyspace(tableName string) string {
 	return fmt.Sprintf("\"%s\".\"%s\"", c.GetLogKeyspace(), tableName)
 }

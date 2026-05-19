@@ -70,6 +70,8 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		applicationType = shared.STB
 	}
 	contextMap[common.APPLICATION_TYPE] = applicationType
+	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r, contextMap[common.PARTNER_ID])
+
 	if len(queryParams) > 0 {
 		for k, v := range queryParams {
 			contextMap[k] = v[0]
@@ -335,7 +337,8 @@ func UpdatePenetrationMetrics(context map[string]string, AccountServiceData *Acc
 		// but create copy first so featureControl response is unchanged
 		sortedRules := featurecontrol.SortCaseInsensitive(ruleNames)
 		sortedFeatures := featurecontrol.SortCaseInsensitive(featureInstances)
-		pTable := &db.RfcPenetrationMetrics{
+		pData := &db.RfcPenetrationData{
+			TenantId:             context[common.TENANT_ID],
 			EstbMac:              estbMac,
 			EcmMac:               ecmMac,
 			SerialNum:            context[common.SERIAL_NUM],
@@ -362,11 +365,11 @@ func UpdatePenetrationMetrics(context map[string]string, AccountServiceData *Acc
 			RfcPostProc:          rfcPostProc,
 		}
 		if AccountServiceData != nil {
-			pTable.RfcTimeZone = AccountServiceData.TimeZone
-			pTable.TitanPartner = AccountServiceData.PartnerId
-			pTable.TitanAccountId = AccountServiceData.AccountId
+			pData.RfcTimeZone = AccountServiceData.TimeZone
+			pData.TitanPartner = AccountServiceData.PartnerId
+			pData.TitanAccountId = AccountServiceData.AccountId
 		}
-		err := db.GetDatabaseClient().SetRfcPenetrationMetrics(pTable, is304FromPrecook)
+		err := db.GetDatabaseClient().SetRfcPenetrationData(pData, is304FromPrecook)
 		if err != nil {
 			log.Error(fmt.Sprintf("Can't save RFC penetration metric, estbMacAddress=%s, error=%+v", estbMac, err))
 		}
