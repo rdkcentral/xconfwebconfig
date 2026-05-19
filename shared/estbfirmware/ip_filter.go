@@ -61,8 +61,8 @@ func IsLower(s string) bool {
 	return true
 }
 
-func IpFiltersByApplicationType(applicationType string) ([]*IpFilter, error) {
-	rulelst, err := firmware.GetFirmwareRuleAllAsListDB()
+func IpFiltersByApplicationType(tenantId string, applicationType string) ([]*IpFilter, error) {
+	rulelst, err := firmware.GetFirmwareRuleAllAsListDB(tenantId)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func IpFiltersByApplicationType(applicationType string) ([]*IpFilter, error) {
 		fr := &IpFilter{
 			Id:             frule.ID,
 			Name:           frule.Name,
-			IpAddressGroup: GetIpAddressGroup(frule.Rule.Condition),
+			IpAddressGroup: GetIpAddressGroup(tenantId, frule.Rule.Condition),
 		}
 		fr.Warehouse = fr.IsWarehouse()
 		filtedRules = append(filtedRules, fr)
@@ -87,8 +87,8 @@ func IpFiltersByApplicationType(applicationType string) ([]*IpFilter, error) {
 	return filtedRules, nil
 }
 
-func IpFilterByName(name string, applicationType string) (*IpFilter, error) {
-	rulelst, err := firmware.GetFirmwareRuleAllAsListDB()
+func IpFilterByName(tenantId string, name string, applicationType string) (*IpFilter, error) {
+	rulelst, err := firmware.GetFirmwareRuleAllAsListDB(tenantId)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func IpFilterByName(name string, applicationType string) (*IpFilter, error) {
 			fr := &IpFilter{
 				Id:             frule.ID,
 				Name:           frule.Name,
-				IpAddressGroup: GetIpAddressGroup(frule.Rule.Condition),
+				IpAddressGroup: GetIpAddressGroup(tenantId, frule.Rule.Condition),
 			}
 			fr.Warehouse = fr.IsWarehouse()
 			return fr, nil

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	corefw "github.com/rdkcentral/xconfwebconfig/shared/firmware"
@@ -30,10 +31,6 @@ import (
 	"gotest.tools/assert"
 )
 
-// TableGenericNSList  = "GenericXconfNamedList"
-// TableFirmwareConfig = "FirmwareConfig"
-// TableFirmwareRule   = "FirmwareRule4"
-
 func TestRuleEval(t *testing.T) {
 	t.Skip()
 	if server == nil {
@@ -41,21 +38,21 @@ func TestRuleEval(t *testing.T) {
 	}
 
 	// setup data
-	server.SetXconfData(shared.TableFirmwareConfig, FirmwareConfigId1, firmwareConfig1Bytes, 3600)
-	server.SetXconfData(shared.TableFirmwareConfig, FirmwareConfigId2, firmwareConfig2Bytes, 3600)
-	server.SetXconfData(shared.TableFirmwareConfig, FirmwareConfigId3, firmwareConfig3Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId1, firmwareConfig1Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId2, firmwareConfig2Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId3, firmwareConfig3Bytes, 3600)
 
-	server.SetXconfData(shared.TableFirmwareRule, firmwareRuleId1, firmwareRule1Bytes, 3600)
-	server.SetXconfData(shared.TableFirmwareRule, firmwareRuleId2, firmwareRule2Bytes, 3600)
-	server.SetXconfData(shared.TableFirmwareRule, firmwareRuleId3, firmwareRule3Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, firmwareRuleId1, firmwareRule1Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, firmwareRuleId2, firmwareRule2Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, firmwareRuleId3, firmwareRule3Bytes, 3600)
 
 	macs := []string{mac3, "AA:AA:AA:BB:BB:BB", "AA:AA:AA:BB:BB:CC"}
 	newList := shared.NewGenericNamespacedList(namespaceListKey, shared.MacList, macs)
-	err := shared.CreateGenericNamedListOneDB(newList)
+	err := shared.CreateGenericNamedListOneDB(db.GetDefaultTenantId(), newList)
 	assert.NilError(t, err)
 
 	// load data
-	ruleBytes := server.GetAllXconfDataAsList(shared.TableFirmwareRule, 0)
+	ruleBytes := server.GetAllXconfDataAsList(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, 0)
 	processor := re.NewRuleProcessorFactory().RuleProcessor()
 
 	// setup test parameters
