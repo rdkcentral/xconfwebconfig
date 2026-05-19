@@ -150,7 +150,13 @@ func NewConfigChangeLog(convertedContext *ConvertedContext, explanation string, 
 
 func GetLastConfigLog(tenantId string, mac string) *ConfigChangeLog {
 	var lastConfigLog *ConfigChangeLog
-	data, err := db.GetListingDao().GetOne(tenantId, db.TABLE_CONFIG_CHANGE_LOGS, mac, LAST_CONFIG_LOG_ID)
+	tableName := db.TABLE_CONFIG_CHANGE_LOGS
+	if db.IsDualWriteEnabled() {
+		// When dual write is enabled, read from old Logs2 table for backward compatibility,
+		// until Logs2 table is fully migrated
+		tableName = db.TABLE_LOGS
+	}
+	data, err := db.GetListingDao().GetOne(tenantId, tableName, mac, LAST_CONFIG_LOG_ID)
 	if err == nil {
 		config, ok := data.(*ConfigChangeLog)
 		if ok {
@@ -162,7 +168,13 @@ func GetLastConfigLog(tenantId string, mac string) *ConfigChangeLog {
 
 func GetConfigChangeLogsOnly(tenantId string, mac string) []*ConfigChangeLog {
 	configChangeLogs := make([]*ConfigChangeLog, 0)
-	data, err := db.GetListingDao().GetAll(tenantId, db.TABLE_CONFIG_CHANGE_LOGS, mac)
+	tableName := db.TABLE_CONFIG_CHANGE_LOGS
+	if db.IsDualWriteEnabled() {
+		// When dual write is enabled, read from old Logs2 table for backward compatibility,
+		// until Logs2 table is fully migrated
+		tableName = db.TABLE_LOGS
+	}
+	data, err := db.GetListingDao().GetAll(tenantId, tableName, mac)
 	if err == nil {
 		configLogs := []*ConfigChangeLog{}
 		for _, log := range data {
