@@ -29,10 +29,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	getMeshPodUrlTemplate = "%s/api/v1/operational/mesh-pod/%s/account"
-)
-
 type DeviceServiceConnector interface {
 	DeviceServiceHost() string
 	SetDeviceServiceHost(host string)
@@ -54,7 +50,8 @@ type DeviceServiceObject struct {
 
 type DefaultDeviceService struct {
 	*HttpClient
-	host string
+	host              string
+	getPodUrlTemplate string
 }
 
 var deviceServiceName string
@@ -71,9 +68,13 @@ func NewDeviceServiceConnector(conf *configuration.Config, tlsConfig *tls.Config
 			panic(fmt.Errorf("%s is required", confKey))
 		}
 
+		getPodDevicePathKey := fmt.Sprintf("xconfwebconfig.%v.pod_url_template", deviceServiceName)
+		getPodDevicePath := conf.GetString(getPodDevicePathKey)
+
 		return &DefaultDeviceService{
-			HttpClient: NewHttpClient(conf, deviceServiceName, tlsConfig),
-			host:       host,
+			HttpClient:        NewHttpClient(conf, deviceServiceName, tlsConfig),
+			host:              host,
+			getPodUrlTemplate: getPodDevicePath,
 		}
 	}
 }
@@ -87,7 +88,7 @@ func (c *DefaultDeviceService) SetDeviceServiceHost(host string) {
 }
 
 func (c *DefaultDeviceService) GetMeshPodAccountBySerialNum(serialNum string, fields log.Fields) (DeviceServiceObject, error) {
-	url := fmt.Sprintf(getMeshPodUrlTemplate, c.DeviceServiceHost(), serialNum)
+	url := fmt.Sprintf(c.getPodUrlTemplate, c.DeviceServiceHost(), serialNum)
 	headers := map[string]string{
 		common.HeaderUserAgent: common.HeaderXconfDataService,
 	}

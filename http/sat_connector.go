@@ -29,11 +29,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	satServiceUrlTemplate        = "%s/v2/oauth/token"
-	satServicePartnerUrlTemplate = "%s/v2/oauth/token?partners=%s"
-)
-
 var satServiceName string
 
 type SatServiceConnector interface {
@@ -42,14 +37,18 @@ type SatServiceConnector interface {
 	ConsumerHost() string
 	SetSatServiceName(name string)
 	SetSatServiceHost(host string)
+	SetTokenUrlTemplate(template string)
+	SetTokenPartnerUrlTemplate(template string)
 	GetSatTokenFromSatService(fields log.Fields, vargs ...string) (*SatServiceResponse, error)
 }
 
 type DefaultSatService struct {
-	host         string
-	consumerHost string
-	headers      map[string]string
-	name         string
+	host                    string
+	consumerHost            string
+	headers                 map[string]string
+	name                    string
+	tokenUrlTemplate        string
+	tokenPartnerUrlTemplate string
 	*HttpClient
 }
 
@@ -101,12 +100,21 @@ func NewSatServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, e
 			"X-Client-Secret": satClientSecret,
 		}
 
+		// Read URL path templates from config
+		tokenUrlKey := fmt.Sprintf("xconfwebconfig.%v.token_url_template", satServiceName)
+		tokenUrl := conf.GetString(tokenUrlKey)
+
+		tokenPartnerUrlKey := fmt.Sprintf("xconfwebconfig.%v.token_partner_url_template", satServiceName)
+		tokenPartnerUrl := conf.GetString(tokenPartnerUrlKey)
+
 		return &DefaultSatService{
-			HttpClient:   NewHttpClient(conf, satServiceName, tlsConfig),
-			host:         host,
-			consumerHost: consumerHost,
-			headers:      headers,
-			name:         satServiceName,
+			HttpClient:              NewHttpClient(conf, satServiceName, tlsConfig),
+			host:                    host,
+			consumerHost:            consumerHost,
+			headers:                 headers,
+			name:                    satServiceName,
+			tokenUrlTemplate:        tokenUrl,
+			tokenPartnerUrlTemplate: tokenPartnerUrl,
 		}
 	}
 }
@@ -131,15 +139,23 @@ func (c *DefaultSatService) SetSatServiceHost(host string) {
 	c.host = host
 }
 
+func (c *DefaultSatService) SetTokenUrlTemplate(template string) {
+	c.tokenUrlTemplate = template
+}
+
+func (c *DefaultSatService) SetTokenPartnerUrlTemplate(template string) {
+	c.tokenPartnerUrlTemplate = template
+}
+
 func (c *DefaultSatService) GetSatTokenFromSatService(fields log.Fields, vargs ...string) (*SatServiceResponse, error) {
 	var cb2Res *SatServiceResponse
 	var url string
 
 	if len(vargs) > 0 {
 		partnerId := vargs[0]
-		url = fmt.Sprintf(satServicePartnerUrlTemplate, c.SatServiceHost(), partnerId)
+		url = fmt.Sprintf(c.tokenPartnerUrlTemplate, c.SatServiceHost(), partnerId)
 	} else {
-		url = fmt.Sprintf(satServiceUrlTemplate, c.SatServiceHost())
+		url = fmt.Sprintf(c.tokenUrlTemplate, c.SatServiceHost())
 	}
 	rbytes, err := c.DoWithRetries("POST", url, c.headers, nil, fields, satServiceName)
 	if err != nil {

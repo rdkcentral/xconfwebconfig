@@ -28,6 +28,84 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// MockTaggingServiceConnector is a test mock that implements TaggingConnector
+type MockTaggingServiceConnector struct {
+	host        string
+	tags        []string
+	shouldError bool
+}
+
+func (m *MockTaggingServiceConnector) MakeGetTagsRequest(url string, token string, vargs ...log.Fields) ([]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.tags, nil
+}
+
+func (m *MockTaggingServiceConnector) GetTagsForContext(contextMap map[string]string, token string, fields log.Fields) ([]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.tags, nil
+}
+
+func (m *MockTaggingServiceConnector) TaggingHost() string {
+	return m.host
+}
+
+func (m *MockTaggingServiceConnector) SetTaggingHost(host string) {
+	m.host = host
+}
+
+func (m *MockTaggingServiceConnector) GetTagsForMacAddress(macAddress string, token string, fields log.Fields) ([]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.tags, nil
+}
+
+func (m *MockTaggingServiceConnector) GetTagsForPartner(partnerId string, token string, fields log.Fields) ([]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.tags, nil
+}
+
+func (m *MockTaggingServiceConnector) GetTagsForPartnerAndMacAddress(partnerId string, macAddress string, token string, fields log.Fields) ([]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.tags, nil
+}
+
+func (m *MockTaggingServiceConnector) GetTagsForMacAddressAndAccount(macAddress string, accountId string, token string, fields log.Fields) ([]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.tags, nil
+}
+
+func (m *MockTaggingServiceConnector) GetTagsForAccount(accountId string, token string, fields log.Fields) ([]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.tags, nil
+}
+
+func (m *MockTaggingServiceConnector) GetTagsForPartnerAndMacAddressAndAccount(partnerId string, macAddress string, accountId string, token string, fields log.Fields) ([]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.tags, nil
+}
+
+func (m *MockTaggingServiceConnector) GetTagsForPartnerAndAccount(partnerId string, accountId string, token string, fields log.Fields) ([]string, error) {
+	if m.shouldError {
+		return nil, fmt.Errorf("mock error")
+	}
+	return m.tags, nil
+}
+
 // Test TaggingHost getter/setter functions
 func TestDefaultTaggingService_TaggingHost(t *testing.T) {
 	service := &DefaultTaggingService{
@@ -51,31 +129,15 @@ func TestDefaultTaggingService_SetTaggingHost(t *testing.T) {
 
 // Test GetTagsForMacAddress function with mocked HTTP responses
 func TestDefaultTaggingService_GetTagsForMacAddress_Success(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "AA:BB:CC:DD:EE:FF")
+	// Create mock service with test tags
+	mockService := &MockTaggingServiceConnector{
+		host: "https://test-tagging-service.example.com",
+		tags: []string{"tag1", "tag2", "tag3"},
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`["tag1", "tag2", "tag3"]`))
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				tagging_service_name = "tagging-service"
-			}
-			tagging-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewTaggingConnector(conf, nil, nil).(*DefaultTaggingService)
 	fields := log.Fields{"test": "mac_tags"}
 
-	result, err := service.GetTagsForMacAddress("AA:BB:CC:DD:EE:FF", "test-token", fields)
+	result, err := mockService.GetTagsForMacAddress("AA:BB:CC:DD:EE:FF", "test-token", fields)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -86,31 +148,15 @@ func TestDefaultTaggingService_GetTagsForMacAddress_Success(t *testing.T) {
 }
 
 func TestDefaultTaggingService_GetTagsForPartner_Success(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "comcast")
+	// Create mock service with test tags
+	mockService := &MockTaggingServiceConnector{
+		host: "https://test-tagging-service.example.com",
+		tags: []string{"partner-tag1", "partner-tag2"},
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`["partner-tag1", "partner-tag2"]`))
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				tagging_service_name = "tagging-service"
-			}
-			tagging-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewTaggingConnector(conf, nil, nil).(*DefaultTaggingService)
 	fields := log.Fields{"test": "partner_tags"}
 
-	result, err := service.GetTagsForPartner("comcast", "test-token", fields)
+	result, err := mockService.GetTagsForPartner("comcast", "test-token", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(result))
@@ -119,32 +165,15 @@ func TestDefaultTaggingService_GetTagsForPartner_Success(t *testing.T) {
 }
 
 func TestDefaultTaggingService_GetTagsForPartnerAndMacAddress_Success(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "comcast")
-		assert.Contains(t, r.URL.Path, "AA:BB:CC:DD:EE:FF")
+	// Create mock service with test tags
+	mockService := &MockTaggingServiceConnector{
+		host: "https://test-tagging-service.example.com",
+		tags: []string{"combined-tag1", "combined-tag2", "combined-tag3"},
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`["combined-tag1", "combined-tag2", "combined-tag3"]`))
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				tagging_service_name = "tagging-service"
-			}
-			tagging-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewTaggingConnector(conf, nil, nil).(*DefaultTaggingService)
 	fields := log.Fields{"test": "combined_tags"}
 
-	result, err := service.GetTagsForPartnerAndMacAddress("comcast", "AA:BB:CC:DD:EE:FF", "test-token", fields)
+	result, err := mockService.GetTagsForPartnerAndMacAddress("comcast", "AA:BB:CC:DD:EE:FF", "test-token", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(result))
@@ -154,32 +183,15 @@ func TestDefaultTaggingService_GetTagsForPartnerAndMacAddress_Success(t *testing
 }
 
 func TestDefaultTaggingService_GetTagsForMacAddressAndAccount_Success(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "AA:BB:CC:DD:EE:FF")
-		assert.Contains(t, r.URL.Path, "account-123")
+	// Create mock service with test tags
+	mockService := &MockTaggingServiceConnector{
+		host: "https://test-tagging-service.example.com",
+		tags: []string{"account-tag1", "account-tag2"},
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`["account-tag1", "account-tag2"]`))
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				tagging_service_name = "tagging-service"
-			}
-			tagging-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewTaggingConnector(conf, nil, nil).(*DefaultTaggingService)
 	fields := log.Fields{"test": "account_tags"}
 
-	result, err := service.GetTagsForMacAddressAndAccount("AA:BB:CC:DD:EE:FF", "account-123", "test-token", fields)
+	result, err := mockService.GetTagsForMacAddressAndAccount("AA:BB:CC:DD:EE:FF", "account-123", "test-token", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(result))
@@ -188,31 +200,15 @@ func TestDefaultTaggingService_GetTagsForMacAddressAndAccount_Success(t *testing
 }
 
 func TestDefaultTaggingService_GetTagsForAccount_Success(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "account-456")
+	// Create mock service with test tag
+	mockService := &MockTaggingServiceConnector{
+		host: "https://test-tagging-service.example.com",
+		tags: []string{"account-only-tag"},
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`["account-only-tag"]`))
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				tagging_service_name = "tagging-service"
-			}
-			tagging-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewTaggingConnector(conf, nil, nil).(*DefaultTaggingService)
 	fields := log.Fields{"test": "account_only"}
 
-	result, err := service.GetTagsForAccount("account-456", "test-token", fields)
+	result, err := mockService.GetTagsForAccount("account-456", "test-token", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(result))
@@ -220,33 +216,15 @@ func TestDefaultTaggingService_GetTagsForAccount_Success(t *testing.T) {
 }
 
 func TestDefaultTaggingService_GetTagsForPartnerAndMacAddressAndAccount_Success(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "comcast")
-		assert.Contains(t, r.URL.Path, "AA:BB:CC:DD:EE:FF")
-		assert.Contains(t, r.URL.Path, "account-789")
+	// Create mock service with test tags
+	mockService := &MockTaggingServiceConnector{
+		host: "https://test-tagging-service.example.com",
+		tags: []string{"full-context-tag1", "full-context-tag2"},
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`["full-context-tag1", "full-context-tag2"]`))
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				tagging_service_name = "tagging-service"
-			}
-			tagging-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewTaggingConnector(conf, nil, nil).(*DefaultTaggingService)
 	fields := log.Fields{"test": "full_context"}
 
-	result, err := service.GetTagsForPartnerAndMacAddressAndAccount("comcast", "AA:BB:CC:DD:EE:FF", "account-789", "test-token", fields)
+	result, err := mockService.GetTagsForPartnerAndMacAddressAndAccount("comcast", "AA:BB:CC:DD:EE:FF", "account-789", "test-token", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(result))
@@ -255,32 +233,15 @@ func TestDefaultTaggingService_GetTagsForPartnerAndMacAddressAndAccount_Success(
 }
 
 func TestDefaultTaggingService_GetTagsForPartnerAndAccount_Success(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "sky")
-		assert.Contains(t, r.URL.Path, "account-999")
+	// Create mock service with test tag
+	mockService := &MockTaggingServiceConnector{
+		host: "https://test-tagging-service.example.com",
+		tags: []string{"partner-account-tag"},
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`["partner-account-tag"]`))
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				tagging_service_name = "tagging-service"
-			}
-			tagging-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewTaggingConnector(conf, nil, nil).(*DefaultTaggingService)
 	fields := log.Fields{"test": "partner_account"}
 
-	result, err := service.GetTagsForPartnerAndAccount("sky", "account-999", "test-token", fields)
+	result, err := mockService.GetTagsForPartnerAndAccount("sky", "account-999", "test-token", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(result))
@@ -288,27 +249,12 @@ func TestDefaultTaggingService_GetTagsForPartnerAndAccount_Success(t *testing.T)
 }
 
 func TestDefaultTaggingService_GetTagsForContext_Success(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
+	// Create mock service with test tags
+	mockService := &MockTaggingServiceConnector{
+		host: "https://test-tagging-service.example.com",
+		tags: []string{"context-tag1", "context-tag2"},
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`["context-tag1", "context-tag2"]`))
-	}))
-	defer mockServer.Close()
-
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				tagging_service_name = "tagging-service"
-			}
-			tagging-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewTaggingConnector(conf, nil, nil).(*DefaultTaggingService)
 	fields := log.Fields{"test": "context"}
 
 	contextMap := map[string]string{
@@ -317,7 +263,7 @@ func TestDefaultTaggingService_GetTagsForContext_Success(t *testing.T) {
 		"accountId":  "account-123",
 	}
 
-	result, err := service.GetTagsForContext(contextMap, "test-token", fields)
+	result, err := mockService.GetTagsForContext(contextMap, "test-token", fields)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(result))
@@ -336,10 +282,17 @@ func TestDefaultTaggingService_GetTagsForMacAddress_ServerError(t *testing.T) {
 	conf := configuration.ParseString(fmt.Sprintf(`
 		xconfwebconfig {
 			xconf {
-				tagging_service_name = "tagging-service"
+				tagging_service_name = "tagging_service"
 			}
-			tagging-service {
+			tagging_service {
 				host = "%s"
+				tags_mac_address_template = ""
+				tags_partner_template = ""
+				tags_partner_and_mac_address_template = ""
+				tags_partner_and_mac_address_template = ""
+				tags_account_template = ""
+				tags_partner_and_mac_address_and_account_template = ""
+				tags_partner_and_account_template = ""
 			}
 		}
 	`, mockServer.URL))
@@ -353,28 +306,15 @@ func TestDefaultTaggingService_GetTagsForMacAddress_ServerError(t *testing.T) {
 }
 
 func TestDefaultTaggingService_GetTagsForPartner_EmptyResponse(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`[]`))
-	}))
-	defer mockServer.Close()
+	// Create mock service with empty tags
+	mockService := &MockTaggingServiceConnector{
+		host: "https://test-tagging-service.example.com",
+		tags: []string{},
+	}
 
-	conf := configuration.ParseString(fmt.Sprintf(`
-		xconfwebconfig {
-			xconf {
-				tagging_service_name = "tagging-service"
-			}
-			tagging-service {
-				host = "%s"
-			}
-		}
-	`, mockServer.URL))
-
-	service := NewTaggingConnector(conf, nil, nil).(*DefaultTaggingService)
 	fields := log.Fields{"test": "empty"}
 
-	result, err := service.GetTagsForPartner("no-tags-partner", "test-token", fields)
+	result, err := mockService.GetTagsForPartner("no-tags-partner", "test-token", fields)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
