@@ -43,11 +43,11 @@ const TwowKeysDelimiter = "::"
 
 type TwoKeys struct {
 	Key  string
-	Key2 interface{}
+	Key2 any
 }
 
-func NewTwoKeys(Key string, Key2 interface{}) *TwoKeys {
-	return &TwoKeys{Key: Key, Key2: Key2}
+func NewTwoKeys(key string, key2 any) *TwoKeys {
+	return &TwoKeys{Key: key, Key2: key2}
 }
 
 func NewTwoKeysFromString(tk string) (*TwoKeys, error) {
@@ -60,13 +60,18 @@ func NewTwoKeysFromString(tk string) (*TwoKeys, error) {
 }
 
 func (tk *TwoKeys) String() string {
-	return fmt.Sprintf("%s%s%v", tk.Key, TwowKeysDelimiter, tk.Key2)
+	return GetTwoKeysAsString(tk.Key, tk.Key2)
+}
+
+// GetTwoKeysAsString returns a string representation of two keys, e.g. "key1::key2"
+func GetTwoKeysAsString(key string, key2 any) string {
+	return key + TwowKeysDelimiter + fmt.Sprint(key2)
 }
 
 // RangeInfo Xconf key2 filtering
 type RangeInfo struct {
-	StartValue interface{}
-	EndValue   interface{}
+	StartValue any
+	EndValue   any
 }
 
 func (ri *RangeInfo) IsNilStartValue() bool {
@@ -84,35 +89,36 @@ type DatabaseClient interface {
 	Sleep()
 
 	// Xconf
-	QueryXconfDataRows(query string, queryParams ...string) ([]map[string]interface{}, error)
+	QueryXconfDataRows(query string, queryParams ...string) ([]map[string]any, error)
 	ModifyXconfData(query string, queryParameters ...string) error
 
 	// Batch operations
 	NewBatch(batchType int) BatchOperation
 	ExecuteBatch(batch BatchOperation) error
 
-	SetXconfData(tableName string, rowKey string, value []byte, ttl int) error
-	GetXconfData(tableName string, rowKey string) ([]byte, error)
-	GetAllXconfDataByKeys(tableName string, rowKeys []string) [][]byte
-	GetAllXconfKeys(tableName string) []string
-	GetAllXconfDataAsList(tableName string, maxResults int) [][]byte
-	GetAllXconfDataAsMap(tableName string, maxResults int) map[string][]byte
-	DeleteXconfData(tableName string, rowKey string) error
-	DeleteAllXconfData(tableName string) error
+	SetXconfData(tenantId string, tableName string, key string, value []byte, ttl int) error
+	GetXconfData(tenantId string, tableName string, key string) ([]byte, error)
+	GetAllXconfDataByKeys(tenantId string, tableName string, keys []string) [][]byte
+	GetAllXconfKeys(tenantId string, tableName string) []string
+	GetAllXconfDataAsList(tenantId string, tableName string, maxResults int) [][]byte
+	GetAllXconfDataAsMap(tenantId string, tableName string, maxResults int) map[string][]byte
+	DeleteXconfData(tenantId string, tableName string, key string) error
+	DeleteAllXconfData(tenantId string, tableName string) error
 
 	// Xconf TwoKeys
-	GetAllXconfData(tableName string, rowKey string) [][]byte
-	GetAllXconfDataTwoKeysRange(tableName string, rowKey interface{}, key2FieldName string, rangeInfo *RangeInfo) [][]byte
-	GetAllXconfDataTwoKeysAsMap(tableName string, rowKey string, key2FieldName string, key2List []interface{}) map[interface{}][]byte
-	SetXconfDataTwoKeys(tableName string, rowKey interface{}, key2FieldName string, key2 interface{}, value []byte, ttl int) error
-	GetXconfDataTwoKeys(tableName string, rowKey string, key2FieldName string, key2 interface{}) ([]byte, error)
-	DeleteXconfDataTwoKeys(tableName string, rowKey string, key2FieldName string, key2 interface{}) error
-	GetAllXconfTwoKeys(tableName string, key2FieldName string) []TwoKeys
-	GetAllXconfKey2s(tableName string, rowKey string, key2FieldName string) []interface{}
+	GetAllXconfData(tenantId string, tableName string, key string) [][]byte
+	GetAllXconfDataTwoKeysRange(tenantId string, tableName string, key any, rangeInfo *RangeInfo) [][]byte
+	GetAllXconfDataTwoKeysAsMap(tenantId string, tableName string, key string, key2List []any) map[any][]byte
+	SetXconfDataTwoKeys(tenantId string, tableName string, key any, key2 any, value []byte, ttl int) error
+	GetXconfDataTwoKeys(tenantId string, tableName string, key string, key2 any) ([]byte, error)
+	DeleteXconfDataTwoKeys(tenantId string, tableName string, key string, key2 any) error
+	GetAllXconfTwoKeys(tenantId string, tableName string) []TwoKeys
+	GetAllXconfKey2s(tenantId string, tableName string, key string) []any
+
 	// Xconf compressed data
-	SetXconfCompressedData(tableName string, rowKey string, values [][]byte, ttl int) error
-	GetXconfCompressedData(tableName string, rowKey string) ([]byte, error)
-	GetAllXconfCompressedDataAsMap(tableName string) map[string][]byte
+	SetXconfCompressedData(tenantId string, tableName string, key string, values [][]byte, ttl int) error
+	GetXconfCompressedData(tenantId string, tableName string, key string) ([]byte, error)
+	GetAllXconfCompressedDataAsMap(tenantId string, tableName string) map[string][]byte
 
 	// Pod table lookup estbMac from pod serialNum
 	GetEcmMacFromPodTable(string) (string, error)
@@ -120,14 +126,13 @@ type DatabaseClient interface {
 	// not found
 	IsDbNotFound(error) bool
 
-	// Penetration Metrics
-	GetPenetrationMetrics(macAddress string) (map[string]interface{}, error)
-	SetPenetrationMetrics(penetrationmetrics *PenetrationMetrics) error
-	SetFwPenetrationMetrics(*FwPenetrationMetrics) error
-	GetFwPenetrationMetrics(string) (*FwPenetrationMetrics, error)
-	SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetrics, is304FromPrecook bool) error
-	GetRfcPenetrationMetrics(string) (*RfcPenetrationMetrics, error)
-	UpdateFwPenetrationMetrics(map[string]string) error
+	// Penetration Data
+	GetPenetrationData(macAddress string) (map[string]any, error)
+	SetPenetrationData(map[string]string) error
+	SetFwPenetrationData(*FwPenetrationData) error
+	GetFwPenetrationData(string) (*FwPenetrationData, error)
+	SetRfcPenetrationData(pMetrics *RfcPenetrationData, is304FromPrecook bool) error
+	GetRfcPenetrationData(string) (*RfcPenetrationData, error)
 	GetEstbIp(string) (string, error)
 	GetSecurityTokenFields(string) (*SecurityTokenDeviceInfo, error)
 
@@ -140,14 +145,19 @@ type DatabaseClient interface {
 	GetPrecookDataFromXPC(RfcPrecookHash string) ([]byte, string, error)
 
 	// Locks
-	AcquireLock(lockName string, lockedBy string, ttlSeconds int) error
-	ReleaseLock(lockName string, lockedBy string) error
-	GetLockInfo(lockName string) (map[string]interface{}, error)
+	AcquireLock(tenantId string, lockName string, lockedBy string, ttlSeconds int) error
+	ReleaseLock(tenantId string, lockName string, lockedBy string) error
+	GetLockInfo(tenantId string, lockName string) (map[string]any, error)
+
+	// Tenants
+	GetAllTenants() []*Tenant
+	SetTenant(tenant *Tenant) error
+	DeleteTenant(tenantId string) error
 }
 
 // BatchOperation interface for database batch operations
 type BatchOperation interface {
-	Query(stmt string, args ...interface{})
+	Query(stmt string, args ...any)
 	Size() int
 }
 

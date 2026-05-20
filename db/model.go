@@ -17,7 +17,13 @@
  */
 package db
 
-import "github.com/gocql/gocql"
+import (
+	"errors"
+	"regexp"
+	"strings"
+
+	"github.com/gocql/gocql"
+)
 
 // OperationType enum
 type OperationType string
@@ -29,18 +35,36 @@ const (
 	TRUNCATE_OPERATION OperationType = "TRUNCATE_CF"
 )
 
-// ChangedData XconfChangedKeys4 table
+// ChangedData change_events table
 type ChangedData struct {
 	ColumnName     gocql.UUID    `json:"columnName"`
 	CfName         string        `json:"cfName"`
 	ChangedKey     string        `json:"changedKey"`
 	Operation      OperationType `json:"operation"`
-	DaoId          int32         `json:"DAOid"`
 	ValidCacheSize int32         `json:"validCacheSize"`
 	UserName       string        `json:"userName"`
 	ServerOriginId string        `json:"serverOriginId"`
+	TenantId       string        `json:"tenantId"`
 }
 
-func NewChangedDataInf() interface{} {
+func NewChangedDataInf() any {
 	return &ChangedData{}
+}
+
+// Tenant tenants table
+type Tenant struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Updated int64  `json:"updated"`
+}
+
+func (obj *Tenant) Validate() error {
+	if len(strings.TrimSpace(obj.ID)) > 0 {
+		match, _ := regexp.MatchString("^[-a-zA-Z0-9_.' ]+$", obj.ID)
+		if match {
+			return nil
+		}
+	}
+
+	return errors.New("Id is invalid")
 }
