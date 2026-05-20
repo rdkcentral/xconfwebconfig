@@ -94,6 +94,15 @@ type RfcPenetrationData struct {
 	RecoveryCertExpiry   string
 }
 
+type SecurityTokenDeviceInfo struct {
+	Partner                 string
+	Model                   string
+	FwFilename              string
+	FwVersion               string
+	FwAdditionalVersionInfo string
+	FwTs                    int64
+}
+
 var emptyValueSet = util.NewSet("", "unknown", "noaccount", "novalue", "nomatch", "na", "nomodel")
 
 func (c *CassandraClient) SetFwPenetrationData(pData *FwPenetrationData) error {
@@ -466,6 +475,60 @@ func (c *CassandraClient) GetEstbIp(estbMac string) (string, error) {
 	}
 
 	return estbIp, nil
+}
+
+func (c *CassandraClient) GetSecurityTokenFields(estbMac string) (*SecurityTokenDeviceInfo, error) {
+	securityTokenDeviceInfo := &SecurityTokenDeviceInfo{}
+	dict := util.Dict{}
+	columns := []string{
+		PartnerColumnName,
+		ModelColumnName,
+		FwFilenameColumnName,
+		FwVersionColumnName,
+		FwAdditionalVersionInfoColumnName,
+		FwTsColumnName,
+	}
+	tableName := PenetrationDataTable
+	if IsDualWriteEnabled() {
+		// When dual write is enabled, read from old PenetrationMetrics table for backward compatibility,
+		// until penetration_data table is fully migrated
+		tableName = c.getTableNameFromLogKeyspace(PenetrationMetricsTable)
+	}
+
+	c.ConcurrentQueries <- true
+	defer func() { <-c.ConcurrentQueries }()
+
+	stmt := fmt.Sprintf(`SELECT %s FROM %s WHERE %s=?`, GetColumnsStr(columns), tableName, EstbMacColumnName)
+	qry := c.Query(stmt, estbMac)
+	err := qry.MapScan(dict)
+	if err != nil {
+		return securityTokenDeviceInfo, err
+	}
+
+	// Extract values from dict into struct
+	if v, ok := dict[PartnerColumnName].(string); ok {
+		securityTokenDeviceInfo.Partner = v
+	}
+	if v, ok := dict[ModelColumnName].(string); ok {
+		securityTokenDeviceInfo.Model = v
+	}
+	if v, ok := dict[FwFilenameColumnName].(string); ok {
+		securityTokenDeviceInfo.FwFilename = v
+	}
+	if v, ok := dict[FwVersionColumnName].(string); ok {
+		securityTokenDeviceInfo.FwVersion = v
+	}
+	if v, ok := dict[FwAdditionalVersionInfoColumnName].(string); ok {
+		securityTokenDeviceInfo.FwAdditionalVersionInfo = v
+	}
+	if v, ok := dict[FwTsColumnName].(time.Time); ok {
+		securityTokenDeviceInfo.FwTs = v.Unix()
+	} else if itfvalue, ok := dict[FwTsColumnName].(int64); ok {
+		// fallback for existing int64 values
+		securityTokenDeviceInfo.FwTs = itfvalue
+	}
+
+	return securityTokenDeviceInfo, nil
 }
 
 func isEmptyString(str string) bool {
