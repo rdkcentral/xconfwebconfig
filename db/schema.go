@@ -110,6 +110,9 @@ var AllTables = []string{
 	TABLE_APPLICATION_TYPES,
 	TABLE_TENANTS,
 	TABLE_LOGS,
+	TABLE_LOCKS,
+	PenetrationDataTable,
+	PenetrationMetricsTable,
 }
 
 // For list types of tables (e.g. config_change_logs, change_events), the secondary key is stored in a column named "key2",

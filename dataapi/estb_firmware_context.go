@@ -142,6 +142,9 @@ func GetExplanation(contextMap map[string]string, evaluationResult *estbfirmware
 	for key, value := range contextMap {
 		fmt.Fprintf(&input, "%s=%s\n", key, value)
 	}
+	if evaluationResult == nil {
+		return fmt.Sprintf("Request: %s\\ndid not produce an evaluation result.", input.String())
+	}
 	var explanation strings.Builder
 	if evaluationResult.MatchedRule == nil {
 		fmt.Fprintf(&explanation, "Request: %s\\ndid not match any rule.", input.String())
