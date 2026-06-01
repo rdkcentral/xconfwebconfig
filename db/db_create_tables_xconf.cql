@@ -84,8 +84,17 @@ CREATE TABLE IF NOT EXISTS recooking_status (tenant_id text, shard_id int, modul
 CREATE TABLE IF NOT EXISTS locks (tenant_id text, shard_id int, name text, locked_by text, locked_at timestamp, expires_at timestamp, PRIMARY KEY ((tenant_id, shard_id), name));
  
 CREATE TABLE IF NOT EXISTS tag_member_metadata (tenant_id text, shard_id int, tag_id text, bucket_id int, PRIMARY KEY ((tenant_id, shard_id), tag_id, bucket_id));
- 
-CREATE TABLE IF NOT EXISTS tag_members_bucketed (tenant_id text, tag_id text, bucket_id int, member text, PRIMARY KEY ((tag_id, bucket_id), member));
+
+CREATE TABLE IF NOT EXISTS tag_members_bucketed (
+                                                    tenant_id text,
+                                                    tag_id text,
+                                                    bucket_id int,
+                                                    member text,
+                                                    updated timestamp,
+                                                    PRIMARY KEY ((tenant_id, tag_id, bucket_id), member)
+) WITH CLUSTERING ORDER BY (member ASC)
+   AND compaction = {'class': 'SizeTieredCompactionStrategy'}
+   AND compression = {'sstable_compression': 'LZ4Compressor'};
 
 CREATE TABLE IF NOT EXISTS config_change_logs (tenant_id text, shard_id int, key text, key2 text, value blob, PRIMARY KEY ((tenant_id, shard_id), key, key2));
 
