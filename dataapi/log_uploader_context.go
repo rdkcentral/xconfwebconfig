@@ -52,6 +52,7 @@ func NormalizeLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, context
 func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap map[string]string, usePartnerAppType bool, vargs ...log.Fields) ([]string, error) {
 	var fields log.Fields
 	var accountId string
+	var accountType string
 	if len(vargs) > 0 {
 		fields = vargs[0]
 	} else {
@@ -90,14 +91,40 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 
 		if xAccountId != nil && err == nil {
 			accountId = xAccountId.GetAccountId()
-			accountType := xAccountId.GetAccountType()
 			contextMap[common.ACCOUNT_ID] = accountId
-			contextMap[common.ACCOUNT_TYPE] = accountType
+			if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+				accountType = xAccountId.GetAccountType()
+				contextMap[common.ACCOUNT_TYPE] = accountType
+			}
 			log.WithFields(fields).Debugf("AddLogUploaderContext Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 		}
 
 		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 			log.WithFields(fields).Debugf("AddLogUploaderContext AcntId='%s' already present,fetching AccntPrds directly from ada", contextMap[common.ACCOUNT_ID])
+
+			if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+				if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
+					macAddress = contextMap[common.ESTB_MAC]
+					macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC])
+					xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+				}
+
+				if xAccountId == nil && err != nil {
+					if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
+						macAddress = contextMap[common.ECM_MAC_ADDRESS]
+						macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ECM_MAC_ADDRESS])
+						xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
+					}
+				}
+
+				if xAccountId != nil && err == nil {
+					if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+						accountType = xAccountId.GetAccountType()
+						contextMap[common.ACCOUNT_TYPE] = accountType
+					}
+				}
+			}
+
 			accountProducts, err := ws.GroupServiceConnector.GetAccountProducts(accountId, fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s", accountId)
@@ -116,8 +143,10 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 					contextMap[common.TIME_ZONE] = TimeZone
 				}
 
-				if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
-					contextMap[common.ACCOUNT_TYPE] = accountType
+				if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+					if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
+						contextMap[common.ACCOUNT_TYPE] = accountType
+					}
 				}
 
 				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
