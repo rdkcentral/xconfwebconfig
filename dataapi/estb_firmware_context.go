@@ -293,6 +293,8 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 							accountType = xAccountId.GetAccountType()
 							contextMap[common.ACCOUNT_TYPE] = accountType
 						}
+					} else {
+						log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for Mac=%s", macAddress)
 					}
 				}
 

@@ -100,7 +100,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 		}
 
 		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
-			log.WithFields(fields).Debugf("AddLogUploaderContext AcntId='%s' already present,fetching AccntPrds directly from ada", contextMap[common.ACCOUNT_ID])
+			log.WithFields(fields).Debugf("AddLogUploaderContext AcntId='%s' already present,fetching AccntPrds directly from grp svc", contextMap[common.ACCOUNT_ID])
 
 			if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
 				if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
@@ -122,6 +122,8 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 						accountType = xAccountId.GetAccountType()
 						contextMap[common.ACCOUNT_TYPE] = accountType
 					}
+				} else {
+					log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for Mac=%s", macAddress)
 				}
 			}
 
