@@ -90,6 +90,7 @@ type XconfConfigs struct {
 	ValidPartnerIdRegex          *regexp.Regexp
 	SecurityTokenManagerEnabled  bool
 	EnableTaggingComparison      bool
+	AccountTypeModelSet          util.Set
 }
 
 // Function to register the table name and the corresponding model/struct constructor
@@ -294,6 +295,15 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		validPartnerIdRegex = regexp.MustCompile(defaultValidPartnerIdRegex)
 	}
 
+	accountTypeModelSet := util.NewSet()
+	accountTypeModelList := conf.GetString("xconfwebconfig.xconf.accounttype_model_list")
+	if !util.IsBlank(accountTypeModelList) {
+		accountTypeModels := strings.Split(accountTypeModelList, ",")
+		for _, model := range accountTypeModels {
+			accountTypeModelSet.Add(strings.ToUpper(strings.TrimSpace(model)))
+		}
+	}
+
 	xc := &XconfConfigs{
 		DeriveAppTypeFromPartnerId:   conf.GetBoolean("xconfwebconfig.xconf.derive_application_type_from_partner_id"),
 		PartnerApplicationTypes:      appTypes,
@@ -328,6 +338,7 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		MacTagsModelSet:              macTagsModelSet,
 		AccountTagsModelSet:          accountTagsModelSet,
 		PartnerTagsModelSet:          partnerTagsModelSet,
+		AccountTypeModelSet:          accountTypeModelSet,
 		MacTagsPrefixList:            macTagsPrefixList,
 		AccountTagsPrefixList:        accountTagsPrefixList,
 		PartnerTagsPrefixList:        partnerTagsPrefixList,
