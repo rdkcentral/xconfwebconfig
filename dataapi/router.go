@@ -44,54 +44,53 @@ import (
 )
 
 type XconfConfigs struct {
-	DeriveAppTypeFromPartnerId    bool
-	PartnerApplicationTypes       []string // List of partner's application type
-	EnableDeviceService           bool
-	EnableDeviceDBLookup          bool
-	EnableMacAccountServiceCall   bool
-	AccountServiceMacPrefix       string
-	EnableAccountService          bool
-	EnableXacGroupService         bool
-	EnableTaggingService          bool
-	EnableTaggingServiceRFC       bool
-	IPv4NetworkMaskPrefixLength   int32
-	IPv6NetworkMaskPrefixLength   int32
-	EnableFwDownloadLogs          bool
-	EnableRfcPrecook              bool
-	EnableRfcPrecookForOfferedFw  bool
-	EnableRfcPrecook304           bool
-	RfcPrecookStartTime           string
-	RfcPrecookEndTime             string
-	RfcPrecookTimeZone            *time.Location
-	RfcPrecookTimeFormat          string
-	EnableGroupService            bool
-	EnableFtGroups                bool
-	EnableFtMacTags               bool
-	EnableFtAccountTags           bool
-	EnableFtPartnerTags           bool
-	GroupServiceModelSet          util.Set
-	MacTagsModelSet               util.Set
-	AccountTagsModelSet           util.Set
-	PartnerTagsModelSet           util.Set
-	MacTagsPrefixList             []string
-	AccountTagsPrefixList         []string
-	PartnerTagsPrefixList         []string
-	ReturnAccountId               bool
-	ReturnAccountHash             bool
-	EstbRecoveryFirmwareVersions  string
-	DiagnosticAPIsEnabled         bool
-	Account_mgmt                  string
-	GroupServiceCacheEnabled      bool
-	RfcReturnCountryCode          bool
-	RfcCountryCodeModelsSet       util.Set
-	RfcCountryCodePartnersSet     util.Set
-	AuxiliaryFirmwareList         []AuxiliaryFirmware
-	PartnerIdValidationEnabled    bool
-	ValidPartnerIdRegex           *regexp.Regexp
-	SecurityTokenManagerEnabled   bool
-	EnableTaggingComparison       bool
-	AccountTypeModelSet           util.Set
-	EnableAccountTypeForAllModels bool
+	DeriveAppTypeFromPartnerId   bool
+	PartnerApplicationTypes      []string // List of partner's application type
+	EnableDeviceService          bool
+	EnableDeviceDBLookup         bool
+	EnableMacAccountServiceCall  bool
+	AccountServiceMacPrefix      string
+	EnableAccountService         bool
+	EnableXacGroupService        bool
+	EnableTaggingService         bool
+	EnableTaggingServiceRFC      bool
+	IPv4NetworkMaskPrefixLength  int32
+	IPv6NetworkMaskPrefixLength  int32
+	EnableFwDownloadLogs         bool
+	EnableRfcPrecook             bool
+	EnableRfcPrecookForOfferedFw bool
+	EnableRfcPrecook304          bool
+	RfcPrecookStartTime          string
+	RfcPrecookEndTime            string
+	RfcPrecookTimeZone           *time.Location
+	RfcPrecookTimeFormat         string
+	EnableGroupService           bool
+	EnableFtGroups               bool
+	EnableFtMacTags              bool
+	EnableFtAccountTags          bool
+	EnableFtPartnerTags          bool
+	GroupServiceModelSet         util.Set
+	MacTagsModelSet              util.Set
+	AccountTagsModelSet          util.Set
+	PartnerTagsModelSet          util.Set
+	MacTagsPrefixList            []string
+	AccountTagsPrefixList        []string
+	PartnerTagsPrefixList        []string
+	ReturnAccountId              bool
+	ReturnAccountHash            bool
+	EstbRecoveryFirmwareVersions string
+	DiagnosticAPIsEnabled        bool
+	Account_mgmt                 string
+	GroupServiceCacheEnabled     bool
+	RfcReturnCountryCode         bool
+	RfcCountryCodeModelsSet      util.Set
+	RfcCountryCodePartnersSet    util.Set
+	AuxiliaryFirmwareList        []AuxiliaryFirmware
+	PartnerIdValidationEnabled   bool
+	ValidPartnerIdRegex          *regexp.Regexp
+	SecurityTokenManagerEnabled  bool
+	EnableTaggingComparison      bool
+	AccountTypeModelSet          util.Set
 }
 
 // Function to register the table name and the corresponding model/struct constructor
@@ -296,63 +295,62 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		validPartnerIdRegex = regexp.MustCompile(defaultValidPartnerIdRegex)
 	}
 
-	gatewayModelSet := util.NewSet()
-	gatewayModelList := conf.GetString("xconfwebconfig.xconf.accounttype_model_list")
-	if !util.IsBlank(gatewayModelList) {
-		xb10Models := strings.Split(gatewayModelList, ";")
-		for _, model := range xb10Models {
-			gatewayModelSet.Add(strings.ToUpper(strings.TrimSpace(model)))
+	accountTypeModelSet := util.NewSet()
+	accountTypeModelList := conf.GetString("xconfwebconfig.xconf.accounttype_model_list")
+	if !util.IsBlank(accountTypeModelList) {
+		accountTypeModels := strings.Split(accountTypeModelList, ",")
+		for _, model := range accountTypeModels {
+			accountTypeModelSet.Add(strings.ToUpper(strings.TrimSpace(model)))
 		}
 	}
 
 	xc := &XconfConfigs{
-		DeriveAppTypeFromPartnerId:    conf.GetBoolean("xconfwebconfig.xconf.derive_application_type_from_partner_id"),
-		PartnerApplicationTypes:       appTypes,
-		EnableDeviceService:           conf.GetBoolean("xconfwebconfig.xconf.enable_device_service"),
-		EnableDeviceDBLookup:          conf.GetBoolean("xconfwebconfig.xconf.enable_device_db_lookup"),
-		EnableMacAccountServiceCall:   conf.GetBoolean("xconfwebconfig.xconf.enable_mac_accountservice_call"),
-		EnableAccountService:          conf.GetBoolean("xconfwebconfig.xconf.enable_account_service"),
-		EnableXacGroupService:         conf.GetBoolean("xconfwebconfig.xconf.enable_xac_ada_keyspace"),
-		EnableTaggingService:          conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service"),
-		EnableTaggingServiceRFC:       conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service_rfc"),
-		ReturnAccountId:               conf.GetBoolean("xconfwebconfig.xconf.return_account_id"),
-		ReturnAccountHash:             conf.GetBoolean("xconfwebconfig.xconf.return_account_hash"),
-		EstbRecoveryFirmwareVersions:  conf.GetString("xconfwebconfig.xconf.estb_recovery_firmware_versions"),
-		DiagnosticAPIsEnabled:         conf.GetBoolean("xconfwebconfig.xconf.diagnostic_apis_enabled"),
-		AccountServiceMacPrefix:       conf.GetString("xconfwebconfig.xconf.account_service_mac_prefix"),
-		IPv4NetworkMaskPrefixLength:   conf.GetInt32("xconfwebconfig.xconf.ipv4_network_mask_prefix_length"),
-		IPv6NetworkMaskPrefixLength:   conf.GetInt32("xconfwebconfig.xconf.ipv6_network_mask_prefix_length"),
-		EnableFwDownloadLogs:          conf.GetBoolean("xconfwebconfig.xconf.enable_fw_download_logs"),
-		EnableRfcPrecook:              rfcPrecookEnabled,
-		EnableRfcPrecookForOfferedFw:  rfcPrecookForOfferedFwEnabled,
-		EnableRfcPrecook304:           conf.GetBoolean("xconfwebconfig.xconf.enable_rfc_precook_304"),
-		RfcPrecookStartTime:           conf.GetString("xconfwebconfig.xconf.rfc_precook_start_time"),
-		RfcPrecookEndTime:             conf.GetString("xconfwebconfig.xconf.rfc_precook_end_time"),
-		RfcPrecookTimeZone:            timezone,
-		RfcPrecookTimeFormat:          conf.GetString("xconfwebconfig.xconf.rfc_precook_time_format"),
-		EnableGroupService:            conf.GetBoolean("xconfwebconfig.xconf.enable_group_service"),
-		EnableFtMacTags:               conf.GetBoolean("xconfwebconfig.xconf.enable_ft_mac_tags"),
-		EnableFtAccountTags:           conf.GetBoolean("xconfwebconfig.xconf.enable_ft_account_tags"),
-		EnableFtPartnerTags:           conf.GetBoolean("xconfwebconfig.xconf.enable_ft_partner_tags"),
-		EnableFtGroups:                conf.GetBoolean("xconfwebconfig.xconf.enable_ft_xdp_groups"),
-		GroupServiceModelSet:          GroupServiceModelSet,
-		MacTagsModelSet:               macTagsModelSet,
-		AccountTagsModelSet:           accountTagsModelSet,
-		PartnerTagsModelSet:           partnerTagsModelSet,
-		AccountTypeModelSet:           gatewayModelSet,
-		EnableAccountTypeForAllModels: conf.GetBoolean("xconfwebconfig.xconf.enable_account_type_for_all_models"),
-		MacTagsPrefixList:             macTagsPrefixList,
-		AccountTagsPrefixList:         accountTagsPrefixList,
-		PartnerTagsPrefixList:         partnerTagsPrefixList,
-		GroupServiceCacheEnabled:      conf.GetBoolean(fmt.Sprintf("xconfwebconfig.%v.cache_enabled", conf.GetString("xconfwebconfig.xconf.group_service_name"))),
-		RfcReturnCountryCode:          conf.GetBoolean("xconfwebconfig.xconf.rfc_return_country_code"),
-		RfcCountryCodeModelsSet:       rfcCountryCodeModelsSet,
-		RfcCountryCodePartnersSet:     rfcCountryCodePartnersSet,
-		AuxiliaryFirmwareList:         auxFirmwareList,
-		ValidPartnerIdRegex:           validPartnerIdRegex,
-		PartnerIdValidationEnabled:    partnerIdValidationEnabled,
-		SecurityTokenManagerEnabled:   conf.GetBoolean("xconfwebconfig.xconf.security_token_manager_enabled"),
-		EnableTaggingComparison:       conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_comparison"),
+		DeriveAppTypeFromPartnerId:   conf.GetBoolean("xconfwebconfig.xconf.derive_application_type_from_partner_id"),
+		PartnerApplicationTypes:      appTypes,
+		EnableDeviceService:          conf.GetBoolean("xconfwebconfig.xconf.enable_device_service"),
+		EnableDeviceDBLookup:         conf.GetBoolean("xconfwebconfig.xconf.enable_device_db_lookup"),
+		EnableMacAccountServiceCall:  conf.GetBoolean("xconfwebconfig.xconf.enable_mac_accountservice_call"),
+		EnableAccountService:         conf.GetBoolean("xconfwebconfig.xconf.enable_account_service"),
+		EnableXacGroupService:        conf.GetBoolean("xconfwebconfig.xconf.enable_xac_ada_keyspace"),
+		EnableTaggingService:         conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service"),
+		EnableTaggingServiceRFC:      conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_service_rfc"),
+		ReturnAccountId:              conf.GetBoolean("xconfwebconfig.xconf.return_account_id"),
+		ReturnAccountHash:            conf.GetBoolean("xconfwebconfig.xconf.return_account_hash"),
+		EstbRecoveryFirmwareVersions: conf.GetString("xconfwebconfig.xconf.estb_recovery_firmware_versions"),
+		DiagnosticAPIsEnabled:        conf.GetBoolean("xconfwebconfig.xconf.diagnostic_apis_enabled"),
+		AccountServiceMacPrefix:      conf.GetString("xconfwebconfig.xconf.account_service_mac_prefix"),
+		IPv4NetworkMaskPrefixLength:  conf.GetInt32("xconfwebconfig.xconf.ipv4_network_mask_prefix_length"),
+		IPv6NetworkMaskPrefixLength:  conf.GetInt32("xconfwebconfig.xconf.ipv6_network_mask_prefix_length"),
+		EnableFwDownloadLogs:         conf.GetBoolean("xconfwebconfig.xconf.enable_fw_download_logs"),
+		EnableRfcPrecook:             rfcPrecookEnabled,
+		EnableRfcPrecookForOfferedFw: rfcPrecookForOfferedFwEnabled,
+		EnableRfcPrecook304:          conf.GetBoolean("xconfwebconfig.xconf.enable_rfc_precook_304"),
+		RfcPrecookStartTime:          conf.GetString("xconfwebconfig.xconf.rfc_precook_start_time"),
+		RfcPrecookEndTime:            conf.GetString("xconfwebconfig.xconf.rfc_precook_end_time"),
+		RfcPrecookTimeZone:           timezone,
+		RfcPrecookTimeFormat:         conf.GetString("xconfwebconfig.xconf.rfc_precook_time_format"),
+		EnableGroupService:           conf.GetBoolean("xconfwebconfig.xconf.enable_group_service"),
+		EnableFtMacTags:              conf.GetBoolean("xconfwebconfig.xconf.enable_ft_mac_tags"),
+		EnableFtAccountTags:          conf.GetBoolean("xconfwebconfig.xconf.enable_ft_account_tags"),
+		EnableFtPartnerTags:          conf.GetBoolean("xconfwebconfig.xconf.enable_ft_partner_tags"),
+		EnableFtGroups:               conf.GetBoolean("xconfwebconfig.xconf.enable_ft_xdp_groups"),
+		GroupServiceModelSet:         GroupServiceModelSet,
+		MacTagsModelSet:              macTagsModelSet,
+		AccountTagsModelSet:          accountTagsModelSet,
+		PartnerTagsModelSet:          partnerTagsModelSet,
+		AccountTypeModelSet:          accountTypeModelSet,
+		MacTagsPrefixList:            macTagsPrefixList,
+		AccountTagsPrefixList:        accountTagsPrefixList,
+		PartnerTagsPrefixList:        partnerTagsPrefixList,
+		GroupServiceCacheEnabled:     conf.GetBoolean(fmt.Sprintf("xconfwebconfig.%v.cache_enabled", conf.GetString("xconfwebconfig.xconf.group_service_name"))),
+		RfcReturnCountryCode:         conf.GetBoolean("xconfwebconfig.xconf.rfc_return_country_code"),
+		RfcCountryCodeModelsSet:      rfcCountryCodeModelsSet,
+		RfcCountryCodePartnersSet:    rfcCountryCodePartnersSet,
+		AuxiliaryFirmwareList:        auxFirmwareList,
+		ValidPartnerIdRegex:          validPartnerIdRegex,
+		PartnerIdValidationEnabled:   partnerIdValidationEnabled,
+		SecurityTokenManagerEnabled:  conf.GetBoolean("xconfwebconfig.xconf.security_token_manager_enabled"),
+		EnableTaggingComparison:      conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_comparison"),
 	}
 	return xc
 }

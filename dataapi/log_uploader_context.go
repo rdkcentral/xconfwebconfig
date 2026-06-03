@@ -92,7 +92,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 		if xAccountId != nil && err == nil {
 			accountId = xAccountId.GetAccountId()
 			contextMap[common.ACCOUNT_ID] = accountId
-			if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+			if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
 				accountType = xAccountId.GetAccountType()
 				contextMap[common.ACCOUNT_TYPE] = accountType
 			}
@@ -102,7 +102,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 			log.WithFields(fields).Debugf("AddLogUploaderContext AcntId='%s' already present,fetching AccntPrds directly from ada", contextMap[common.ACCOUNT_ID])
 
-			if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+			if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
 				if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
 					macAddress = contextMap[common.ESTB_MAC]
 					macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC])
@@ -118,7 +118,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 				}
 
 				if xAccountId != nil && err == nil {
-					if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+					if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
 						accountType = xAccountId.GetAccountType()
 						contextMap[common.ACCOUNT_TYPE] = accountType
 					}
@@ -143,7 +143,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 					contextMap[common.TIME_ZONE] = TimeZone
 				}
 
-				if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+				if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
 					if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
 						contextMap[common.ACCOUNT_TYPE] = accountType
 					}

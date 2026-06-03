@@ -139,7 +139,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 	if xAccountId != nil {
 		accountId := xAccountId.GetAccountId()
 		contextMap[common.ACCOUNT_ID] = accountId
-		if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+		if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
 			accountType = xAccountId.GetAccountType()
 			contextMap[common.ACCOUNT_TYPE] = accountType
 		}
@@ -165,7 +165,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 			contextMap[common.COUNTRY_CODE] = countryCode
 		}
 
-		if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+		if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
 			if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
 				contextMap[common.ACCOUNT_TYPE] = accountType
 			}
@@ -369,7 +369,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				if xAccountId != nil && xAccountId.GetAccountId() != "" {
 					accountId = xAccountId.GetAccountId()
 					contextMap[common.ACCOUNT_ID] = accountId
-					if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+					if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
 						accountType = xAccountId.GetAccountType()
 						contextMap[common.ACCOUNT_TYPE] = accountType
 					}
@@ -397,7 +397,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 						contextMap[common.TIME_ZONE] = TimeZone
 					}
 
-					if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+					if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
 						if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
 							contextMap[common.ACCOUNT_TYPE] = accountType
 						}
@@ -531,7 +531,7 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 			log.WithFields(fields).Debugf("AddFeatureControlContext AcntId='%s' already present", contextMap[common.ACCOUNT_ID])
 
-			if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+			if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
 				if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
 					macAddress = contextMap[common.ESTB_MAC]
 					macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC])
@@ -547,7 +547,7 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 				}
 
 				if xAccountId != nil && err == nil {
-					if Xc.EnableAccountTypeForAllModels || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+					if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
 						accountType = xAccountId.GetAccountType()
 						contextMap[common.ACCOUNT_TYPE] = accountType
 					}
@@ -577,8 +577,10 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 					contextMap[common.TIME_ZONE] = TimeZone
 				}
 
-				if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
-					contextMap[common.ACCOUNT_TYPE] = accountType
+				if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToLower(contextMap[common.MODEL])) {
+					if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
+						contextMap[common.ACCOUNT_TYPE] = accountType
+					}
 				}
 
 				if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
