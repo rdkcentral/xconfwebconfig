@@ -288,7 +288,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					contextMap[common.TIME_ZONE] = TimeZone
 				}
 
-				if accountType, ok := accountProducts["AccountType"]; ok && accountType != "" {
+				if accountType, ok := accountProducts["Type"]; ok && accountType != "" {
 					contextMap[common.ACCOUNT_TYPE] = accountType
 				}
 
