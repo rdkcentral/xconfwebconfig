@@ -706,7 +706,7 @@ func TestGetAccountInfoFromGrpService_AccountTypePrecedence(t *testing.T) {
 						AccountType: tt.groupServiceAccountType,
 					},
 					accountProducts: map[string]string{
-						"AccountType": tt.accountProductsTypeValue,
+						"Type": tt.accountProductsTypeValue,
 					},
 				},
 			}
