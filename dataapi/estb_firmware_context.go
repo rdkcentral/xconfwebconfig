@@ -308,7 +308,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			}
 		} else {
 			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId info from Grp Svc for Mac=%s", macAddress)
-			xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
+			xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		}
 	}
 
