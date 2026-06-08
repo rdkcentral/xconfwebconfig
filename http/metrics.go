@@ -353,7 +353,7 @@ func NewMetrics() *AppMetrics {
 				Name: "grp_service_not_found_response_count",
 				Help: "A counter for Not Found 404 responses from GrpService",
 			},
-			[]string{"app", "model"},
+			[]string{"app", "model", "partner"},
 		),
 	}
 	prometheus.MustRegister(metrics.inFlight, metrics.counter, metrics.duration,
@@ -993,7 +993,7 @@ func IncreaseAccountFetchCounter(model, partner string) {
 	metrics.accountServiceFetchedDataCounter.With(labels).Inc()
 }
 
-func IncreaseGrpServiceNotFoundResponseCounter(model string) {
+func IncreaseGrpServiceNotFoundResponseCounter(model, partner string) {
 	if metrics == nil {
 		return
 	}
@@ -1002,9 +1002,14 @@ func IncreaseGrpServiceNotFoundResponseCounter(model string) {
 		model = "null"
 	}
 
+	if len(partner) == 0 {
+		partner = "null"
+	}
+
 	labels := prometheus.Labels{
-		"app":   AppName(),
-		"model": model,
+		"app":     AppName(),
+		"model":   model,
+		"partner": partner,
 	}
 	metrics.grpServiceNotFoundResponseCounter.With(labels).Inc()
 }

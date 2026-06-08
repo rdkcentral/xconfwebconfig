@@ -132,7 +132,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Errorf("AddContextForPods: Error getting accountId info from Grp Svc for serialNum=%s", contextMap[common.SERIAL_NUM])
-		xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
+		xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		return nil, nil
 	}
 	if xAccountId != nil {
@@ -356,7 +356,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId info from Grp Svc for Mac=%s", macAddress)
-				xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
+				xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			} else {
 				if xAccountId != nil && xAccountId.GetAccountId() != "" {
 					accountId = xAccountId.GetAccountId()

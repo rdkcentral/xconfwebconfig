@@ -140,7 +140,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 			}
 		} else {
 			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId information from Grp Service for Mac=%s", macAddress)
-			xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL])
+			xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		}
 	}
 
