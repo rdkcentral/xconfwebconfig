@@ -134,7 +134,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 						xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 						log.WithFields(fields).Debugf("AddLogUploaderContext AcntId='%s' ,AccntPrd='%v' successfully retrieved from Grp Svc", contextMap[common.ACCOUNT_ID], contextMap)
 					} else {
-						log.WithFields(fields).Errorf("AddLogUploaderContext: Mac= '%s' AcntId='%s' Failed to unmarshall AccountProducts", macAddress, contextMap[common.ACCOUNT_ID])
+						log.WithFields(fields).Errorf("AddLogUploaderContext: Mac= '%s' AcntId='%s' Failed to unmarshal only AccountProducts", macAddress, contextMap[common.ACCOUNT_ID])
 					}
 				}
 			}
