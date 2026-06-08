@@ -268,7 +268,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 		}
 
 		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
-			log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' already present,fetching AccntPrds directly from Grp Svc", contextMap[common.ACCOUNT_ID])
+			log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' present,fetching AccntPrds directly from Grp Svc", contextMap[common.ACCOUNT_ID])
 			accountData, err = ws.GroupServiceConnector.GetAccountData(accountId, fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts info from Grp Svc for AccountId=%s Mac=%s", contextMap[common.ACCOUNT_ID], macAddress)
@@ -302,7 +302,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 						xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 						log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v' successfully retrieved from Grp Svc", contextMap[common.ACCOUNT_ID], contextMap)
 					} else {
-						log.WithFields(fields).Errorf("AddFeatureControlContextFromAccountService: Mac='%s' AcntId='%s' Failed to unmarshall AccountProducts", macAddress, contextMap[common.ACCOUNT_ID])
+						log.WithFields(fields).Errorf("AddFeatureControlContextFromAccountService: Mac='%s' AcntId='%s' Failed to unmarshal only AccountProducts", macAddress, contextMap[common.ACCOUNT_ID])
 					}
 				}
 			}
