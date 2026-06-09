@@ -48,7 +48,7 @@ func TestCRUD(t *testing.T) {
 	jsonData, err := json.Marshal(model)
 	assert.NilError(t, err)
 
-	err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, jsonData)
+	err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, jsonData, util.GetTimestamp())
 	assert.NilError(t, err)
 
 	// test retrieve
@@ -65,7 +65,7 @@ func TestCRUD(t *testing.T) {
 	jsonData, err = json.Marshal(model)
 	assert.NilError(t, err)
 
-	err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, jsonData)
+	err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, jsonData, util.GetTimestamp())
 	assert.NilError(t, err)
 
 	obj, err = db.GetSimpleDao().GetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID)
@@ -184,7 +184,7 @@ func generateTestModels(num int) ([]string, error) {
 			return nil, err
 		}
 
-		err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, jsonData)
+		err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, jsonData, util.GetTimestamp())
 		if err != nil {
 			return nil, err
 		}
@@ -204,7 +204,7 @@ func generateTestEnvironments(num int) ([]string, error) {
 			return nil, err
 		}
 
-		err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_ENVIRONMENTS, env.ID, jsonData)
+		err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_ENVIRONMENTS, env.ID, jsonData, util.GetTimestamp())
 		if err != nil {
 			return nil, err
 		}

@@ -62,7 +62,7 @@ func TestCacheCRUD(t *testing.T) {
 	jsonData, err := json.Marshal(model)
 	assert.NilError(t, err)
 
-	err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, jsonData)
+	err = db.GetSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, jsonData, util.GetTimestamp())
 	assert.NilError(t, err)
 
 	// test retrieve from cache
@@ -75,6 +75,7 @@ func TestCacheCRUD(t *testing.T) {
 
 	// test update
 	model.Description = "obsolete model"
+	model.Updated = util.GetTimestamp()
 	err = db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_MODELS, model.ID, model)
 	assert.NilError(t, err)
 
@@ -123,7 +124,7 @@ func TestCacheCompressingDataCRUD(t *testing.T) {
 	jsonData, err := json.Marshal(nl)
 	assert.NilError(t, err)
 
-	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData, util.GetTimestamp())
 	assert.NilError(t, err)
 
 	// test retreive from cache only

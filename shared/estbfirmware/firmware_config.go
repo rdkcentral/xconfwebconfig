@@ -105,7 +105,7 @@ type FirmwareConfigForMacRuleBeanResponse struct {
 	Properties               map[string]string `json:"properties,omitempty"`
 }
 
-// FirmwareConfig table
+// FirmwareConfig firmware_configs table
 type FirmwareConfig struct {
 	ID                       string            `json:"id"`
 	Updated                  int64             `json:"updated,omitempty"`
@@ -121,6 +121,14 @@ type FirmwareConfig struct {
 	RebootImmediately        bool              `json:"rebootImmediately"`
 	MandatoryUpdate          bool              `json:"mandatoryUpdate,omitempty"`
 	Properties               map[string]string `json:"properties,omitempty"`
+}
+
+func (obj *FirmwareConfig) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *FirmwareConfig) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *FirmwareConfig) SetApplicationType(appType string) {

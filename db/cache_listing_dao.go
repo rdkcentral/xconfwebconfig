@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	copy "github.com/mitchellh/copystructure"
+	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
 /*
@@ -103,8 +104,16 @@ func (cld cachedListingDaoImpl) SetOne(tenantId string, tableName string, key st
 		return err
 	}
 
+	var updatedAt int64
+	if obj, ok := entity.(Updatable); ok {
+		updatedAt = obj.GetUpdated()
+	}
+	if updatedAt == 0 {
+		updatedAt = util.GetTimestamp()
+	}
+
 	// 1st update the DB
-	err = GetListingDao().SetOne(tenantId, tableName, key, key2, jsonData)
+	err = GetListingDao().SetOne(tenantId, tableName, key, key2, jsonData, updatedAt)
 	if err == nil {
 		// Next update the cache
 		tkStr := GetTwoKeysAsString(key, key2)

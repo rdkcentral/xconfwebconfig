@@ -100,7 +100,7 @@ func NewFeatureLegacy() *FeatureLegacy {
 	return &FeatureLegacy{}
 }
 
-// Feature XconfFeature table
+// Feature features table
 type Feature struct {
 	Properties         map[string]interface{} `json:"properties,omitempty"`
 	ListType           string                 `json:"listType,omitempty"`
@@ -115,6 +115,14 @@ type Feature struct {
 	ConfigData         map[string]string      `json:"configData"`
 	WhitelistProperty  *WhitelistProperty     `json:"whitelistProperty,omitempty"`
 	ApplicationType    string                 `json:"applicationType,omitempty"`
+}
+
+func (obj *Feature) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *Feature) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *Feature) Clone() (*Feature, error) {

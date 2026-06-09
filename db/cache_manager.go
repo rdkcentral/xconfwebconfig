@@ -762,7 +762,7 @@ func (cm *CacheManager) writeCacheLog(tenantId string, tableName string, changed
 		if err == nil {
 			log.WithFields(log.Fields{"tenantId": tenantId}).Debugf("write cache changed log for table %s: %v %v %v", tableName, operation, key, changedData.ValidCacheSize)
 			// TODO: ensure SetOne support empty tenantId
-			err = GetListingDao().SetOne(tenantId, TABLE_CHANGE_EVENTS, key, changedData.ColumnName, jsonData)
+			err = GetListingDao().SetOne(tenantId, TABLE_CHANGE_EVENTS, key, changedData.ColumnName, jsonData, util.GetTimestamp())
 		}
 
 		if err != nil {

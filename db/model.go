@@ -35,6 +35,12 @@ const (
 	TRUNCATE_OPERATION OperationType = "TRUNCATE_CF"
 )
 
+// Interface to be implemented by all objects stored in DB that has updated timestamp field
+type Updatable interface {
+	GetUpdated() int64
+	SetUpdated(int64)
+}
+
 // ChangedData change_events table
 type ChangedData struct {
 	ColumnName     gocql.UUID    `json:"columnName"`
@@ -56,6 +62,14 @@ type Tenant struct {
 	ID      string `json:"id"`
 	Name    string `json:"name"`
 	Updated int64  `json:"updated"`
+}
+
+func (obj *Tenant) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *Tenant) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *Tenant) Validate() error {

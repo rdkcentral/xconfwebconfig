@@ -24,6 +24,7 @@ import (
 
 	"github.com/gocql/gocql"
 	copy "github.com/mitchellh/copystructure"
+	"github.com/rdkcentral/xconfwebconfig/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -175,11 +176,19 @@ func (csd cachedSimpleDaoImpl) SetOne(tenantId string, tableName string, key str
 		return err
 	}
 
+	var updatedAt int64
+	if obj, ok := entity.(Updatable); ok {
+		updatedAt = obj.GetUpdated()
+	}
+	if updatedAt == 0 {
+		updatedAt = util.GetTimestamp()
+	}
+
 	// 1st update data the DB as Json Data
 	if tableInfo.IsCompressedAndSplit() {
-		err = GetCompressingDataDao().SetOne(tenantId, tableName, key, jsonData)
+		err = GetCompressingDataDao().SetOne(tenantId, tableName, key, jsonData, updatedAt)
 	} else {
-		err = GetSimpleDao().SetOne(tenantId, tableName, key, jsonData)
+		err = GetSimpleDao().SetOne(tenantId, tableName, key, jsonData, updatedAt)
 	}
 
 	// Next update the cache with the actual model/struct

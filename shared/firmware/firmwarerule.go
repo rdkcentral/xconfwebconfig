@@ -203,7 +203,7 @@ func (a ApplicableAction) String() string {
 	)
 }
 
-// FirmwareRule FirmwareRule4 table
+// FirmwareRule firmware_rules table
 type FirmwareRule struct {
 	ID               string            `json:"id"`
 	Updated          int64             `json:"updated"`
@@ -217,6 +217,14 @@ type FirmwareRule struct {
 
 func (obj *FirmwareRule) SetApplicationType(appType string) {
 	obj.ApplicationType = appType
+}
+
+func (obj *FirmwareRule) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *FirmwareRule) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *FirmwareRule) GetApplicationType() string {
@@ -379,7 +387,7 @@ func (r *FirmwareRule) IsNoop() bool {
 	return true
 }
 
-// FirmwareRuleTemplate table
+// FirmwareRuleTemplate firmware_rule_templates table
 type FirmwareRuleTemplate struct {
 	ID                   string                    `json:"id"`
 	Updated              int64                     `json:"updated,omitempty"`
@@ -390,6 +398,14 @@ type FirmwareRuleTemplate struct {
 	ByPassFilters        []string                  `json:"byPassFilters,omitempty"`
 	ValidationExpression string                    `json:"validationExpression,omitempty"`
 	Editable             bool                      `json:"editable"`
+}
+
+func (obj *FirmwareRuleTemplate) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *FirmwareRuleTemplate) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *FirmwareRuleTemplate) Clone() (*FirmwareRuleTemplate, error) {

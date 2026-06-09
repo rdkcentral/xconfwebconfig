@@ -293,18 +293,22 @@ func (c *CassandraClient) GetLogKeyspace() string {
 }
 
 // SetXconfData Create XconfData for the specified key and value, where value is JSON data
-func (c *CassandraClient) SetXconfData(tenantId string, tableName string, key string, value []byte, ttl int) error {
+func (c *CassandraClient) SetXconfData(tenantId string, tableName string, key string, value []byte, updatedAt int64, ttl int) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
-	var stmt string
-	if ttl > 0 {
-		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, value) VALUES(?,?,?,?) USING TTL %d`, tableName, ttl)
-	} else {
-		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, value) VALUES(?,?,?,?)`, tableName)
+	if updatedAt == 0 {
+		updatedAt = util.GetTimestamp()
 	}
 
-	if err := c.Query(stmt, tenantId, GetShardId(key), key, value).Exec(); err != nil {
+	var stmt string
+	if ttl > 0 {
+		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, value, updated) VALUES(?,?,?,?,?) USING TTL %d`, tableName, ttl)
+	} else {
+		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, value, updated) VALUES(?,?,?,?,?)`, tableName)
+	}
+
+	if err := c.Query(stmt, tenantId, GetShardId(key), key, value, updatedAt).Exec(); err != nil {
 		return err
 	}
 
@@ -645,7 +649,7 @@ func (c *CassandraClient) GetAllXconfDataTwoKeysAsMap(tenantId string, tableName
 }
 
 // SetXconfDataTwoKeys Create XconfData for the specified two keys and value, where value is JSON data
-func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string, key any, key2 any, value []byte, ttl int) error {
+func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string, key any, key2 any, value []byte, updatedAt int64, ttl int) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
@@ -655,25 +659,35 @@ func (c *CassandraClient) SetXconfDataTwoKeys(tenantId string, tableName string,
 	if tableName == TABLE_LOGS {
 		tableName = c.getTableNameFromLogKeyspace(tableName)
 		key2FieldName = Key2FieldNameForLogs2
+		updatedAt = 0
+	} else {
+		if updatedAt == 0 {
+			updatedAt = util.GetTimestamp()
+		}
+	}
+
+	ttlClause := ""
+	if ttl > 0 {
+		ttlClause = fmt.Sprintf(" USING TTL %d", ttl)
 	}
 
 	// If tenantId is empty, it means the table is not sharded and does not have tenant_id and shard_id columns
 	if tenantId == "" {
-		if ttl > 0 {
-			stmt = fmt.Sprintf(`INSERT INTO %s(key, %s, value) VALUES(?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
+		if updatedAt > 0 {
+			stmt = fmt.Sprintf(`INSERT INTO %s(key, %s, value, updated) VALUES(?,?,?,?)%s`, tableName, key2FieldName, ttlClause)
+			return c.Query(stmt, key, key2, value, updatedAt).Exec()
 		} else {
-			stmt = fmt.Sprintf(`INSERT INTO %s(key, %s, value) VALUES(?,?,?)`, tableName, key2FieldName)
+			stmt = fmt.Sprintf(`INSERT INTO %s(key, %s, value) VALUES(?,?,?)%s`, tableName, key2FieldName, ttlClause)
+			return c.Query(stmt, key, key2, value).Exec()
 		}
-
-		return c.Query(stmt, key, key2, value).Exec()
 	} else {
-		if ttl > 0 {
-			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
+		if updatedAt > 0 {
+			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value, updated) VALUES(?,?,?,?,?,?)%s`, tableName, key2FieldName, ttlClause)
+			return c.Query(stmt, tenantId, GetShardId(key), key, key2, value, updatedAt).Exec()
 		} else {
-			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, key2FieldName)
+			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)%s`, tableName, key2FieldName, ttlClause)
+			return c.Query(stmt, tenantId, GetShardId(key), key, key2, value).Exec()
 		}
-
-		return c.Query(stmt, tenantId, GetShardId(key), key, key2, value).Exec()
 	}
 }
 
@@ -798,7 +812,7 @@ func (c *CassandraClient) GetAllXconfKey2s(tenantId string, tableName string, ke
 }
 
 // SetXconfCompressedData Create XconfData for the specified key and values, where values is compressed JSON data
-func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName string, key string, values [][]byte, ttl int) error {
+func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName string, key string, values [][]byte, updatedAt int64, ttl int) error {
 	c.ConcurrentQueries <- true
 	defer func() { <-c.ConcurrentQueries }()
 
@@ -810,25 +824,28 @@ func (c *CassandraClient) SetXconfCompressedData(tenantId string, tableName stri
 
 	shardId := GetShardId(key)
 	batch := c.NewBatch(LoggedBatch)
+	if updatedAt == 0 {
+		updatedAt = util.GetTimestamp()
+	}
 
 	// Add a record that specifies the number of compressed data chunks
 	var stmt string
 	if ttl > 0 {
-		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?)) USING TTL %d`, tableName, key2FieldName, ttl)
+		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value, updated) VALUES(?,?,?,?,intAsBlob(?),?) USING TTL %d`, tableName, key2FieldName, ttl)
 	} else {
-		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,intAsBlob(?))`, tableName, key2FieldName)
+		stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value, updated) VALUES(?,?,?,?,intAsBlob(?),?)`, tableName, key2FieldName)
 	}
-	batch.Query(stmt, tenantId, shardId, key, NamedListCountColumnValue, len(values))
+	batch.Query(stmt, tenantId, shardId, key, NamedListCountColumnValue, len(values), updatedAt)
 
 	for i, value := range values {
 		// Add a record for each compressed data chunk where key has the format: NamedListData_part_0, ...
 		partColumnValue := NamedListPartColumnValue + strconv.Itoa(i)
 		if ttl > 0 {
-			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
+			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value, updated) VALUES(?,?,?,?,?,?) USING TTL %d`, tableName, key2FieldName, ttl)
 		} else {
-			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value) VALUES(?,?,?,?,?)`, tableName, key2FieldName)
+			stmt = fmt.Sprintf(`INSERT INTO %s(tenant_id, shard_id, key, %s, value, updated) VALUES(?,?,?,?,?,?)`, tableName, key2FieldName)
 		}
-		batch.Query(stmt, tenantId, shardId, key, partColumnValue, value)
+		batch.Query(stmt, tenantId, shardId, key, partColumnValue, value, updatedAt)
 	}
 
 	if err := c.ExecuteBatch(batch); err != nil {

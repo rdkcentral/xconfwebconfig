@@ -51,7 +51,7 @@ func TestCompressingDataCRUD(t *testing.T) {
 	jsonData, err := json.Marshal(nl)
 	assert.NilError(t, err)
 
-	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData, util.GetTimestamp())
 	assert.NilError(t, err)
 
 	// test retrieve
@@ -77,7 +77,7 @@ func TestCompressingDataCRUD(t *testing.T) {
 	jsonData, err = json.Marshal(nl)
 	assert.NilError(t, err)
 
-	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData, util.GetTimestamp())
 	assert.NilError(t, err)
 
 	obj, err = db.GetCompressingDataDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID)
@@ -197,7 +197,7 @@ func TestCompressingDataMultipleParts(t *testing.T) {
 	jsonData, err := json.Marshal(nl)
 	assert.NilError(t, err)
 
-	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData, util.GetTimestamp())
 	assert.NilError(t, err)
 
 	// test retrieve
@@ -215,7 +215,7 @@ func TestCompressingDataMultipleParts(t *testing.T) {
 	jsonData, err = json.Marshal(nl)
 	assert.NilError(t, err)
 
-	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData, util.GetTimestamp())
 	assert.NilError(t, err)
 
 	// ensure list can be retrieve
@@ -243,7 +243,7 @@ func generateTestNamespacedList(num int) ([]string, error) {
 			return nil, err
 		}
 
-		err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData)
+		err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, nl.ID, jsonData, util.GetTimestamp())
 		if err != nil {
 			return nil, err
 		}

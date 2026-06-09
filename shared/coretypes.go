@@ -40,14 +40,22 @@ const (
 	ALL      = "all"
 )
 
-// AppSettings table object
+// AppSetting app_settings table
 type AppSetting struct {
 	ID      string `json:"id"`
 	Updated int64  `json:"updated"`
 	Value   any    `json:"value"`
 }
 
-// ApplicationType table object
+func (obj *AppSetting) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *AppSetting) SetUpdated(ts int64) {
+	obj.Updated = ts
+}
+
+// ApplicationType application_types table
 type ApplicationType struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -55,6 +63,14 @@ type ApplicationType struct {
 	CreatedBy   string `json:"createdBy"`
 	CreatedAt   int64  `json:"createdAt"`
 	UpdatedAt   int64  `json:"updatedAt,omitempty"`
+}
+
+func (obj *ApplicationType) GetUpdated() int64 {
+	return obj.UpdatedAt
+}
+
+func (obj *ApplicationType) SetUpdated(ts int64) {
+	obj.UpdatedAt = ts
 }
 
 func (obj *ApplicationType) Clone() (*ApplicationType, error) {
@@ -107,11 +123,19 @@ type XEnvModel interface {
 	GetDescription() string
 }
 
-// Environment table object
+// Environment environments table
 type Environment struct {
 	ID          string `json:"id"`
 	Updated     int64  `json:"updated"`
 	Description string `json:"description"`
+}
+
+func (obj *Environment) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *Environment) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *Environment) Clone() (*Environment, error) {
@@ -205,11 +229,19 @@ func DeleteOneEnvironment(tenantId string, id string) error {
 	return nil
 }
 
-// Model table object
+// Model models table
 type Model struct {
 	ID          string `json:"id"`
 	Updated     int64  `json:"updated"`
 	Description string `json:"description"`
+}
+
+func (obj *Model) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *Model) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *Model) Clone() (*Model, error) {

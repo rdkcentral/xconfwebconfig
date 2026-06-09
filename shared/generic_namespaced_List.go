@@ -54,6 +54,14 @@ type NamespacedList struct {
 	TypeName string   `json:"typeName"`
 }
 
+func (obj *NamespacedList) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *NamespacedList) SetUpdated(ts int64) {
+	obj.Updated = ts
+}
+
 func (obj *NamespacedList) Clone() (*NamespacedList, error) {
 	cloneObj, err := util.Copy(obj)
 	if err != nil {
@@ -67,12 +75,20 @@ func NewNamespacedListInf() interface{} {
 	return &NamespacedList{}
 }
 
-// GenericNamespacedList GenericXconfNamedList table
+// GenericNamespacedList generic_named_lists table
 type GenericNamespacedList struct {
 	ID       string   `json:"id"`
 	Updated  int64    `json:"updated,omitempty"`
 	Data     []string `json:"data"`
 	TypeName string   `json:"typeName,omitempty"`
+}
+
+func (obj *GenericNamespacedList) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *GenericNamespacedList) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *GenericNamespacedList) Clone() (*GenericNamespacedList, error) {

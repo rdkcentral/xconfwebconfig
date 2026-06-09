@@ -90,6 +90,14 @@ func NewEmptyDownloadLocationRoundRobinFilterValue() *DownloadLocationRoundRobin
 	}
 }
 
+func (obj *DownloadLocationRoundRobinFilterValue) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *DownloadLocationRoundRobinFilterValue) SetUpdated(ts int64) {
+	obj.Updated = ts
+}
+
 func (obj *DownloadLocationRoundRobinFilterValue) SetApplicationType(appType string) {
 	obj.ApplicationType = appType
 }
