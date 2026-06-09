@@ -70,7 +70,7 @@ const (
 	LogUpload tables
 */
 
-// UploadRepository table
+// UploadRepository upload_repositories table
 type UploadRepository struct {
 	ID              string `json:"id"`
 	Updated         int64  `json:"updated"`
@@ -79,6 +79,14 @@ type UploadRepository struct {
 	URL             string `json:"url"`
 	ApplicationType string `json:"applicationType"`
 	Protocol        string `json:"protocol"`
+}
+
+func (obj *UploadRepository) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *UploadRepository) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *UploadRepository) Clone() (*UploadRepository, error) {
@@ -96,12 +104,20 @@ func NewUploadRepositoryInf() interface{} {
 	}
 }
 
-// LogFile table
+// LogFile log_files table
 type LogFile struct {
 	ID             string `json:"id"`
 	Updated        int64  `json:"updated"`
 	Name           string `json:"name"`
 	DeleteOnUpload bool   `json:"deleteOnUpload"`
+}
+
+func (obj *LogFile) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *LogFile) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *LogFile) Clone() (*LogFile, error) {
@@ -117,12 +133,20 @@ func NewLogFileInf() interface{} {
 	return &LogFile{}
 }
 
-// LogFilesGroups table
+// LogFilesGroups log_files_groups table
 type LogFilesGroups struct {
 	ID         string   `json:"id"`
 	Updated    int64    `json:"updated"`
 	GroupName  string   `json:"groupName"`
 	LogFileIDs []string `json:"logFileIds"`
+}
+
+func (obj *LogFilesGroups) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *LogFilesGroups) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *LogFilesGroups) Clone() (*LogFilesGroups, error) {
@@ -138,10 +162,18 @@ func NewLogFilesGroupsInf() interface{} {
 	return &LogFilesGroups{}
 }
 
-// LogFileList LogFileList table
+// LogFileList log_file_lists table
 type LogFileList struct {
 	Updated int64      `json:"updated"`
 	Data    []*LogFile `json:"data"`
+}
+
+func (obj *LogFileList) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *LogFileList) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *LogFileList) Clone() (*LogFileList, error) {
@@ -175,7 +207,7 @@ type ConfigurationServiceURL struct {
 	URL         string `json:"url,omitempty"`
 }
 
-// DcmRule DcmRule table
+// DcmRule dcm_rules table
 type DCMGenericRule struct {
 	re.Rule
 	ID              string      `json:"id"`
@@ -189,6 +221,14 @@ type DCMGenericRule struct {
 	PercentageL2    json.Number `json:"percentageL2,omitempty"`
 	PercentageL3    json.Number `json:"percentageL3,omitempty"`
 	ApplicationType string      `json:"applicationType"`
+}
+
+func (obj *DCMGenericRule) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *DCMGenericRule) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *DCMGenericRule) GetPriority() int {

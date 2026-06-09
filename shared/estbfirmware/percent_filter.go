@@ -90,6 +90,14 @@ func NewPercentFilterValue(whiteList *shared.IpAddressGroup, percentage float32,
 	}
 }
 
+func (obj *PercentFilterValue) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *PercentFilterValue) SetUpdated(ts int64) {
+	obj.Updated = ts
+}
+
 func (p *PercentFilterValue) SetId(id string) error {
 	if PERCENT_FILTER_SINGLETON_ID != id {
 		return errors.New("PercentFilterValue id is PERCENT_FILTER_VALUE")

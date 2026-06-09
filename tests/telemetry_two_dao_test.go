@@ -137,9 +137,10 @@ func TestGenericNamedListDaoForMacs(t *testing.T) {
 		"11:11:22:22:33:07",
 	}
 	sourceNamedlist := shared.NewGenericNamespacedList(namedListKey, shared.MacList, macs)
+	sourceNamedlist.Updated = util.GetTimestamp()
 	bbytes, err := json.Marshal(sourceNamedlist)
 	assert.NilError(t, err)
-	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID, bbytes)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID, bbytes, sourceNamedlist.Updated)
 	assert.NilError(t, err)
 	itf, err := db.GetCompressingDataDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID)
 	assert.NilError(t, err)
@@ -160,9 +161,10 @@ func TestGenericNamedlistDaoForIpAddresses(t *testing.T) {
 		"33.44.55.66/20",
 	}
 	sourceNamedlist := shared.NewGenericNamespacedList(namedListKey, shared.IpList, ips)
+	sourceNamedlist.Updated = util.GetTimestamp()
 	bbytes, err := json.Marshal(sourceNamedlist)
 	assert.NilError(t, err)
-	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID, bbytes)
+	err = db.GetCompressingDataDao().SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID, bbytes, sourceNamedlist.Updated)
 	assert.NilError(t, err)
 	itf, err := db.GetCompressingDataDao().GetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, sourceNamedlist.ID)
 	assert.NilError(t, err)

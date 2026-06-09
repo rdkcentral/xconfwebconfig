@@ -34,7 +34,7 @@ const (
 // CompressingDataDao interface
 type CompressingDataDao interface {
 	GetOne(tenantId string, tableName string, key string) (any, error)
-	SetOne(tenantId string, tableName string, key string, value []byte) error
+	SetOne(tenantId string, tableName string, key string, value []byte, updatedAt int64) error
 	DeleteOne(tenantId string, tableName string, key string) error
 	GetAllByKeys(tenantId string, tableName string, keys []string) ([]any, error)
 	GetAllAsList(tenantId string, tableName string, continueOnError bool) ([]any, error)
@@ -79,7 +79,7 @@ func (cd compressingDataDaoImpl) GetOne(tenantId string, tableName string, key s
 }
 
 // SetOne set compressed Xconf record
-func (cd compressingDataDaoImpl) SetOne(tenantId string, tableName string, key string, value []byte) error {
+func (cd compressingDataDaoImpl) SetOne(tenantId string, tableName string, key string, value []byte, updatedAt int64) error {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func (cd compressingDataDaoImpl) SetOne(tenantId string, tableName string, key s
 	compressedData := compress(value)
 	values := split(compressedData, CompressionChunkSize)
 
-	err = GetDatabaseClient().SetXconfCompressedData(tenantId, tableName, key, values, tableInfo.TTL)
+	err = GetDatabaseClient().SetXconfCompressedData(tenantId, tableName, key, values, updatedAt, tableInfo.TTL)
 	return err
 }
 

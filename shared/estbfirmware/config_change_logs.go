@@ -69,6 +69,14 @@ type ConfigChangeLog struct {
 	HasMinimumFirmware bool                  `json:"hasMinimumFirmware"`
 }
 
+func (obj *ConfigChangeLog) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *ConfigChangeLog) SetUpdated(ts int64) {
+	obj.Updated = ts
+}
+
 func NewRuleInfo(filterOrRule interface{}) *RuleInfo {
 	switch t := filterOrRule.(type) {
 	case *firmware.FirmwareRule:
@@ -199,12 +207,12 @@ func SetLastConfigLog(tenantId string, mac string, configChangeLog *ConfigChange
 	}
 	if db.IsDualWriteEnabled() {
 		// Write to Logs2 table for backward compatibility, but Logs2 will be eventually removed
-		err = db.GetListingDao().SetOne(tenantId, db.TABLE_LOGS, mac, LAST_CONFIG_LOG_ID, []byte(jsonData))
+		err = db.GetListingDao().SetOne(tenantId, db.TABLE_LOGS, mac, LAST_CONFIG_LOG_ID, []byte(jsonData), configChangeLog.Updated)
 		if err != nil {
 			return err
 		}
 	}
-	return db.GetListingDao().SetOne(tenantId, db.TABLE_CONFIG_CHANGE_LOGS, mac, LAST_CONFIG_LOG_ID, []byte(jsonData))
+	return db.GetListingDao().SetOne(tenantId, db.TABLE_CONFIG_CHANGE_LOGS, mac, LAST_CONFIG_LOG_ID, []byte(jsonData), configChangeLog.Updated)
 }
 
 func SetConfigChangeLog(tenantId string, mac string, configChangeLog *ConfigChangeLog) error {
@@ -219,7 +227,7 @@ func SetConfigChangeLog(tenantId string, mac string, configChangeLog *ConfigChan
 			configChangeLog.ID = id
 			jsonData, err := json.Marshal(configChangeLog)
 			if err == nil {
-				err = db.GetListingDao().SetOne(tenantId, tableName, mac, id, []byte(jsonData))
+				err = db.GetListingDao().SetOne(tenantId, tableName, mac, id, []byte(jsonData), configChangeLog.Updated)
 				if err != nil {
 					return err
 				}

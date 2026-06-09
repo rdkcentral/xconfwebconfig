@@ -56,7 +56,7 @@ func SettingTypeEnum(s string) int {
 	return 0
 }
 
-// SettingProfiles table
+// SettingProfiles setting_profiles table
 type SettingProfiles struct {
 	ID               string            `json:"id"`
 	Updated          int64             `json:"updated"`
@@ -64,6 +64,14 @@ type SettingProfiles struct {
 	SettingType      string            `json:"settingType"`
 	Properties       map[string]string `json:"properties"`
 	ApplicationType  string            `json:"applicationType"`
+}
+
+func (obj *SettingProfiles) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *SettingProfiles) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *SettingProfiles) Clone() (*SettingProfiles, error) {
@@ -88,7 +96,7 @@ type FormulaWithSettings struct {
 	VodSettings       *VodSettings       `json:"vodSettings"`
 }
 
-// VodSettings table
+// VodSettings vod_settings table
 type VodSettings struct {
 	ID              string            `json:"id"`
 	Updated         int64             `json:"updated"`
@@ -98,6 +106,14 @@ type VodSettings struct {
 	IPList          []string          `json:"ipList"`
 	SrmIPList       map[string]string `json:"srmIPList"`
 	ApplicationType string            `json:"applicationType"`
+}
+
+func (obj *VodSettings) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *VodSettings) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *VodSettings) Clone() (*VodSettings, error) {
@@ -115,7 +131,7 @@ func NewVodSettingsInf() interface{} {
 	}
 }
 
-// SettingRule SettingRules table
+// SettingRule setting_rules table
 type SettingRule struct {
 	ID              string  `json:"id"`
 	Updated         int64   `json:"updated"`
@@ -123,6 +139,14 @@ type SettingRule struct {
 	Rule            re.Rule `json:"rule"`
 	BoundSettingID  string  `json:"boundSettingId"`
 	ApplicationType string  `json:"applicationType"`
+}
+
+func (obj *SettingRule) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *SettingRule) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *SettingRule) Clone() (*SettingRule, error) {
@@ -421,7 +445,7 @@ func CreateSettingsResponseObject(settings *Settings) *SettingsResponse {
 	return settingsResponse
 }
 
-// DeviceSettings DeviceSettings2 table
+// DeviceSettings device_settings table
 type DeviceSettings struct {
 	ID                      string                  `json:"id"`
 	Updated                 int64                   `json:"updated"`
@@ -431,6 +455,14 @@ type DeviceSettings struct {
 	SettingsAreActive       bool                    `json:"settingsAreActive"`
 	Schedule                Schedule                `json:"schedule"`
 	ApplicationType         string                  `json:"applicationType"`
+}
+
+func (obj *DeviceSettings) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *DeviceSettings) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *DeviceSettings) Clone() (*DeviceSettings, error) {
@@ -454,7 +486,7 @@ const (
 	MODE_TO_GET_LOG_FILES_2 = "AllLogFiles"
 )
 
-// LogUploadSettings LogUploadSettings2 table
+// LogUploadSettings log_upload_settings table
 type LogUploadSettings struct {
 	ID                  string   `json:"id"`
 	Updated             int64    `json:"updated"`
@@ -471,6 +503,14 @@ type LogUploadSettings struct {
 	FromDateTime        string   `json:"fromDateTime"`
 	ToDateTime          string   `json:"toDateTime"`
 	ApplicationType     string   `json:"applicationType"`
+}
+
+func (obj *LogUploadSettings) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *LogUploadSettings) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *LogUploadSettings) Clone() (*LogUploadSettings, error) {

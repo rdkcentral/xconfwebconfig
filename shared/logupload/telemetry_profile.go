@@ -342,9 +342,10 @@ type TelemetryElement struct {
 	Component        string `json:"component,omitempty"`
 }
 
-// TelemetryProfile Telemetry table
+// TelemetryProfile telemetry_profiles table
 type TelemetryProfile struct {
 	ID               string             `json:"id"`
+	Updated          int64              `json:"updated"`
 	TelemetryProfile []TelemetryElement `json:"telemetryProfile"`
 	Schedule         string             `json:"schedule"`
 	Expires          int64              `json:"expires"`
@@ -352,6 +353,14 @@ type TelemetryProfile struct {
 	UploadRepository string             `json:"uploadRepository:URL"`
 	UploadProtocol   UploadProtocol     `json:"uploadRepository:uploadProtocol"`
 	ApplicationType  string             `json:"applicationType"`
+}
+
+func (obj *TelemetryProfile) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *TelemetryProfile) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *TelemetryProfile) Clone() (*TelemetryProfile, error) {
@@ -376,10 +385,11 @@ func NewTelemetryProfileDescriptor() *TelemetryProfileDescriptor {
 	return &TelemetryProfileDescriptor{}
 }
 
-// PermanentTelemetryProfile PermanentTelemetry table
+// PermanentTelemetryProfile permanent_telemetry_profiles table
 type PermanentTelemetryProfile struct {
 	Type             string             `json:"@type,omitempty"`
 	ID               string             `json:"id"`
+	Updated          int64              `json:"updated"`
 	TelemetryProfile []TelemetryElement `json:"telemetryProfile"`
 	Schedule         string             `json:"schedule"`
 	Expires          int64              `json:"expires"`
@@ -387,6 +397,14 @@ type PermanentTelemetryProfile struct {
 	UploadRepository string             `json:"uploadRepository:URL"`
 	UploadProtocol   UploadProtocol     `json:"uploadRepository:uploadProtocol"`
 	ApplicationType  string             `json:"applicationType,omitempty"`
+}
+
+func (obj *PermanentTelemetryProfile) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *PermanentTelemetryProfile) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (s *PermanentTelemetryProfile) Equals(t *PermanentTelemetryProfile) bool {
@@ -529,7 +547,7 @@ func NullifyUnwantedFieldsPermanentTelemetryProfile(profile *PermanentTelemetryP
 	return profile
 }
 
-// TelemetryRule TelemetryRules table
+// TelemetryRule telemetry_rules table
 type TelemetryRule struct {
 	re.Rule
 	ID               string `json:"id"`
@@ -537,6 +555,14 @@ type TelemetryRule struct {
 	BoundTelemetryID string `json:"boundTelemetryId"`
 	Name             string `json:"name"`
 	ApplicationType  string `json:"applicationType"`
+}
+
+func (obj *TelemetryRule) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *TelemetryRule) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *TelemetryRule) Clone() (*TelemetryRule, error) {
@@ -640,7 +666,7 @@ func (t *TimestampedRule) Equals(x *TimestampedRule) bool {
 	}
 }
 
-// TelemetryTwoRule TelemetryTwoRules table
+// TelemetryTwoRule telemetry_two_rules table
 type TelemetryTwoRule struct {
 	re.Rule
 	ID                string   `json:"id"`
@@ -649,6 +675,14 @@ type TelemetryTwoRule struct {
 	ApplicationType   string   `json:"applicationType"`
 	BoundTelemetryIDs []string `json:"boundTelemetryIds"`
 	NoOp              bool     `json:"noOp"`
+}
+
+func (obj *TelemetryTwoRule) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *TelemetryTwoRule) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *TelemetryTwoRule) Clone() (*TelemetryTwoRule, error) {
@@ -721,7 +755,7 @@ func (t *TelemetryTwoRule) Equals(o *TelemetryTwoRule) bool {
 	return true
 }
 
-// TelemetryTwoProfile TelemetryTwoProfiles table
+// TelemetryTwoProfile telemetry_two_profiles table
 type TelemetryTwoProfile struct {
 	Type            string `json:"@type,omitempty"`
 	ID              string `json:"id"`
@@ -729,6 +763,14 @@ type TelemetryTwoProfile struct {
 	Name            string `json:"name"`
 	Jsonconfig      string `json:"jsonconfig"`
 	ApplicationType string `json:"applicationType"`
+}
+
+func (obj *TelemetryTwoProfile) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *TelemetryTwoProfile) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *TelemetryTwoProfile) SetApplicationType(appType string) {

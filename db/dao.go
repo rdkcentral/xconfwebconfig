@@ -47,7 +47,7 @@ The following code illustrates how to retrieve a specific model from the models 
 // SimpleDao interface
 type SimpleDao interface {
 	GetOne(tenantId string, tableName string, rowKey string) (any, error)
-	SetOne(tenantId string, tableName string, rowKey string, value []byte) error
+	SetOne(tenantId string, tableName string, rowKey string, value []byte, updatedAt int64) error
 	DeleteOne(tenantId string, tableName string, rowKey string) error
 	GetAllByKeys(tenantId string, tableName string, rowKeys []string) ([]any, error)
 	GetAllAsList(tenantId string, tableName string, maxResults int) ([]any, error)
@@ -95,13 +95,13 @@ func (sd simpleDaoImpl) GetOne(tenantId string, tableName string, rowKey string)
 }
 
 // SetOne set Xconf record
-func (sd simpleDaoImpl) SetOne(tenantId string, tableName string, rowKey string, value []byte) error {
+func (sd simpleDaoImpl) SetOne(tenantId string, tableName string, rowKey string, value []byte, updatedAt int64) error {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return err
 	}
 
-	err = GetDatabaseClient().SetXconfData(tenantId, tableName, rowKey, value, tableInfo.TTL)
+	err = GetDatabaseClient().SetXconfData(tenantId, tableName, rowKey, value, updatedAt, tableInfo.TTL)
 	return err
 }
 

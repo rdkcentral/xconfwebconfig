@@ -111,11 +111,12 @@ func TestListingCRUD(t *testing.T) {
 			truncateTable(tableName)
 
 			// test create
-			err := db.GetListingDao().SetOne(tenantId, tableName, key, coreef.LAST_CONFIG_LOG_ID, []byte(configChangeLogJsonTemplate1))
+			updatedAt := util.GetTimestamp()
+			err := db.GetListingDao().SetOne(tenantId, tableName, key, coreef.LAST_CONFIG_LOG_ID, []byte(configChangeLogJsonTemplate1), updatedAt)
 			assert.NilError(t, err)
-			err = db.GetListingDao().SetOne(tenantId, tableName, key, key2_1, []byte(configChangeLogJsonTemplate1))
+			err = db.GetListingDao().SetOne(tenantId, tableName, key, key2_1, []byte(configChangeLogJsonTemplate1), updatedAt)
 			assert.NilError(t, err)
-			err = db.GetListingDao().SetOne(tenantId, tableName, key, key2_2, []byte(configChangeLogJsonTemplate1))
+			err = db.GetListingDao().SetOne(tenantId, tableName, key, key2_2, []byte(configChangeLogJsonTemplate1), updatedAt)
 			assert.NilError(t, err)
 
 			// test retrieve
@@ -227,7 +228,7 @@ func TestListingGetRange(t *testing.T) {
 	currentTS := util.GetTimestamp(time.Now().UTC())
 	rowKey := currentTS - (currentTS % int64(10000)) // 10 secs window
 
-	err = db.GetListingDao().SetOne(db.GetDefaultTenantId(), db.TABLE_CHANGE_EVENTS, rowKey, changedData.ColumnName, jsonData)
+	err = db.GetListingDao().SetOne(db.GetDefaultTenantId(), db.TABLE_CHANGE_EVENTS, rowKey, changedData.ColumnName, jsonData, currentTS)
 	assert.NilError(t, err)
 
 	// test retrieve

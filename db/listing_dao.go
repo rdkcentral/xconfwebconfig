@@ -37,7 +37,7 @@ to the target data type.
 // ListingDao interface
 type ListingDao interface {
 	GetOne(tenantId string, tableName string, key string, key2 any) (any, error)
-	SetOne(tenantId string, tableName string, key any, key2 any, value []byte) error
+	SetOne(tenantId string, tableName string, key any, key2 any, value []byte, updatedAt int64) error
 	DeleteOne(tenantId string, tableName string, key string, key2 any) error
 	DeleteAll(tenantId string, tableName string, key string) error
 	GetAll(tenantId string, tableName string, key string) ([]any, error)
@@ -95,7 +95,7 @@ func (ld listingDaoImpl) GetOne(tenantId string, tableName string, key string, k
 }
 
 // SetOne set Xconf record for two keys
-func (ld listingDaoImpl) SetOne(tenantId string, tableName string, key any, key2 any, value []byte) error {
+func (ld listingDaoImpl) SetOne(tenantId string, tableName string, key any, key2 any, value []byte, updatedAt int64) error {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (ld listingDaoImpl) SetOne(tenantId string, tableName string, key any, key2
 		tid = "" // use empty string to query since tenantId is not part of the partition key
 	}
 
-	return GetDatabaseClient().SetXconfDataTwoKeys(tid, tableName, key, key2, data, tableInfo.TTL)
+	return GetDatabaseClient().SetXconfDataTwoKeys(tid, tableName, key, key2, data, updatedAt, tableInfo.TTL)
 }
 
 // DeleteOne delete Xconf record for two keys
