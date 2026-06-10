@@ -98,15 +98,15 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 
 		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 			log.WithFields(fields).Debugf("AddLogUploaderContext AcntId='%s' already present,fetching AccntPrds directly from Grp Svc", contextMap[common.ACCOUNT_ID])
-			accountData, err := ws.GroupServiceConnector.GetAccountData(accountId, fields)
+			accountData, err := ws.GroupServiceConnector.GetAccountData(contextMap[common.ACCOUNT_ID], fields)
 			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts info from Grp Svc for AccountId=%s", accountId)
+				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts info from Grp Svc for AccountId=%s", contextMap[common.ACCOUNT_ID])
 			} else {
 				if partner, ok := accountData["Partner"]; ok && partner != "" {
 					contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
 				}
 
-				contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
+				contextMap[common.ACCOUNT_HASH] = util.CalculateHash(contextMap[common.ACCOUNT_ID])
 
 				if countryCode, ok := accountData["CountryCode"]; ok {
 					contextMap[common.COUNTRY_CODE] = countryCode

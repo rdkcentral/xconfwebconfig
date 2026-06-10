@@ -264,12 +264,13 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			accountType = xAccountId.GetAccountType()
 			contextMap[common.ACCOUNT_ID] = accountId
 			contextMap[common.ACCOUNT_TYPE] = accountType
+			contextMap[common.ACCOUNT_HASH] = util.CalculateHash(contextMap[common.ACCOUNT_ID])
 			log.WithFields(fields).Debugf("AddEstbFirmwareContext Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 		}
 
 		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 			log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' present,fetching AccntPrds directly from Grp Svc", contextMap[common.ACCOUNT_ID])
-			accountData, err = ws.GroupServiceConnector.GetAccountData(accountId, fields)
+			accountData, err = ws.GroupServiceConnector.GetAccountData(contextMap[common.ACCOUNT_ID], fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts info from Grp Svc for AccountId=%s Mac=%s", contextMap[common.ACCOUNT_ID], macAddress)
 			} else {
@@ -300,9 +301,9 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 							contextMap[key] = val
 						}
 						xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-						log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService AcntId='%s' ,AccntPrd='%v' successfully retrieved from Grp Svc", contextMap[common.ACCOUNT_ID], contextMap)
+						log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' ,AccntPrd='%v' successfully retrieved from Grp Svc", contextMap[common.ACCOUNT_ID], contextMap)
 					} else {
-						log.WithFields(fields).Errorf("AddFeatureControlContextFromAccountService: Mac='%s' AcntId='%s' Failed to unmarshal only AccountProducts", macAddress, contextMap[common.ACCOUNT_ID])
+						log.WithFields(fields).Errorf("AddEstbFirmwareContext: Mac='%s' AcntId='%s' Failed to unmarshal only AccountProducts", macAddress, contextMap[common.ACCOUNT_ID])
 					}
 				}
 			}
