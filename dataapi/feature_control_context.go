@@ -140,38 +140,37 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 		accountType := xAccountId.GetAccountType()
 		contextMap[common.ACCOUNT_ID] = accountId
 		contextMap[common.ACCOUNT_TYPE] = accountType
-		contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
+		contextMap[common.ACCOUNT_HASH] = util.CalculateHash(contextMap[common.ACCOUNT_ID])
 		log.WithFields(fields).Debugf("AddContextForPods: Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 
-		accountProducts, err := ws.GroupServiceConnector.GetAccountData(accountId, fields)
+		accountData, err := ws.GroupServiceConnector.GetAccountData(contextMap[common.ACCOUNT_ID], fields)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Errorf("AddContextForPods: Error getting accountProducts info from Grp Svc for serialNum=%s AccountId=%s", contextMap[common.SERIAL_NUM], accountId)
+			log.WithFields(log.Fields{"error": err}).Errorf("AddContextForPods: Error getting accountProducts info from Grp Svc for serialNum=%s AccountId=%s", contextMap[common.SERIAL_NUM], contextMap[common.ACCOUNT_ID])
 			return nil, nil
 		}
 
-		//Extract Partner and TimeZone from ADA response
-		if timeZone, ok := accountProducts["TimeZone"]; ok {
+		if timeZone, ok := accountData["TimeZone"]; ok {
 			contextMap[common.TIME_ZONE] = timeZone
 		}
 
-		if partner, ok := accountProducts["Partner"]; ok && partner != "" {
+		if partner, ok := accountData["Partner"]; ok && partner != "" {
 			contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
 		}
 
-		if countryCode, ok := accountProducts["CountryCode"]; ok {
+		if countryCode, ok := accountData["CountryCode"]; ok {
 			contextMap[common.COUNTRY_CODE] = countryCode
 		}
 
-		if accountType, ok := accountProducts["Type"]; ok && accountType != "" {
+		if accountType, ok := accountData["Type"]; ok && accountType != "" {
 			contextMap[common.ACCOUNT_TYPE] = accountType
 		}
-		if accountState, ok := accountProducts["State"]; ok {
+		if accountState, ok := accountData["State"]; ok {
 			contextMap[common.ACCOUNT_STATE] = accountState
 		}
 
-		if raw, ok := accountProducts["AccountProducts"]; ok && raw != "" {
+		if raw, ok := accountData["AccountProducts"]; ok && raw != "" {
 			var ap map[string]string
-			err := json.Unmarshal([]byte(accountProducts["AccountProducts"]), &ap)
+			err := json.Unmarshal([]byte(accountData["AccountProducts"]), &ap)
 			if err == nil {
 				for key, val := range ap {
 					contextMap[key] = val
@@ -179,7 +178,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 				xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 				log.WithFields(fields).Debugf("AddContextForPods AcntId='%s' ,AccntPrd='%v' Successfully retrieved from Grp Svc", contextMap[common.ACCOUNT_ID], contextMap)
 			} else {
-				log.WithFields(fields).Errorf("AddFeatureControlContextFromAccountService: serialNum='%s' AcntId='%s' Failed to unmarshall AccountProducts", contextMap[common.SERIAL_NUM], contextMap[common.ACCOUNT_ID])
+				log.WithFields(fields).Errorf("AddContextForPods: serialNum='%s' AcntId='%s' Failed to unmarshal AccountProducts", contextMap[common.SERIAL_NUM], contextMap[common.ACCOUNT_ID])
 			}
 		}
 
@@ -366,18 +365,18 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 				}
 
-				accountProducts, err := ws.GroupServiceConnector.GetAccountData(accountId, fields)
+				accountProducts, err := ws.GroupServiceConnector.GetAccountData(contextMap[common.ACCOUNT_ID], fields)
 				if err != nil {
-					log.WithFields(log.Fields{"error": err}).Errorf("AddFeatureControlContextFromAccountService Error getting accountProducts info from Grp Svc for AccountId=%s Mac=%s", accountId, macAddress)
+					log.WithFields(log.Fields{"error": err}).Errorf("AddFeatureControlContextFromAccountService Error getting accountProducts info from Grp Svc for AccountId=%s Mac=%s", contextMap[common.ACCOUNT_ID], macAddress)
 				} else {
 					if partner, ok := accountProducts["Partner"]; ok && partner != "" {
 						contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
 					}
 					td = &AccountServiceData{
-						AccountId: accountId,
+						AccountId: contextMap[common.ACCOUNT_ID],
 						PartnerId: contextMap[common.PARTNER_ID],
 					}
-					contextMap[common.ACCOUNT_HASH] = util.CalculateHash(accountId)
+					contextMap[common.ACCOUNT_HASH] = util.CalculateHash(contextMap[common.ACCOUNT_ID])
 
 					if countryCode, ok := accountProducts["CountryCode"]; ok {
 						contextMap[common.COUNTRY_CODE] = countryCode
