@@ -232,9 +232,6 @@ func IsBlank(str string) bool {
 }
 
 func FormatRuleEvalStatus(ruleEvalReasons []string) string {
-	if len(ruleEvalReasons) == 1 {
-		return ruleEvalReasons[0]
-	}
 	return strings.Join(ruleEvalReasons, "-")
 }
 
