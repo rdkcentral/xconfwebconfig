@@ -191,7 +191,7 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		// if configsetHash from device matches precook, return 304 without running rules engine
 		if matchedHash := getMatchedPrecookHash(configSetHash, precookData, isRfcPrecookForOfferedFwEnabled); matchedHash != "" {
 			xhttp.IncreaseReturn304FromPrecookCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
-			fields["ruleEval"] = []string{"precook-304"}
+			fields["ruleEval"] = "precook-304"
 			fields["isLiveCalculated"] = false
 			headers := map[string]string{
 				common.CONFIG_SET_HASH: matchedHash,
@@ -274,7 +274,7 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		// Only use 'precook' as a fallback if no other reasons (like 'precook-304') were set
 		ruleEvalReasons = []string{"precook"}
 	}
-	fields["ruleEval"] = ruleEvalReasons
+	fields["ruleEval"] = util.FormatRuleEvalStatus(ruleEvalReasons)
 	featureControlRuleBase.LogFeatureInfo(contextMap, appliedFeatureRules, featureControl.FeatureResponses, isLiveCalculated, fields)
 
 	if Ws.Config.GetBoolean("xconfwebconfig.xconf.enable_rfc_penetration_metrics", false) {
