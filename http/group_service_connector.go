@@ -41,7 +41,7 @@ type GroupServiceConnector interface {
 	CreateListFromGroupServiceProto(cpeGroup *conversion.CpeGroup) []string
 	GetFeatureTagsHashedItems(name string, fields log.Fields) (map[string]string, error)
 	GetAccountIdData(mac string, fields log.Fields) (*conversion.XBOAccount, error)
-	GetAccountData(accountId string, fields log.Fields) (map[string]string, error)
+	GetAccountProdData(accountId string, fields log.Fields) (map[string]string, error)
 }
 
 type DefaultGroupService struct {
@@ -195,7 +195,7 @@ func (c *DefaultGroupService) GetAccountIdData(mac string, fields log.Fields) (*
 	return &xboAccount, nil
 }
 
-func (c *DefaultGroupService) GetAccountData(accountId string, fields log.Fields) (map[string]string, error) {
+func (c *DefaultGroupService) GetAccountProdData(accountId string, fields log.Fields) (map[string]string, error) {
 	url := fmt.Sprintf(c.getAccountProductsUrlTemplate, c.GroupServiceHost(), accountId)
 	rbytes, err := c.DoWithRetries(http.MethodGet, url, nil, nil, fields, groupServiceName)
 	if err != nil {
