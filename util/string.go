@@ -231,6 +231,10 @@ func IsBlank(str string) bool {
 	return strings.Trim(str, " ") == ""
 }
 
+func FormatRuleEvalStatus(ruleEvalReasons []string) string {
+	return strings.Join(ruleEvalReasons, "-")
+}
+
 func StringSliceEqual(a, b []string) bool {
 	// If one is nil, the other must also be nil.
 	if (a == nil) != (b == nil) {
