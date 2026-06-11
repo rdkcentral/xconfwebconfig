@@ -67,6 +67,6 @@ func (m *accountInfoGroupServiceConnector) GetAccountIdData(mac string, fields l
 	return m.accountData, m.accountIDErr
 }
 
-func (m *accountInfoGroupServiceConnector) GetAccountData(accountId string, fields log.Fields) (map[string]string, error) {
+func (m *accountInfoGroupServiceConnector) GetAccountProductsData(accountId string, fields log.Fields) (map[string]string, error) {
 	return m.accountProducts, m.productsErr
 }
