@@ -240,6 +240,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	var accountType string
 	var accountData map[string]string
 	var macAddress string
+	var adaAccountProducts map[string]string // Store ADA account products for comparison
 
 	if Xc.EnableXacGroupService {
 		if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || contextMap[common.ACCOUNT_ID] == "" || util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
@@ -297,6 +298,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					var ap map[string]string
 					err = json.Unmarshal([]byte(accountData["AccountProducts"]), &ap)
 					if err == nil {
+						adaAccountProducts = ap // Store for comparison with xconfTags
 						for key, val := range ap {
 							contextMap[key] = val
 						}
@@ -325,7 +327,10 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	coastTags := AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
 	xconfTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC, contextMap, true, fields)
 	CompareTaggingSources(contextMap, coastTags, xconfTags, fields)
-	//CompareAccountTagSources(contextMap,xconfTags)
+	// Compare ADA account products with XConf tags to identify missing data
+	if adaAccountProducts != nil {
+		CompareAccountProductSources(contextMap, adaAccountProducts, xconfTags, fields)
+	}
 	log.Debug(fmt.Sprintf("AddEstbFirmwareContext ... end contextMap %v", contextMap))
 	return nil
 }

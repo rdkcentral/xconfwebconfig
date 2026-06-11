@@ -499,7 +499,7 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	} else {
 		fields = log.Fields{}
 	}
-
+	var adaAccountProducts map[string]string
 	contextMap[common.PASSED_PARTNER_ID] = contextMap[common.PARTNER_ID]
 
 	// getting local sat token
@@ -546,6 +546,7 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 					var ap map[string]string
 					err := json.Unmarshal([]byte(accountData["AccountProducts"]), &ap)
 					if err == nil {
+						adaAccountProducts = ap
 						for key, val := range ap {
 							contextMap[key] = val
 						}
@@ -570,6 +571,9 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	tags := AddContextFromTaggingService(ws, contextMap, satToken, configSetHash, true, fields)
 	ftTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, false, fields)
 	CompareTaggingSources(contextMap, tags, ftTags, fields)
+	if adaAccountProducts != nil {
+		CompareAccountProductSources(contextMap, adaAccountProducts, ftTags, fields)
+	}
 	tags = append(tags, ftTags...)
 	return podData, tags, td
 }

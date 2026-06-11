@@ -320,6 +320,99 @@ func CompareTaggingSources(contextMap map[string]string, coastTags []string, xco
 	}
 }
 
+// CompareAccountProductSources compares account products from ADA keyspace with XConf tags
+// and logs differences to track which tags are missing in ADA keyspace.
+// This helps identify data inconsistencies between ADA and GroupService/FT keyspace.
+// XconfTags format: "prefixed_key#value" (e.g., "p_CDVR#" or "p_xbcloud-basic#active")
+// ADA AccountProducts format: "key": "value" (e.g., "CDVR": "" or "xbcloud-basic": "active")
+func CompareAccountProductSources(contextMap map[string]string, adaAccountProducts map[string]string, xconfTags []string, fields log.Fields) {
+	if !Xc.EnableXacGroupService {
+		return
+	}
+
+	if len(xconfTags) == 0 {
+		return
+	}
+
+	// Create map of ADA account products for comparison
+	adaProductMap := make(map[string]string)
+	for key, value := range adaAccountProducts {
+		adaProductMap[key] = value
+	}
+
+	// Combine all possible prefix lists for tag comparison
+	allPrefixes := append([]string{}, Xc.PartnerTagsPrefixList...)
+	allPrefixes = append(allPrefixes, Xc.AccountTagsPrefixList...)
+	allPrefixes = append(allPrefixes, Xc.MacTagsPrefixList...)
+
+	var missingInADA []string
+	var valueMismatches []string
+
+	// Parse xconfTags (format: "prefixed_key#value") and compare with ADA
+	for _, xconfTag := range xconfTags {
+		// Split tag by '#' to get key and value
+		parts := strings.SplitN(xconfTag, "#", 2)
+		if len(parts) < 1 {
+			continue
+		}
+
+		prefixedKey := parts[0]
+		xconfValue := ""
+		if len(parts) == 2 {
+			xconfValue = parts[1]
+		}
+
+		// Remove prefix from the key (e.g., "p_CDVR" -> "CDVR")
+		unprefixedKey, prefixRemoved := RemovePrefix(prefixedKey, allPrefixes)
+
+		// If no prefix was removed, use the original key
+		keyToCheck := unprefixedKey
+		if !prefixRemoved {
+			keyToCheck = prefixedKey
+		}
+
+		// Check if this key exists in ADA account products
+		if adaValue, exists := adaProductMap[keyToCheck]; exists {
+			// Key exists, check if values match
+			if adaValue != xconfValue {
+				valueMismatches = append(valueMismatches, fmt.Sprintf("%s (ADA:%s, XConf:%s)", keyToCheck, adaValue, xconfValue))
+			}
+		} else {
+			// Key missing in ADA
+			missingInADA = append(missingInADA, fmt.Sprintf("%s#%s", keyToCheck, xconfValue))
+		}
+	}
+
+	// Log only when differences found
+	if len(missingInADA) > 0 || len(valueMismatches) > 0 {
+		estbMac := contextMap[common.ESTB_MAC_ADDRESS]
+		if estbMac == "" {
+			estbMac = contextMap[common.ESTB_MAC]
+		}
+
+		logFields := log.Fields{
+			"estbMac":          estbMac,
+			"partner":          contextMap[common.PARTNER_ID],
+			"model":            contextMap[common.MODEL],
+			"accountId":        contextMap[common.ACCOUNT_ID],
+			"totalXconfTags":   len(xconfTags),
+			"totalAdaProducts": len(adaAccountProducts),
+		}
+
+		if len(missingInADA) > 0 {
+			logFields["missingTags"] = strings.Join(missingInADA, ",")
+			logFields["missingCount"] = len(missingInADA)
+		}
+
+		if len(valueMismatches) > 0 {
+			logFields["valueMismatches"] = strings.Join(valueMismatches, ",")
+			logFields["mismatchCount"] = len(valueMismatches)
+		}
+
+		log.WithFields(logFields).Warn("Data inconsistency between ADA AccountProducts and XConf tags")
+	}
+}
+
 func AddGroupServiceFeatureTags(ws *xhttp.XconfServer, groupName string, contextMap map[string]string, getGroupsData bool, getPrefixData bool, prefixList []string, fields log.Fields) []string {
 	featureTags, err := ws.GroupServiceConnector.GetFeatureTagsHashedItems(groupName, fields)
 	if err != nil {
