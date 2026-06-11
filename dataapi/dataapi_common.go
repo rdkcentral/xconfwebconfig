@@ -323,7 +323,8 @@ func CompareTaggingSources(contextMap map[string]string, coastTags []string, xco
 // CompareAccountProductSources compares account products from ADA keyspace with XConf tags
 // and logs differences to track which tags are missing in ADA keyspace.
 // This helps identify data inconsistencies between ADA and GroupService/FT keyspace.
-// XconfTags format: "prefixed_key#value" (e.g., "p_CDVR#" or "p_xbcloud-basic#active")
+// XconfTags format: "unprefixed_key#value" (e.g., "CDVR#" or "xbcloud-basic#active")
+// Note: Tags from GroupService already have prefixes removed before being added to xconfTags
 // ADA AccountProducts format: "key": "value" (e.g., "CDVR": "" or "xbcloud-basic": "active")
 func CompareAccountProductSources(contextMap map[string]string, adaAccountProducts map[string]string, xconfTags []string, fields log.Fields) {
 	if !Xc.EnableXacGroupService {
@@ -334,21 +335,10 @@ func CompareAccountProductSources(contextMap map[string]string, adaAccountProduc
 		return
 	}
 
-	// Create map of ADA account products for comparison
-	adaProductMap := make(map[string]string)
-	for key, value := range adaAccountProducts {
-		adaProductMap[key] = value
-	}
-
-	// Combine all possible prefix lists for tag comparison
-	allPrefixes := append([]string{}, Xc.PartnerTagsPrefixList...)
-	allPrefixes = append(allPrefixes, Xc.AccountTagsPrefixList...)
-	allPrefixes = append(allPrefixes, Xc.MacTagsPrefixList...)
-
 	var missingInADA []string
 	var valueMismatches []string
 
-	// Parse xconfTags (format: "prefixed_key#value") and compare with ADA
+	// Parse xconfTags (format: "unprefixed_key#value") and compare with ADA
 	for _, xconfTag := range xconfTags {
 		// Split tag by '#' to get key and value
 		parts := strings.SplitN(xconfTag, "#", 2)
@@ -356,23 +346,14 @@ func CompareAccountProductSources(contextMap map[string]string, adaAccountProduc
 			continue
 		}
 
-		prefixedKey := parts[0]
+		keyToCheck := parts[0]
 		xconfValue := ""
 		if len(parts) == 2 {
 			xconfValue = parts[1]
 		}
 
-		// Remove prefix from the key (e.g., "p_CDVR" -> "CDVR")
-		unprefixedKey, prefixRemoved := RemovePrefix(prefixedKey, allPrefixes)
-
-		// If no prefix was removed, use the original key
-		keyToCheck := unprefixedKey
-		if !prefixRemoved {
-			keyToCheck = prefixedKey
-		}
-
 		// Check if this key exists in ADA account products
-		if adaValue, exists := adaProductMap[keyToCheck]; exists {
+		if adaValue, exists := adaAccountProducts[keyToCheck]; exists {
 			// Key exists, check if values match
 			if adaValue != xconfValue {
 				valueMismatches = append(valueMismatches, fmt.Sprintf("%s (ADA:%s, XConf:%s)", keyToCheck, adaValue, xconfValue))
