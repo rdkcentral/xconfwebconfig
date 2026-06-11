@@ -143,7 +143,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 		contextMap[common.ACCOUNT_HASH] = util.CalculateHash(contextMap[common.ACCOUNT_ID])
 		log.WithFields(fields).Debugf("AddContextForPods: Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 
-		accountData, err := ws.GroupServiceConnector.GetAccountData(contextMap[common.ACCOUNT_ID], fields)
+		accountData, err := ws.GroupServiceConnector.GetAccountProdData(contextMap[common.ACCOUNT_ID], fields)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Errorf("AddContextForPods: Error getting accountProducts info from Grp Svc for serialNum=%s AccountId=%s", contextMap[common.SERIAL_NUM], contextMap[common.ACCOUNT_ID])
 			return nil, nil
@@ -365,7 +365,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
 				}
 
-				accountProducts, err := ws.GroupServiceConnector.GetAccountData(contextMap[common.ACCOUNT_ID], fields)
+				accountProducts, err := ws.GroupServiceConnector.GetAccountProdData(contextMap[common.ACCOUNT_ID], fields)
 				if err != nil {
 					log.WithFields(log.Fields{"error": err}).Errorf("AddFeatureControlContextFromAccountService Error getting accountProducts info from Grp Svc for AccountId=%s Mac=%s", contextMap[common.ACCOUNT_ID], macAddress)
 				} else {
@@ -513,7 +513,7 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	if Xc.EnableXacGroupService {
 		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 			log.WithFields(fields).Debugf("AddFeatureControlContext AcntId='%s' present,fetching AccntPrds directly from Grp Svc", contextMap[common.ACCOUNT_ID])
-			accountData, err := ws.GroupServiceConnector.GetAccountData(contextMap[common.ACCOUNT_ID], fields)
+			accountData, err := ws.GroupServiceConnector.GetAccountProdData(contextMap[common.ACCOUNT_ID], fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts information from Grp Service for AccountId=%s Mac=%s", contextMap[common.ACCOUNT_ID], contextMap[common.ESTB_MAC_ADDRESS])
 			} else {
