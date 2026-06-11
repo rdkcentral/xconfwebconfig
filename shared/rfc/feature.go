@@ -321,6 +321,7 @@ func GetOneFeature(tenantId string, featureId string) *Feature {
 }
 
 func SetFeatureRule(tenantId string, id string, featureRule *FeatureRule) error {
+	featureRule.Updated = util.GetTimestamp()
 	if err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FEATURE_CONTROL_RULES, id, featureRule); err != nil {
 		log.Error("cannot save featureRule to DB")
 		return err
