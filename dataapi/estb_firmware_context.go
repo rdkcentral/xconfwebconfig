@@ -298,14 +298,14 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 							contextMap[key] = val
 						}
 						xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-						log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId,AccntProduct successfully retrieved from Grp Svc")
+						log.WithFields(fields).Debug("AddEstbFirmwareContext AcntId,AccntProduct successfully retrieved from Grp Svc")
 					} else {
-						log.WithFields(fields).Errorf("AddEstbFirmwareContext:Failed to unmarshal only AccountProducts")
+						log.WithFields(fields).Error("AddEstbFirmwareContext: Failed to unmarshal only AccountProducts")
 					}
 				}
 			}
 		} else {
-			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId info from Grp Svc for Mac")
+			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId info from Grp Svc")
 			xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		}
 	}
