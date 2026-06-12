@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	"gotest.tools/assert"
@@ -47,20 +47,20 @@ func TestGetEstbFirmwareSwuHandler(t *testing.T) {
 	defer taggingMockServer.Close()
 
 	// setup test data
-	server.SetXconfData(shared.TableFirmwareConfig, FirmwareConfigId1, firmwareConfig1Bytes, 3600)
-	server.SetXconfData(shared.TableFirmwareConfig, FirmwareConfigId2, firmwareConfig2Bytes, 3600)
-	server.SetXconfData(shared.TableFirmwareConfig, FirmwareConfigId3, firmwareConfig3Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId1, firmwareConfig1Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId2, firmwareConfig2Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_CONFIGS, FirmwareConfigId3, firmwareConfig3Bytes, 3600)
 
-	server.SetXconfData(shared.TableFirmwareRule, firmwareRuleId1, firmwareRule1Bytes, 3600)
-	server.SetXconfData(shared.TableFirmwareRule, firmwareRuleId2, firmwareRule2Bytes, 3600)
-	server.SetXconfData(shared.TableFirmwareRule, firmwareRuleId3, firmwareRule3Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, firmwareRuleId1, firmwareRule1Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, firmwareRuleId2, firmwareRule2Bytes, 3600)
+	server.SetXconfData(db.GetDefaultTenantId(), db.TABLE_FIRMWARE_RULES, firmwareRuleId3, firmwareRule3Bytes, 3600)
 
 	macs := []string{mac3, "AA:AA:AA:BB:BB:BB", "AA:AA:AA:BB:BB:CC"}
 	newList := shared.NewGenericNamespacedList(namespaceListKey, shared.MacList, macs)
-	compDao := ds.GetCompressingDataDao()
+	compDao := db.GetCompressingDataDao()
 	bbytes, err := json.Marshal(newList)
 	assert.NilError(t, err)
-	err = compDao.SetOne(shared.TableGenericNSList, namespaceListKey, bbytes)
+	err = compDao.SetOne(db.GetDefaultTenantId(), db.TABLE_GENERIC_NS_LIST, namespaceListKey, bbytes)
 	assert.NilError(t, err)
 
 	// no eStbMac and version is greater than or equal to, 400 error

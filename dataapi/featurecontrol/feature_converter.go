@@ -28,13 +28,13 @@ import (
 
 var GetGenericNamedListOneByTypeFunc = shared.GetGenericNamedListOneByType
 
-func ToRfcResponse(feature *rfc.Feature) *rfc.Feature {
+func ToRfcResponse(tenantId string, feature *rfc.Feature) *rfc.Feature {
 	if !feature.Whitelisted {
 		return feature
 	}
 	whitelistProperty := feature.WhitelistProperty
 	if whitelistProperty != nil && whitelistProperty.Value != "" && whitelistProperty.NamespacedListType != "" {
-		namespacedList, err := GetGenericNamedListOneByTypeFunc(whitelistProperty.Value, whitelistProperty.NamespacedListType)
+		namespacedList, err := GetGenericNamedListOneByTypeFunc(tenantId, whitelistProperty.Value, whitelistProperty.NamespacedListType)
 		if err != nil {
 			log.Error(fmt.Sprintf("Call GetGenericNamedListOneByType error %v", err))
 		}
