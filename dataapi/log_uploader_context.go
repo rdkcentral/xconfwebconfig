@@ -60,7 +60,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 	var xAccountId *conversion.XBOAccount
 	var err error
 	var localToken *xhttp.SatToken
-	var macAddress string
+	var macAddress = contextMap[common.ESTB_MAC_ADDRESS]
 	NormalizeLogUploaderContext(ws, r, contextMap, usePartnerAppType, fields)
 
 	localToken, err = xhttp.GetLocalSatToken(fields)
