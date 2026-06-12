@@ -239,20 +239,17 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 	var accountId string
 	var accountType string
 	var accountData map[string]string
-	var macAddress = contextMap[common.ESTB_MAC]
 
 	if Xc.EnableXacGroupService {
 		if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) || contextMap[common.ACCOUNT_ID] == "" || util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
 			xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 			if util.IsValidMacAddress(contextMap[common.ESTB_MAC]) {
-				macAddress = contextMap[common.ESTB_MAC]
 				macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ESTB_MAC])
 				xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
 			}
 
 			if xAccountId == nil && err != nil {
 				if util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-					macAddress = contextMap[common.ECM_MAC_ADDRESS]
 					macPart := util.RemoveNonAlphabeticSymbols(contextMap[common.ECM_MAC_ADDRESS])
 					xAccountId, err = ws.GroupServiceConnector.GetAccountIdData(macPart, fields)
 				}
@@ -265,14 +262,14 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			contextMap[common.ACCOUNT_ID] = accountId
 			contextMap[common.ACCOUNT_TYPE] = accountType
 			contextMap[common.ACCOUNT_HASH] = util.CalculateHash(contextMap[common.ACCOUNT_ID])
-			log.WithFields(fields).Debugf("AddEstbFirmwareContext Successfully fetched AcntId='%s' and AcntType='%s' from Grp Svc", accountId, accountType)
+			log.WithFields(fields).Debugf("AddEstbFirmwareContext Successfully fetched AcntId and AcntType from Grp Svc")
 		}
 
 		if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
-			log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' present,fetching AccntPrds directly from Grp Svc", contextMap[common.ACCOUNT_ID])
+			log.WithFields(fields).Debug("AddEstbFirmwareContext AcntId present,fetching AccntPrds directly from Grp Svc")
 			accountData, err = ws.GroupServiceConnector.GetAccountProductsData(contextMap[common.ACCOUNT_ID], fields)
 			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountProducts info from Grp Svc for AccountId=%s Mac=%s", contextMap[common.ACCOUNT_ID], macAddress)
+				log.WithFields(log.Fields{"error": err}).Error("Error getting accountProducts info from Grp Svc")
 			} else {
 				if partner, ok := accountData["Partner"]; ok {
 					contextMap[common.PARTNER_ID] = partner
@@ -301,20 +298,20 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 							contextMap[key] = val
 						}
 						xhttp.IncreaseGrpServiceFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
-						log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId='%s' ,AccntPrd='%v' successfully retrieved from Grp Svc", contextMap[common.ACCOUNT_ID], contextMap)
+						log.WithFields(fields).Debugf("AddEstbFirmwareContext AcntId,AccntProduct successfully retrieved from Grp Svc")
 					} else {
-						log.WithFields(fields).Errorf("AddEstbFirmwareContext: Mac='%s' AcntId='%s' Failed to unmarshal only AccountProducts", macAddress, contextMap[common.ACCOUNT_ID])
+						log.WithFields(fields).Errorf("AddEstbFirmwareContext:Failed to unmarshal only AccountProducts")
 					}
 				}
 			}
 		} else {
-			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId info from Grp Svc for Mac=%s", macAddress)
+			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId info from Grp Svc for Mac")
 			xhttp.IncreaseGrpServiceNotFoundResponseCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		}
 	}
 
 	if Xc.EnableAccountService && util.IsUnknownValue(contextMap[common.PARTNER_ID]) {
-		log.WithFields(fields).Debugf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Svc for MAC='%s' due to Flag Disabled or err", macAddress)
+		log.WithFields(fields).Debugf("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Svc due to Flag Disabled or err")
 		xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		partnerId := GetPartnerFromAccountServiceByHostMac(ws, contextMap[common.ESTB_MAC], satToken, fields)
 		if partnerId != "" {
