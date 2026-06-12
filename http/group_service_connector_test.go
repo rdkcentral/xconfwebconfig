@@ -97,7 +97,7 @@ func (m *MockGroupServiceConnector) GetAccountIdData(mac string, fields log.Fiel
 	return m.accountIdData, nil
 }
 
-func (m *MockGroupServiceConnector) GetAccountProducts(accountId string, fields log.Fields) (map[string]string, error) {
+func (m *MockGroupServiceConnector) GetAccountProductsData(accountId string, fields log.Fields) (map[string]string, error) {
 	if m.shouldError {
 		return nil, fmt.Errorf("mock error")
 	}
