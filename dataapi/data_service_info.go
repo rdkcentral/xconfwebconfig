@@ -28,6 +28,7 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/util"
 
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 func GetInfoRefreshAllHandler(w http.ResponseWriter, r *http.Request) {
@@ -49,9 +50,11 @@ func GetInfoRefreshHandler(w http.ResponseWriter, r *http.Request) {
 			response, _ := util.JSONMarshal(stats)
 			xhttp.WriteXconfResponse(w, http.StatusOK, response)
 		} else {
+			log.Errorf("GetInfoRefreshHandler failed to get cache stats for table %s: %v", tableName, err)
 			xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(err.Error()))
 		}
 	} else {
+		log.Errorf("GetInfoRefreshHandler failed to refresh table %s: %v", tableName, err)
 		xhttp.WriteXconfResponse(w, http.StatusInternalServerError, []byte(err.Error()))
 	}
 }

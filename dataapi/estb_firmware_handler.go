@@ -66,7 +66,10 @@ func GetEstbFirmwareSwuBseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	estbFirmwareRuleBase := dataef.NewEstbFirmwareRuleBaseDefault()
-	bseConfiguration, _ := estbFirmwareRuleBase.GetBseConfiguration(ip)
+	bseConfiguration, err := estbFirmwareRuleBase.GetBseConfiguration(ip)
+	if err != nil {
+		log.Errorf("GetEstbFirmwareSwuBseHandler failed to get BSE configuration: %v", err)
+	}
 	if bseConfiguration == nil {
 		xhttp.WriteXconfResponseAsText(w, 404, []byte("\"<h2>404 NOT FOUND</h2>\""))
 		return
@@ -125,7 +128,10 @@ func GetEstbFirmwareSwuHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		firmwareConfigResponse := sharedef.CreateFirmwareConfigFacadeResponse(*evaluationResult.FirmwareConfig)
-		response, _ := util.JSONMarshal(firmwareConfigResponse)
+		response, err := util.JSONMarshal(firmwareConfigResponse)
+		if err != nil {
+			log.WithFields(common.FilterLogFields(fields)).Errorf("GetEstbFirmwareSwuHandler failed to marshal firmware config response: %v", err)
+		}
 		xhttp.WriteXconfResponse(w, 200, response)
 	} else {
 		xhttp.WriteXconfResponseAsText(w, status, response)
@@ -175,7 +181,10 @@ func GetFirmwareResponse(w http.ResponseWriter, r *http.Request, xw *xhttp.XResp
 	log.Debugf("GetEstbFirmwareSwuHandler call AddEstbFirmwareContext  ... end contextMap %v", contextMap)
 	estbFirmwareRuleBase := dataef.NewEstbFirmwareRuleBaseDefault()
 	convertedContext := sharedef.GetContextConverted(contextMap)
-	evaluationResult, _ := estbFirmwareRuleBase.Eval(contextMap, convertedContext, contextMap[common.APPLICATION_TYPE], fields)
+	evaluationResult, err := estbFirmwareRuleBase.Eval(contextMap, convertedContext, contextMap[common.APPLICATION_TYPE], fields)
+	if err != nil {
+		log.WithFields(common.FilterLogFields(fields)).Errorf("GetFirmwareResponse firmware rule evaluation failed: %v", err)
+	}
 	explanation := GetExplanation(contextMap, evaluationResult)
 	if evaluationResult == nil || evaluationResult.Blocked || evaluationResult.FirmwareConfig == nil || evaluationResult.FirmwareConfig.Properties == nil {
 		return http.StatusNotFound, []byte(fmt.Sprintf("\"<h2>404 NOT FOUND</h2><div>%s<div>\"", explanation)), evaluationResult, convertedContext, explanation, contextMap
