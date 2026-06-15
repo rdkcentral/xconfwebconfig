@@ -300,7 +300,19 @@ func TestNormalizeMacAddress(t *testing.T) {
 	result = NormalizeMacAddress("")
 	assert.Equal(t, result, "") // Should return original if empty
 }
+func TestFormatRuleEvalReasons(t *testing.T) {
+	// Test with empty reasons
+	result := FormatRuleEvalReasons([]string{})
+	assert.Equal(t, result, "unknown")
 
+	// Test with one reason
+	result = FormatRuleEvalReasons([]string{"precook"})
+	assert.Equal(t, result, "precook")
+
+	// Test with multiple reasons
+	result = FormatRuleEvalReasons([]string{"precook", "live"})
+	assert.Equal(t, result, "precook-live")
+}
 func TestStringSliceEqual(t *testing.T) {
 	// Test equal slices
 	slice1 := []string{"a", "b", "c"}

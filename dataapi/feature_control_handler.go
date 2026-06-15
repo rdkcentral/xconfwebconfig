@@ -274,7 +274,7 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		// Only use 'precook' as a fallback if no other reasons (like 'precook-304') were set
 		ruleEvalReasons = []string{"precook"}
 	}
-	fields["ruleEval"] = ruleEvalReasons
+	fields["ruleEval"] = util.FormatRuleEvalReasons(ruleEvalReasons)
 	featureControlRuleBase.LogFeatureInfo(contextMap, appliedFeatureRules, featureControl.FeatureResponses, isLiveCalculated, fields)
 
 	if Ws.Config.GetBoolean("xconfwebconfig.xconf.enable_rfc_penetration_metrics", false) {
