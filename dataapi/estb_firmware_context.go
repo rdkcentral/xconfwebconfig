@@ -399,6 +399,7 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 				FwTs:                    fwTs,
 				ClientCertExpiry:        contextMap[common.CLIENT_CERT_EXPIRY],
 				RecoveryCertExpiry:      contextMap[common.RECOVERY_CERT_EXPIRY],
+				TimeZone:                contextMap[common.TIME_ZONE],
 			}
 
 			err := db.GetDatabaseClient().SetFwPenetrationMetrics(pTable)

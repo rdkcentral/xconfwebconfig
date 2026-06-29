@@ -379,6 +379,7 @@ func UpdatePenetrationMetrics(context map[string]string, AccountServiceData *Acc
 			ClientCertExpiry:     context[common.CLIENT_CERT_EXPIRY],
 			RecoveryCertExpiry:   context[common.RECOVERY_CERT_EXPIRY],
 			RfcPostProc:          rfcPostProc,
+			TimeZone:             context[common.TIME_ZONE],
 		}
 		if AccountServiceData != nil {
 			pTable.RfcTimeZone = AccountServiceData.TimeZone

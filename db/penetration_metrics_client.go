@@ -43,6 +43,7 @@ const (
 	RfcEstbIpColumnValue               = "rfc_estb_ip"
 	RfcTsColumnValue                   = "rfc_ts"
 	RfcPostProcColumnValue             = "rfc_post_proc"
+	TimeZoneColumnValue                = "time_zone"
 )
 
 // PenetrationMetrics struct
@@ -58,6 +59,7 @@ type FwPenetrationMetrics struct {
 	FwTs                    int64
 	ClientCertExpiry        string
 	RecoveryCertExpiry      string
+	TimeZone                string
 }
 
 type SecurityTokenDeviceInfo struct {
@@ -97,6 +99,7 @@ type RfcPenetrationMetrics struct {
 	RfcPostProc          string
 	ClientCertExpiry     string
 	RecoveryCertExpiry   string
+	TimeZone             string
 }
 
 var emptyValueSet = util.NewSet("", "unknown", "noaccount", "novalue", "nomatch", "na", "nomodel")
@@ -112,6 +115,7 @@ func (c *CassandraClient) SetFwPenetrationMetrics(pMetrics *FwPenetrationMetrics
 		FwAdditionalVersionInfoColumnValue,
 		FwAppliedRuleColumnValue,
 		FwTsColumnValue,
+		TimeZoneColumnValue,
 	}
 	if isEmptyString(pMetrics.FwAppliedRule) {
 		pMetrics.FwAppliedRule = ""
@@ -137,6 +141,7 @@ func (c *CassandraClient) SetFwPenetrationMetrics(pMetrics *FwPenetrationMetrics
 		pMetrics.FwAdditionalVersionInfo,
 		pMetrics.FwAppliedRule,
 		pMetrics.FwTs,
+		pMetrics.TimeZone,
 	}
 
 	// XPC-18738 special handling for partner and model. We allow replacement but do not clean up if not found in input
@@ -157,6 +162,11 @@ func (c *CassandraClient) SetFwPenetrationMetrics(pMetrics *FwPenetrationMetrics
 	if !isEmptyString(pMetrics.RecoveryCertExpiry) {
 		columns = append(columns, RecoveryCertExpiryValue)
 		values = append(values, pMetrics.RecoveryCertExpiry)
+	}
+
+	if !isEmptyString(pMetrics.TimeZone) {
+		columns = append(columns, TimeZoneColumnValue)
+		values = append(values, pMetrics.TimeZone)
 	}
 
 	stmt := fmt.Sprintf(`INSERT INTO "%s"(%v) VALUES(%v)`, PenetrationMetricsTable, GetColumnsStr(columns), GetValuesStr(len(columns)))
@@ -197,6 +207,7 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		RfcEstbIpColumnValue,
 		RfcTsColumnValue,
 		RfcPostProcColumnValue,
+		TimeZoneColumnValue,
 	}
 
 	values := []interface{}{
@@ -222,6 +233,7 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		pMetrics.RfcEstbIp,
 		pMetrics.RfcTs,
 		pMetrics.RfcPostProc,
+		pMetrics.TimeZone,
 	}
 
 	// only write following values when they're non-empty for rfc penetratioin metrics
@@ -256,6 +268,10 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		values = append(values, pMetrics.TitanAccountId)
 	}
 
+	if !isEmptyString(pMetrics.TimeZone) {
+		columns = append(columns, TimeZoneColumnValue)
+		values = append(values, pMetrics.TimeZone)
+	}
 	//if we return 304 based on precook data, we do not update features and applied_rules with empty string
 	if !isReturn304FromPrecook {
 		columns = append(columns, RfcFeaturesColumnValue, RfcAppliedRulesColumnValue)
@@ -385,6 +401,12 @@ func (c *CassandraClient) GetFwPenetrationMetrics(estbMac string) (*FwPenetratio
 				// fallback for existing int64 values
 				pMetrics.FwTs = itfvalue
 			}
+		case TimeZoneColumnValue:
+			if itfvalue, ok := v.(string); ok {
+				if len(itfvalue) > 0 {
+					pMetrics.TimeZone = itfvalue
+				}
+			}
 		}
 	}
 
@@ -440,6 +462,12 @@ func (c *CassandraClient) GetRfcPenetrationMetrics(estbMac string) (*RfcPenetrat
 			} else if itfvalue, ok := v.(int64); ok {
 				// fallback for existing int64 values
 				pMetrics.RfcTs = itfvalue
+			}
+		case TimeZoneColumnValue:
+			if itfvalue, ok := v.(string); ok {
+				if len(itfvalue) > 0 {
+					pMetrics.TimeZone = itfvalue
+				}
 			}
 		}
 	}
