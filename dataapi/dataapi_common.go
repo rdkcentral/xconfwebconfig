@@ -133,6 +133,10 @@ func NormalizeCommonContext(contextMap map[string]string, estbMacKey string, ecm
 	if partnerId != "" {
 		contextMap[common.PARTNER_ID] = strings.ToUpper(partnerId)
 	}
+	tenantId := contextMap[common.TENANT_ID]
+	if tenantId != "" {
+		contextMap[common.TENANT_ID] = strings.ToUpper(tenantId)
+	}
 }
 
 func AddContextFromTaggingService(ws *xhttp.XconfServer, contextMap map[string]string, satToken string, configSetHash string, isRfcApi bool, vargs ...log.Fields) []string {
@@ -260,7 +264,7 @@ func AddGroupServiceFTContext(ws *xhttp.XconfServer, macAddressKey string, conte
 			log.WithFields(fields).Debugf("Getting all data from GroupService /ft keyspace for partnerId=%s", partner)
 
 			if Xc.GroupServiceCacheEnabled {
-				Tags := groupServiceDao.GetGroupServiceFeatureTags(partner)
+				Tags := groupServiceDao.GetGroupServiceFeatureTags(contextMap[common.TENANT_ID], partner)
 				for key, value := range Tags {
 					if keyWithoutPrefix, ok := RemovePrefix(key, Xc.PartnerTagsPrefixList); ok {
 						if getPrefixData {

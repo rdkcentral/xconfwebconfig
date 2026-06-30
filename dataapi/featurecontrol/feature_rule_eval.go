@@ -52,7 +52,7 @@ func (f *FeatureControlRuleBase) Eval(context map[string]string, applicationType
 	featureMap := map[string]*rfc.Feature{}
 	if len(appliedFeatureRules) > 0 {
 		for _, featureRule := range appliedFeatureRules {
-			f.AddFeaturesToResult(featureMap, featureRule.FeatureIds)
+			f.AddFeaturesToResult(context[common.TENANT_ID], featureMap, featureRule.FeatureIds)
 		}
 	}
 	featureResponseList := make([]rfc.FeatureResponse, 0)
@@ -67,13 +67,13 @@ func (f *FeatureControlRuleBase) Eval(context map[string]string, applicationType
 
 var rfcGetOneFeatureFunc = rfc.GetOneFeature
 
-func (f *FeatureControlRuleBase) AddFeaturesToResult(featureMap map[string]*rfc.Feature, featureIds []string) {
+func (f *FeatureControlRuleBase) AddFeaturesToResult(tenantId string, featureMap map[string]*rfc.Feature, featureIds []string) {
 	var feature *rfc.Feature
 	for _, featureID := range featureIds {
 		if featureID == "" {
 			continue // no feature
 		}
-		feature = rfcGetOneFeatureFunc(featureID)
+		feature = rfcGetOneFeatureFunc(tenantId, featureID)
 		if feature == nil {
 			log.Debug(fmt.Sprintf("AddFeaturesToResult failed to find feature ID %v", featureID))
 			continue // feature not found
@@ -86,13 +86,13 @@ func (f *FeatureControlRuleBase) AddFeaturesToResult(featureMap map[string]*rfc.
 			log.Error(fmt.Sprintf("AddFeaturesToResult failed to clone %v: %v", feature, err))
 			continue // cloning failed
 		}
-		ToRfcResponse(clonedFeature)
+		ToRfcResponse(tenantId, clonedFeature)
 		featureMap[feature.Name] = clonedFeature
 	}
 }
 
 func (f *FeatureControlRuleBase) ProcessFeatureRules(context map[string]string, applicationType string) []*rfc.FeatureRule {
-	featureRules := rfc.GetSortedFeatureRules()
+	featureRules := rfc.GetSortedFeatureRules(context[common.TENANT_ID])
 	var filteredfeatureRules []*rfc.FeatureRule
 	for _, featureRule := range featureRules {
 		if applicationType == featureRule.ApplicationType && f.RuleProcessorFactory.RuleProcessor().Evaluate(featureRule.Rule, context, log.Fields{}) {

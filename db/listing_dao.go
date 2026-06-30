@@ -30,22 +30,22 @@ for the method to unmarshal the raw JSON data (i.e. []byte) to the proper struct
 Therefore, a table name and a corresponding constructor function need to be
 configured for the TableConfig variable.
 
-The returned value is an empty interface{} so the caller needs to cast the value
+The returned value is an empty interface{} (any) so the caller needs to cast the value
 to the target data type.
 */
 
 // ListingDao interface
 type ListingDao interface {
-	GetOne(tableName string, rowKey string, key2 interface{}) (interface{}, error)
-	SetOne(tableName string, rowKey interface{}, key2 interface{}, value []byte) error
-	DeleteOne(tableName string, rowKey string, key2 interface{}) error
-	DeleteAll(tableName string, rowKey string) error
-	GetAll(tableName string, rowKey string) ([]interface{}, error)
-	GetAllAsList(tableName string) ([]interface{}, error)
-	GetAllAsMap(tableName string, rowKey string, key2List []interface{}) (map[interface{}]interface{}, error)
-	GetRange(tableName string, rowKey interface{}, rangeInfo *RangeInfo) ([]interface{}, error)
-	GetKeys(tableName string) ([]TwoKeys, error)
-	GetKey2AsList(tableName string, rowKey string) ([]interface{}, error)
+	GetOne(tenantId string, tableName string, key string, key2 any) (any, error)
+	SetOne(tenantId string, tableName string, key any, key2 any, value []byte) error
+	DeleteOne(tenantId string, tableName string, key string, key2 any) error
+	DeleteAll(tenantId string, tableName string, key string) error
+	GetAll(tenantId string, tableName string, key string) ([]any, error)
+	GetAllAsList(tenantId string, tableName string) ([]any, error)
+	GetAllAsMap(tenantId string, tableName string, key string, key2List []any) (map[any]any, error)
+	GetRange(tenantId string, tableName string, key any, rangeInfo *RangeInfo) ([]any, error)
+	GetKeys(tenantId string, tableName string) ([]TwoKeys, error)
+	GetKey2AsList(tenantId string, tableName string, key string) ([]any, error)
 }
 
 type listingDaoImpl struct{}
@@ -58,23 +58,28 @@ func GetListingDao() ListingDao {
 }
 
 // GetOne get one Xconf record for two keys
-func (ld listingDaoImpl) GetOne(tableName string, rowKey string, key2 interface{}) (interface{}, error) {
+func (ld listingDaoImpl) GetOne(tenantId string, tableName string, key string, key2 any) (any, error) {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get data from DB as raw JSON []byte
-	data, err := GetDatabaseClient().GetXconfDataTwoKeys(tableName, rowKey, tableInfo.Key2FieldName, key2)
+	tid := tenantId
+	if tableInfo.TenantAgnostic {
+		tid = "" // use empty string to query since tenantId is not part of the partition key
+	}
+
+	data, err := GetDatabaseClient().GetXconfDataTwoKeys(tid, tableName, key, key2)
 	if err != nil {
 		return nil, err
 	}
 
 	var jsonData []byte
-	if tableInfo.Compress {
+	if tableInfo.Compressed {
 		jsonData, err = decompress(data)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
+			return nil, fmt.Errorf("failed to decompress tenantId %s table %s key %s key2 %v: %w", tenantId, tableName, key, key2, err)
 		}
 	} else {
 		jsonData = data
@@ -90,7 +95,7 @@ func (ld listingDaoImpl) GetOne(tableName string, rowKey string, key2 interface{
 }
 
 // SetOne set Xconf record for two keys
-func (ld listingDaoImpl) SetOne(tableName string, rowKey interface{}, key2 interface{}, value []byte) error {
+func (ld listingDaoImpl) SetOne(tenantId string, tableName string, key any, key2 any, value []byte) error {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return err
@@ -98,34 +103,52 @@ func (ld listingDaoImpl) SetOne(tableName string, rowKey interface{}, key2 inter
 
 	// Compress the JSON data if required
 	var data []byte
-	if tableInfo.Compress {
+	if tableInfo.Compressed {
 		data = compress(value)
 	} else {
 		data = value
 	}
 
-	err = GetDatabaseClient().SetXconfDataTwoKeys(tableName, rowKey, tableInfo.Key2FieldName, key2, data, tableInfo.TTL)
-	return err
+	tid := tenantId
+	if tableInfo.TenantAgnostic {
+		tid = "" // use empty string to query since tenantId is not part of the partition key
+	}
+
+	return GetDatabaseClient().SetXconfDataTwoKeys(tid, tableName, key, key2, data, tableInfo.TTL)
 }
 
 // DeleteOne delete Xconf record for two keys
-func (ld listingDaoImpl) DeleteOne(tableName string, rowKey string, key2 interface{}) error {
+func (ld listingDaoImpl) DeleteOne(tenantId string, tableName string, key string, key2 any) error {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return err
 	}
 
-	return GetDatabaseClient().DeleteXconfDataTwoKeys(tableName, rowKey, tableInfo.Key2FieldName, key2)
+	tid := tenantId
+	if tableInfo.TenantAgnostic {
+		tid = "" // use empty string to query since tenantId is not part of the partition key
+	}
+
+	return GetDatabaseClient().DeleteXconfDataTwoKeys(tid, tableName, key, key2)
 }
 
-func (ld listingDaoImpl) DeleteAll(tableName string, rowKey string) error {
-	err := GetDatabaseClient().DeleteXconfData(tableName, rowKey)
-	return err
+func (ld listingDaoImpl) DeleteAll(tenantId string, tableName string, key string) error {
+	tableInfo, err := GetTableInfo(tableName)
+	if err != nil {
+		return err
+	}
+
+	tid := tenantId
+	if tableInfo.TenantAgnostic {
+		tid = "" // use empty string to query since tenantId is not part of the partition key
+	}
+
+	return GetDatabaseClient().DeleteXconfData(tid, tableName, key)
 }
 
-// GetAll get multiple Xconf records for the specified rowKey
-func (ld listingDaoImpl) GetAll(tableName string, rowKey string) ([]interface{}, error) {
-	var result []interface{}
+// GetAll get multiple Xconf records for the specified key
+func (ld listingDaoImpl) GetAll(tenantId string, tableName string, key string) ([]any, error) {
+	var result []any
 
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
@@ -133,13 +156,18 @@ func (ld listingDaoImpl) GetAll(tableName string, rowKey string) ([]interface{},
 	}
 
 	// Get data from DB as a list of raw JSON []byte
-	rows := GetDatabaseClient().GetAllXconfData(tableName, rowKey)
+	tid := tenantId
+	if tableInfo.TenantAgnostic {
+		tid = "" // use empty string to query since tenantId is not part of the partition key
+	}
+
+	rows := GetDatabaseClient().GetAllXconfData(tid, tableName, key)
 	for _, data := range rows {
 		var jsonData []byte
-		if tableInfo.Compress {
+		if tableInfo.Compressed {
 			jsonData, err = decompress(data)
 			if err != nil {
-				return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
+				return nil, fmt.Errorf("failed to decompress tenantId %s table %s key %s: %w", tenantId, tableName, key, err)
 			}
 		} else {
 			jsonData = data
@@ -157,18 +185,23 @@ func (ld listingDaoImpl) GetAll(tableName string, rowKey string) ([]interface{},
 }
 
 // GetAllAsList get a list of all Xconf records
-func (ld listingDaoImpl) GetAllAsList(tableName string) ([]interface{}, error) {
-	var result []interface{}
+func (ld listingDaoImpl) GetAllAsList(tenantId string, tableName string) ([]any, error) {
+	var result []any
 
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return nil, err
 	}
 
-	rows := GetDatabaseClient().GetAllXconfDataAsList(tableName, 0)
+	tid := tenantId
+	if tableInfo.TenantAgnostic {
+		tid = "" // use empty string to query since tenantId is not part of the partition key
+	}
+
+	rows := GetDatabaseClient().GetAllXconfDataAsList(tid, tableName, 0)
 	for _, data := range rows {
 		var jsonData []byte
-		if tableInfo.Compress {
+		if tableInfo.Compressed {
 			jsonData, err = decompress(data)
 			if err != nil {
 				return nil, err
@@ -189,8 +222,8 @@ func (ld listingDaoImpl) GetAllAsList(tableName string) ([]interface{}, error) {
 }
 
 // GetAllAsMap get a map of all Xconf records for the specified key2 list
-func (ld listingDaoImpl) GetAllAsMap(tableName string, rowKey string, key2List []interface{}) (map[interface{}]interface{}, error) {
-	var result = make(map[interface{}]interface{})
+func (ld listingDaoImpl) GetAllAsMap(tenantId string, tableName string, key string, key2List []any) (map[any]any, error) {
+	var result = make(map[any]any)
 
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
@@ -198,13 +231,18 @@ func (ld listingDaoImpl) GetAllAsMap(tableName string, rowKey string, key2List [
 	}
 
 	// Get data from DB as a map of key2 and raw JSON []byte
-	dataMap := GetDatabaseClient().GetAllXconfDataTwoKeysAsMap(tableName, rowKey, tableInfo.Key2FieldName, key2List)
+	tid := tenantId
+	if tableInfo.TenantAgnostic {
+		tid = "" // use empty string to query since tenantId is not part of the partition key
+	}
+
+	dataMap := GetDatabaseClient().GetAllXconfDataTwoKeysAsMap(tid, tableName, key, key2List)
 	for key2, data := range dataMap {
 		var jsonData []byte
-		if tableInfo.Compress {
+		if tableInfo.Compressed {
 			jsonData, err = decompress(data)
 			if err != nil {
-				return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
+				return nil, fmt.Errorf("failed to decompress tenantId %s table %s key %s key2 %v: %w", tenantId, tableName, key, key2, err)
 			}
 		} else {
 			jsonData = data
@@ -221,8 +259,8 @@ func (ld listingDaoImpl) GetAllAsMap(tableName string, rowKey string, key2List [
 	return result, err
 }
 
-func (ld listingDaoImpl) GetRange(tableName string, rowKey interface{}, rangeInfo *RangeInfo) ([]interface{}, error) {
-	var result []interface{}
+func (ld listingDaoImpl) GetRange(tenantId string, tableName string, key any, rangeInfo *RangeInfo) ([]any, error) {
+	var result []any
 
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
@@ -230,13 +268,18 @@ func (ld listingDaoImpl) GetRange(tableName string, rowKey interface{}, rangeInf
 	}
 
 	// Get data from DB as a list of raw JSON []byte
-	rows := GetDatabaseClient().GetAllXconfDataTwoKeysRange(tableName, rowKey, tableInfo.Key2FieldName, rangeInfo)
+	tid := tenantId
+	if tableInfo.TenantAgnostic {
+		tid = "" // use empty string to query since tenantId is not part of the partition key
+	}
+
+	rows := GetDatabaseClient().GetAllXconfDataTwoKeysRange(tid, tableName, key, rangeInfo)
 	for _, data := range rows {
 		var jsonData []byte
-		if tableInfo.Compress {
+		if tableInfo.Compressed {
 			jsonData, err = decompress(data)
 			if err != nil {
-				return nil, fmt.Errorf("failed to decompress rowKey '%s': %w", rowKey, err)
+				return nil, fmt.Errorf("failed to decompress tenantId %s table %s key %v: %w", tenantId, tableName, key, err)
 			}
 		} else {
 			jsonData = data
@@ -254,21 +297,31 @@ func (ld listingDaoImpl) GetRange(tableName string, rowKey interface{}, rangeInf
 }
 
 // GetKeys get all Xconf two keys
-func (ld listingDaoImpl) GetKeys(tableName string) ([]TwoKeys, error) {
+func (ld listingDaoImpl) GetKeys(tenantId string, tableName string) ([]TwoKeys, error) {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return nil, err
 	}
 
-	return GetDatabaseClient().GetAllXconfTwoKeys(tableName, tableInfo.Key2FieldName), nil
+	tid := tenantId
+	if tableInfo.TenantAgnostic {
+		tid = "" // use empty string to query since tenantId is not part of the partition key
+	}
+
+	return GetDatabaseClient().GetAllXconfTwoKeys(tid, tableName), nil
 }
 
 // GetKeys get a list of Xconf key2 for the specified rowKey
-func (ld listingDaoImpl) GetKey2AsList(tableName string, rowKey string) ([]interface{}, error) {
+func (ld listingDaoImpl) GetKey2AsList(tenantId string, tableName string, rowKey string) ([]any, error) {
 	tableInfo, err := GetTableInfo(tableName)
 	if err != nil {
 		return nil, err
 	}
 
-	return GetDatabaseClient().GetAllXconfKey2s(tableName, rowKey, tableInfo.Key2FieldName), nil
+	tid := tenantId
+	if tableInfo.TenantAgnostic {
+		tid = "" // use empty string to query since tenantId is not part of the partition key
+	}
+
+	return GetDatabaseClient().GetAllXconfKey2s(tid, tableName, rowKey), nil
 }

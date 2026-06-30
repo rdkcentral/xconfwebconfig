@@ -91,6 +91,7 @@ func GetContextMapAndSettingTypes(r *http.Request) (map[string]string, []string)
 	}
 	contextMap := make(map[string]string)
 	contextMap[common.APPLICATION_TYPE] = applicationType
+	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r, "")
 	var settingTypes []string
 	if len(queryParams) > 0 {
 		for k, v := range queryParams {
@@ -143,7 +144,7 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 		if result != nil {
 			telemetryProfileService := telemetry.NewTelemetryProfileService()
 			telemetryRule = telemetryProfileService.GetTelemetryRuleForContext(contextMap)
-			permanentTelemetryProfile := telemetryProfileService.GetPermanentProfileByTelemetryRule(telemetryRule)
+			permanentTelemetryProfile := telemetryProfileService.GetPermanentProfileByTelemetryRule(contextMap[common.TENANT_ID], telemetryRule)
 			if permanentTelemetryProfile != nil {
 				cloneObj, err := permanentTelemetryProfile.Clone()
 				if err == nil {
@@ -171,7 +172,7 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 			var settingProfiles []logupload.SettingProfiles
 			for _, settingType := range settingTypes {
 				rule := settings.GetSettingsRuleByTypeForContext(settingType, contextMap)
-				profile := settings.GetSettingProfileBySettingRule(rule)
+				profile := settings.GetSettingProfileBySettingRule(contextMap[common.TENANT_ID], rule)
 				if profile != nil {
 					settingProfiles = append(settingProfiles, *profile)
 					settingRules = append(settingRules, rule)
@@ -208,7 +209,7 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 					result.LusUploadRepositoryURLNew = Ws.LogUploadSecurityTokenConfig.AddSecurityTokenToUrl(deviceInfo, result.LusUploadRepositoryURLNew, fields)
 				}
 			}
-			LogResultSettings(result, telemetryRule, settingRules, fields)
+			LogResultSettings(contextMap[common.TENANT_ID], result, telemetryRule, settingRules, fields)
 			settingsResponse := logupload.CreateSettingsResponseObject(result)
 			response, _ := util.JSONMarshal(settingsResponse)
 			xhttp.WriteXconfResponse(w, 200, response)

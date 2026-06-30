@@ -20,6 +20,7 @@ package settings
 import (
 	"testing"
 
+	"github.com/rdkcentral/xconfwebconfig/db"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
 	"github.com/stretchr/testify/assert"
@@ -80,7 +81,7 @@ func TestGetMaxRule(t *testing.T) {
 			},
 		}
 
-		result := GetMaxRule(rules)
+		result := GetMaxRule(db.GetDefaultTenantId(), rules)
 
 		assert.NotNil(t, result)
 		// The rule with most compound parts (most complex) should be selected
@@ -102,7 +103,7 @@ func TestGetMaxRule(t *testing.T) {
 			},
 		}
 
-		result := GetMaxRule(rules)
+		result := GetMaxRule(db.GetDefaultTenantId(), rules)
 
 		assert.NotNil(t, result)
 		assert.Equal(t, "rule1", result.ID)
@@ -111,13 +112,13 @@ func TestGetMaxRule(t *testing.T) {
 	t.Run("GetMaxRuleWithEmptySlice", func(t *testing.T) {
 		rules := []logupload.SettingRule{}
 
-		result := GetMaxRule(rules)
+		result := GetMaxRule(db.GetDefaultTenantId(), rules)
 
 		assert.Nil(t, result)
 	})
 
 	t.Run("GetMaxRuleWithNilSlice", func(t *testing.T) {
-		result := GetMaxRule(nil)
+		result := GetMaxRule(db.GetDefaultTenantId(), nil)
 
 		assert.Nil(t, result)
 	})
@@ -148,7 +149,7 @@ func TestGetMaxRule(t *testing.T) {
 			},
 		}
 
-		result := GetMaxRule(rules)
+		result := GetMaxRule(db.GetDefaultTenantId(), rules)
 
 		assert.NotNil(t, result)
 		// With equal complexity, should return one (sorting is stable)
@@ -223,7 +224,7 @@ func TestGetMaxRule(t *testing.T) {
 			},
 		}
 
-		result := GetMaxRule(rules)
+		result := GetMaxRule(db.GetDefaultTenantId(), rules)
 
 		assert.NotNil(t, result)
 		// The most complex rule should be selected
@@ -281,7 +282,7 @@ func TestGetMaxRule(t *testing.T) {
 			},
 		}
 
-		result := GetMaxRule(rules)
+		result := GetMaxRule(db.GetDefaultTenantId(), rules)
 
 		assert.NotNil(t, result)
 		// The nested (more complex) rule should be selected
@@ -292,7 +293,7 @@ func TestGetMaxRule(t *testing.T) {
 // TestGetSettingProfileBySettingRule tests the GetSettingProfileBySettingRule function
 func TestGetSettingProfileBySettingRule(t *testing.T) {
 	t.Run("GetSettingProfileWithNilSettingRule", func(t *testing.T) {
-		result := GetSettingProfileBySettingRule(nil)
+		result := GetSettingProfileBySettingRule(db.GetDefaultTenantId(), nil)
 		assert.Nil(t, result)
 	})
 
@@ -303,7 +304,7 @@ func TestGetSettingProfileBySettingRule(t *testing.T) {
 			BoundSettingID: "",
 		}
 
-		result := GetSettingProfileBySettingRule(settingRule)
+		result := GetSettingProfileBySettingRule(db.GetDefaultTenantId(), settingRule)
 		assert.Nil(t, result)
 	})
 
@@ -317,7 +318,7 @@ func TestGetSettingRulesBySettingType(t *testing.T) {
 	t.Run("GetSettingRulesBySettingType_WithEmptyType", func(t *testing.T) {
 		// This will attempt to query the database
 		// In a unit test without DB, it returns nil or empty slice depending on error
-		result := GetSettingRulesBySettingType("")
+		result := GetSettingRulesBySettingType(db.GetDefaultTenantId(), "")
 		// Function may return nil when DB is unavailable
 		// Just verify it doesn't panic and returns a slice type (nil is valid)
 		if result != nil {
@@ -326,7 +327,7 @@ func TestGetSettingRulesBySettingType(t *testing.T) {
 	})
 
 	t.Run("GetSettingRulesBySettingType_WithValidType", func(t *testing.T) {
-		result := GetSettingRulesBySettingType("EPON")
+		result := GetSettingRulesBySettingType(db.GetDefaultTenantId(), "EPON")
 		// Without DB, may return nil
 		if result != nil {
 			assert.IsType(t, []*logupload.SettingRule{}, result)
@@ -334,14 +335,14 @@ func TestGetSettingRulesBySettingType(t *testing.T) {
 	})
 
 	t.Run("GetSettingRulesBySettingType_WithPartnerType", func(t *testing.T) {
-		result := GetSettingRulesBySettingType("partnersettings")
+		result := GetSettingRulesBySettingType(db.GetDefaultTenantId(), "partnersettings")
 		if result != nil {
 			assert.IsType(t, []*logupload.SettingRule{}, result)
 		}
 	})
 
 	t.Run("GetSettingRulesBySettingType_WithTelemetryType", func(t *testing.T) {
-		result := GetSettingRulesBySettingType("telemetry")
+		result := GetSettingRulesBySettingType(db.GetDefaultTenantId(), "telemetry")
 		if result != nil {
 			assert.IsType(t, []*logupload.SettingRule{}, result)
 		}
@@ -353,7 +354,7 @@ func TestGetSettingRuleAllAsList(t *testing.T) {
 	t.Run("GetSettingRuleAllAsList_ReturnsWithoutError", func(t *testing.T) {
 		// This attempts to fetch from cache or database
 		// Without a real DB connection, it should handle gracefully
-		rules, err := GetSettingRuleAllAsList()
+		rules, err := GetSettingRuleAllAsList(db.GetDefaultTenantId())
 
 		// The function may return error or empty list depending on DB state
 		// We just verify it doesn't panic
@@ -369,7 +370,9 @@ func TestGetSettingRuleAllAsList(t *testing.T) {
 // TestGetSettingsRuleByTypeForContext tests the GetSettingsRuleByTypeForContext function
 func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 	t.Run("GetSettingsRuleByTypeForContext_WithEmptyContext", func(t *testing.T) {
-		contextMap := map[string]string{}
+		contextMap := map[string]string{
+			"tenantId": db.GetDefaultTenantId(),
+		}
 		result := GetSettingsRuleByTypeForContext("EPON", contextMap)
 
 		// Without DB or matching rules, should return nil
@@ -381,6 +384,7 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"model":           "MODEL1",
 			"env":             "PROD",
 			"applicationType": "stb",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
 		result := GetSettingsRuleByTypeForContext("EPON", contextMap)
 
@@ -394,6 +398,7 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"env":             "QA",
 			"partnerId":       "cox",
 			"applicationType": "stb",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
 		result := GetSettingsRuleByTypeForContext("partnersettings", contextMap)
 
@@ -405,6 +410,7 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"model":           "XG2v2",
 			"firmwareVersion": "2.0.0",
 			"applicationType": "xhome",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
 		result := GetSettingsRuleByTypeForContext("telemetry", contextMap)
 
@@ -420,6 +426,7 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"firmwareVersion": "1.2.3",
 			"applicationType": "stb",
 			"capabilities":    "DOCSIS3.0",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
 		result := GetSettingsRuleByTypeForContext("EPON", contextMap)
 
@@ -428,7 +435,8 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 
 	t.Run("GetSettingsRuleByTypeForContext_WithEmptySettingType", func(t *testing.T) {
 		contextMap := map[string]string{
-			"model": "MODEL1",
+			"model":    "MODEL1",
+			"tenantId": db.GetDefaultTenantId(),
 		}
 		result := GetSettingsRuleByTypeForContext("", contextMap)
 
@@ -441,6 +449,7 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"model":           "XG1v3",
 			"env":             "PROD",
 			"applicationType": "stb",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
 		result := GetSettingsRuleByTypeForContext("EPON", contextMap)
 
@@ -452,6 +461,7 @@ func TestGetSettingsRuleByTypeForContext(t *testing.T) {
 			"ipAddress":       "10.0.0.1",
 			"model":           "XG1v4",
 			"applicationType": "stb",
+			"tenantId":        db.GetDefaultTenantId(),
 		}
 		result := GetSettingsRuleByTypeForContext("partnersettings", contextMap)
 

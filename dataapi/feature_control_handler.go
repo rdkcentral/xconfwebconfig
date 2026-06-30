@@ -70,6 +70,8 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		applicationType = shared.STB
 	}
 	contextMap[common.APPLICATION_TYPE] = applicationType
+	contextMap[common.TENANT_ID] = xhttp.GetTenantId(r, contextMap[common.PARTNER_ID])
+
 	if len(queryParams) > 0 {
 		for k, v := range queryParams {
 			contextMap[k] = v[0]
@@ -89,7 +91,7 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	canPrecookRfcResponse := false
 	isRfcPrecook304Enabled := false
 	isRfcPrecookForOfferedFwEnabled := Xc.EnableRfcPrecookForOfferedFw
-	isPrecookLockdownMode := shared.GetBooleanAppSetting(common.PROP_PRECOOK_LOCKDOWN_ENABLED, false)
+	isPrecookLockdownMode := shared.GetBooleanAppSetting(contextMap[common.TENANT_ID], common.PROP_PRECOOK_LOCKDOWN_ENABLED, false)
 	tfields := common.FilterLogFields(fields)
 	ruleEvalReasons := []string{}
 	// only check values of precook flags if not in precook lockdown mode and mac is not in exclusion
@@ -97,7 +99,7 @@ func GetFeatureControlSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(tfields).Debug("Currently in pre-cook lockdown mode, setting pre-cook flags to false.")
 		ruleEvalReasons = append(ruleEvalReasons, "precook-off")
 	} else {
-		exclusionMacsSet, _ := shared.GetGenericNamedListSetByType(shared.MAC_LIST)
+		exclusionMacsSet, _ := shared.GetGenericNamedListSetByType(contextMap[common.TENANT_ID], shared.MAC_LIST)
 		if exclusionMacsSet.Contains(contextMap[common.ESTB_MAC_ADDRESS]) {
 			log.WithFields(tfields).Debugf("Device mac %s is in precook exclusion list, will not deliver precook data.", contextMap[common.ESTB_MAC_ADDRESS])
 			xhttp.IncreasePrecookExcludeMacListCounter(contextMap[common.PARTNER_ID], contextMap[common.MODEL])
@@ -354,7 +356,8 @@ func UpdatePenetrationMetrics(context map[string]string, AccountServiceData *Acc
 		// but create copy first so featureControl response is unchanged
 		sortedRules := featurecontrol.SortCaseInsensitive(ruleNames)
 		sortedFeatures := featurecontrol.SortCaseInsensitive(featureInstances)
-		pTable := &db.RfcPenetrationMetrics{
+		pData := &db.RfcPenetrationData{
+			TenantId:             context[common.TENANT_ID],
 			EstbMac:              estbMac,
 			EcmMac:               ecmMac,
 			SerialNum:            context[common.SERIAL_NUM],
@@ -381,11 +384,11 @@ func UpdatePenetrationMetrics(context map[string]string, AccountServiceData *Acc
 			RfcPostProc:          rfcPostProc,
 		}
 		if AccountServiceData != nil {
-			pTable.RfcTimeZone = AccountServiceData.TimeZone
-			pTable.TitanPartner = AccountServiceData.PartnerId
-			pTable.TitanAccountId = AccountServiceData.AccountId
+			pData.RfcTimeZone = AccountServiceData.TimeZone
+			pData.TitanPartner = AccountServiceData.PartnerId
+			pData.TitanAccountId = AccountServiceData.AccountId
 		}
-		err := db.GetDatabaseClient().SetRfcPenetrationMetrics(pTable, is304FromPrecook)
+		err := db.GetDatabaseClient().SetRfcPenetrationData(pData, is304FromPrecook)
 		if err != nil {
 			log.Error(fmt.Sprintf("Can't save RFC penetration metric, estbMacAddress=%s, error=%+v", estbMac, err))
 		}

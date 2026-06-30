@@ -18,14 +18,11 @@
 package rulesengine
 
 import (
+	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	ipListTableName = "GenericXconfNamedList"
 )
 
 type IpAddressEvaluator struct {
@@ -72,14 +69,14 @@ func (e *IpAddressEvaluator) Evaluate(condition *Condition, context map[string]s
 	// ==== eval core ====
 	// Get data from cache only and avoid loading from DB due to performance,
 	// When a new record is added to the DB, the cache will be updated via CacheRefreshTask
-	var GetOneFunc func(tableName string, rowKey string) (interface{}, error)
+	var GetOneFunc func(tenantId string, tableName string, rowKey string) (interface{}, error)
 	if db.Conf.GetBoolean("xconfwebconfig.xconf.evaluator_nslist_loading_cache_enabled") {
 		GetOneFunc = e.nsListDao.GetOne
 	} else {
 		GetOneFunc = e.nsListDao.GetOneFromCacheOnly
 	}
 
-	nsListItf, err := GetOneFunc(ipListTableName, fixedArgValue)
+	nsListItf, err := GetOneFunc(context[common.TENANT_ID], db.TABLE_GENERIC_NS_LIST, fixedArgValue)
 	if err != nil {
 		log.Debugf("NsListInEvaluator  Can't evaluate rule because NsList doesn't exist. ID: %v", fixedArgValue)
 		return false
