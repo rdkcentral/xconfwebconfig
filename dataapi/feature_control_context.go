@@ -592,8 +592,8 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 func useApacRoute(contextMap map[string]string) bool {
 	enabled := Xc != nil && Xc.EnableApacRouting
 	partner := strings.ToUpper(strings.TrimSpace(contextMap[common.PARTNER_ID]))
-	accountUnknown := util.IsUnknownValue(contextMap[common.ACCOUNT_ID])
-
+	accountID := strings.TrimSpace(contextMap[common.ACCOUNT_ID])
+	accountUnknown := accountID == "" || util.IsUnknownValue(accountID)
 	if !enabled {
 		return false
 	}
