@@ -116,10 +116,10 @@ func NormalizeCommonContext(contextMap map[string]string, estbMacKey string, ecm
 		normalizedEstbMac, err := util.MacAddrComplexFormat(estbMac)
 		if err == nil {
 			contextMap[estbMacKey] = normalizedEstbMac
-		}
-		// Compute estbHash and store in contextMap
-		if estbHash, ok := re.GetPercentHash(estbMac); ok {
-			contextMap[common.ESTB_HASH] = strconv.FormatFloat(estbHash, 'f', -1, 64)
+			// Compute estbHash and store in contextMap
+			if estbHash, ok := re.GetPercentHash(normalizedEstbMac); ok {
+				contextMap[common.ESTB_HASH] = strconv.FormatFloat(estbHash, 'f', -1, 64)
+			}
 		}
 	}
 	ecmMac := contextMap[ecmMacKey]
