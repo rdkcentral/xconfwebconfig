@@ -115,7 +115,6 @@ func (c *CassandraClient) SetFwPenetrationMetrics(pMetrics *FwPenetrationMetrics
 		FwAdditionalVersionInfoColumnValue,
 		FwAppliedRuleColumnValue,
 		FwTsColumnValue,
-		TimeZoneColumnValue,
 	}
 	if isEmptyString(pMetrics.FwAppliedRule) {
 		pMetrics.FwAppliedRule = ""
@@ -141,7 +140,6 @@ func (c *CassandraClient) SetFwPenetrationMetrics(pMetrics *FwPenetrationMetrics
 		pMetrics.FwAdditionalVersionInfo,
 		pMetrics.FwAppliedRule,
 		pMetrics.FwTs,
-		pMetrics.TimeZone,
 	}
 
 	// XPC-18738 special handling for partner and model. We allow replacement but do not clean up if not found in input
@@ -207,7 +205,6 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		RfcEstbIpColumnValue,
 		RfcTsColumnValue,
 		RfcPostProcColumnValue,
-		TimeZoneColumnValue,
 	}
 
 	values := []interface{}{
@@ -233,7 +230,6 @@ func (c *CassandraClient) SetRfcPenetrationMetrics(pMetrics *RfcPenetrationMetri
 		pMetrics.RfcEstbIp,
 		pMetrics.RfcTs,
 		pMetrics.RfcPostProc,
-		pMetrics.TimeZone,
 	}
 
 	// only write following values when they're non-empty for rfc penetratioin metrics
