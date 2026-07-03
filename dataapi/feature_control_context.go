@@ -42,6 +42,7 @@ const (
 	DTGR_PARTNER_ID  = "dt-gr"
 	GR_PREFIX        = "GR"
 	SN_PREFIX        = "sn-"
+	apacRouteKey     = "apac_route"
 )
 
 type PodData struct {
@@ -210,6 +211,10 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 	}
 
 	tfields := common.FilterLogFields(fields)
+	accountServiceConnector := ws.AccountServiceConnector
+	if strings.EqualFold(contextMap[apacRouteKey], "true") && ws.ApacAccountServiceConnector != nil {
+		accountServiceConnector = ws.ApacAccountServiceConnector
+	}
 	if Xc.EnableXacGroupService {
 		podData, td = getAccountInfoFromGrpService(ws, contextMap, fields)
 	}
@@ -217,7 +222,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 	if podData == nil {
 		log.WithFields(fields).Debug("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service")
 		if Xc.EnableMacAccountServiceCall && strings.HasPrefix(strings.ToUpper(contextMap[common.SERIAL_NUM]), Xc.AccountServiceMacPrefix) {
-			AccountServiceDeviceObject, err := ws.AccountServiceConnector.GetDevices(common.SERIAL_NUMBER_PARAM, contextMap[common.SERIAL_NUM], satToken, fields)
+			AccountServiceDeviceObject, err := accountServiceConnector.GetDevices(common.SERIAL_NUMBER_PARAM, contextMap[common.SERIAL_NUM], satToken, fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService device information: serialNum=%s", contextMap[common.SERIAL_NUM])
 				return podData, td
@@ -240,7 +245,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 			if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
 				contextMap[common.ACCOUNT_ID] = podData.AccountId
 			}
-			AccountServiceAccountObject, err := ws.AccountServiceConnector.GetAccountData(podData.AccountId, satToken, fields)
+			AccountServiceAccountObject, err := accountServiceConnector.GetAccountData(podData.AccountId, satToken, fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService account information for XLE device: accountId=%s, serialNum=%s", podData.AccountId, contextMap[common.SERIAL_NUM])
 				return podData, td
@@ -266,7 +271,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 				log.WithFields(log.Fields{"error": err}).Errorf("Mac address from odp db is invalid: ecmMac=%s, serialNum=%s", ecmMacAddress, contextMap[common.SERIAL_NUM])
 				return podData, td
 			}
-			AccountServiceDeviceObject, err := ws.AccountServiceConnector.GetDevices(common.ECM_MAC_PARAM, normalizedEcmMac, satToken, fields)
+			AccountServiceDeviceObject, err := accountServiceConnector.GetDevices(common.ECM_MAC_PARAM, normalizedEcmMac, satToken, fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService device information: ecmMac=%s, serialNum=%s", normalizedEcmMac, contextMap[common.SERIAL_NUM])
 				return podData, td
@@ -289,7 +294,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 			if util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) && podData.AccountId != "" {
 				contextMap[common.ACCOUNT_ID] = podData.AccountId
 			}
-			accountServiceAccountObject, err := ws.AccountServiceConnector.GetAccountData(podData.AccountId, satToken, fields)
+			accountServiceAccountObject, err := accountServiceConnector.GetAccountData(podData.AccountId, satToken, fields)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Errorf("Error getting AccountService account information: accountId=%s, ecmMac=%s, serialNum=%s", podData.AccountId, normalizedEcmMac, contextMap[common.SERIAL_NUM])
 				return podData, td
@@ -334,6 +339,10 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 		fields = log.Fields{}
 	}
 	var err error
+	accountServiceConnector := ws.AccountServiceConnector
+	if strings.EqualFold(contextMap[apacRouteKey], "true") && ws.ApacAccountServiceConnector != nil {
+		accountServiceConnector = ws.ApacAccountServiceConnector
+	}
 	if Xc.EnableXacGroupService {
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
 			var xAccountId *conversion.XBOAccount
@@ -415,7 +424,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 			log.WithFields(fields).Debug("Fallback Trying via Old Account Service,Failed to Get AccountId via Grp Service due to Flag Disabled or err")
 			var accountServiceObject xhttp.AccountServiceDevices
 			if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) {
-				accountServiceObject, err = ws.AccountServiceConnector.GetDevices(common.HOST_MAC_PARAM, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
+				accountServiceObject, err = accountServiceConnector.GetDevices(common.HOST_MAC_PARAM, contextMap[common.ESTB_MAC_ADDRESS], satToken, fields)
 				if err == nil {
 					td = &AccountServiceData{
 						AccountId: accountServiceObject.DeviceData.ServiceAccountUri,
@@ -424,7 +433,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				}
 			}
 			if accountServiceObject.Id == "" && accountServiceObject.DeviceData.Partner == "" && accountServiceObject.DeviceData.ServiceAccountUri == "" && util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
-				accountServiceObject, err = ws.AccountServiceConnector.GetDevices(common.ECM_MAC_PARAM, contextMap[common.ECM_MAC_ADDRESS], satToken, fields)
+				accountServiceObject, err = accountServiceConnector.GetDevices(common.ECM_MAC_PARAM, contextMap[common.ECM_MAC_ADDRESS], satToken, fields)
 				td = &AccountServiceData{
 					AccountId: accountServiceObject.DeviceData.ServiceAccountUri,
 					PartnerId: accountServiceObject.DeviceData.Partner,
@@ -455,7 +464,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 				if contextMap[common.ACCOUNT_ID] != "" && !util.IsUnknownValue(contextMap[common.ACCOUNT_ID]) {
 					if Xc.RfcCountryCodeModelsSet.Contains(contextMap[common.MODEL]) && Xc.RfcCountryCodePartnersSet.Contains(contextMap[common.PARTNER_ID]) {
 						var accountObject xhttp.Account
-						accountObject, err = ws.AccountServiceConnector.GetAccountData(contextMap[common.ACCOUNT_ID], satToken, fields)
+						accountObject, err = accountServiceConnector.GetAccountData(contextMap[common.ACCOUNT_ID], satToken, fields)
 						if err != nil {
 							log.WithFields(log.Fields{"error": err}).Error("Error getting AccountService account information")
 						} else {
@@ -498,9 +507,18 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	}
 
 	contextMap[common.PASSED_PARTNER_ID] = contextMap[common.PARTNER_ID]
+	if useApacRoute(contextMap) {
+		contextMap[apacRouteKey] = "true"
+	}
 
 	// getting local sat token
-	localToken, err := xhttp.GetLocalSatToken(fields)
+	var localToken *xhttp.SatToken
+	var err error
+	if strings.EqualFold(contextMap[apacRouteKey], "true") {
+		localToken, err = xhttp.GetLocalApacSatToken(fields, strings.ToLower(contextMap[common.PASSED_PARTNER_ID]))
+	} else {
+		localToken, err = xhttp.GetLocalSatToken(fields)
+	}
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Error getting sat token from SatService")
 		return podData, nil, td
@@ -569,6 +587,27 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	CompareTaggingSources(contextMap, tags, ftTags, fields)
 	tags = append(tags, ftTags...)
 	return podData, tags, td
+}
+
+func useApacRoute(contextMap map[string]string) bool {
+	enabled := Xc != nil && Xc.EnableApacRouting
+	partner := strings.ToUpper(strings.TrimSpace(contextMap[common.PARTNER_ID]))
+	accountUnknown := util.IsUnknownValue(contextMap[common.ACCOUNT_ID])
+
+	if !enabled {
+		return false
+	}
+	if partner == "" {
+		return false
+	}
+	partnerMatched := Xc.ApacPartnerSet.Contains(partner)
+	if !partnerMatched {
+		return false
+	}
+	if !accountUnknown {
+		return false
+	}
+	return true
 }
 
 // PostProcessFeatureControl

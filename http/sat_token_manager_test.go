@@ -31,6 +31,8 @@ type MockSatServiceConnector struct {
 	name                    string
 	host                    string
 	consumerHost            string
+	clientID                string
+	clientSecret            string
 	tokenUrlTemplate        string
 	tokenPartnerUrlTemplate string
 }
@@ -53,6 +55,11 @@ func (m *MockSatServiceConnector) SetSatServiceName(name string) {
 
 func (m *MockSatServiceConnector) SetSatServiceHost(host string) {
 	m.host = host
+}
+
+func (m *MockSatServiceConnector) SetSatClientCredentials(clientID, clientSecret string) {
+	m.clientID = clientID
+	m.clientSecret = clientSecret
 }
 
 func (m *MockSatServiceConnector) SetTokenUrlTemplate(template string) {
@@ -84,6 +91,14 @@ func TestSatTokenMgr_TestOnly_Default(t *testing.T) {
 	assert.False(t, result)
 }
 
+func TestMockSatServiceConnector_SetSatClientCredentials(t *testing.T) {
+	m := &MockSatServiceConnector{}
+
+	m.SetSatClientCredentials("test-client-id", "test-client-secret")
+
+	assert.Equal(t, "test-client-id", m.clientID)
+	assert.Equal(t, "test-client-secret", m.clientSecret)
+}
 func TestSatTokenMgr_TestOnly_True(t *testing.T) {
 	mgr := NewSatTokenMgr(true)
 

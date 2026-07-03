@@ -37,6 +37,7 @@ type SatServiceConnector interface {
 	ConsumerHost() string
 	SetSatServiceName(name string)
 	SetSatServiceHost(host string)
+	SetSatClientCredentials(clientID, clientSecret string)
 	SetTokenUrlTemplate(template string)
 	SetTokenPartnerUrlTemplate(template string)
 	GetSatTokenFromSatService(fields log.Fields, vargs ...string) (*SatServiceResponse, error)
@@ -67,7 +68,6 @@ func NewSatServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, e
 	} else {
 		// load SAT credentials
 		satServiceName = conf.GetString("xconfwebconfig.xconf.sat_service_name")
-
 		satClientId := os.Getenv("SAT_CLIENT_ID")
 		if util.IsBlank(satClientId) {
 			confKey := fmt.Sprintf("xconfwebconfig.%v.client_id", satServiceName)
@@ -137,6 +137,11 @@ func (c *DefaultSatService) ConsumerHost() string {
 
 func (c *DefaultSatService) SetSatServiceHost(host string) {
 	c.host = host
+}
+
+func (c *DefaultSatService) SetSatClientCredentials(clientID, clientSecret string) {
+	c.headers["X-Client-Id"] = clientID
+	c.headers["X-Client-Secret"] = clientSecret
 }
 
 func (c *DefaultSatService) SetTokenUrlTemplate(template string) {

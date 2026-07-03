@@ -19,6 +19,7 @@ package http
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
@@ -30,7 +31,9 @@ import (
 // SatTokenMgr - token manager
 type SatTokenMgr struct {
 	*SatToken
-	testOnly bool
+	apacSatToken *SatToken
+	mu           sync.RWMutex
+	testOnly     bool
 }
 
 // SatToken - response object of sat token from SatService
@@ -60,13 +63,15 @@ func NewSatTokenMgr(args ...bool) *SatTokenMgr {
 	if len(args) > 0 {
 		arg := args[0]
 		return &SatTokenMgr{
-			SatToken: &SatToken{},
-			testOnly: arg,
+			SatToken:     &SatToken{},
+			apacSatToken: &SatToken{},
+			testOnly:     arg,
 		}
 	}
 	return &SatTokenMgr{
-		SatToken: &SatToken{},
-		testOnly: false,
+		SatToken:     &SatToken{},
+		apacSatToken: &SatToken{},
+		testOnly:     false,
 	}
 }
 
@@ -115,6 +120,32 @@ func GetLocalSatToken(fields log.Fields) (*SatToken, error) {
 	return stm.SatToken, nil
 }
 
+func GetLocalApacSatToken(fields log.Fields, partner string) (*SatToken, error) {
+	if stm.TestOnly() {
+		stm.mu.RLock()
+		defer stm.mu.RUnlock()
+		return stm.apacSatToken, nil
+	}
+	fields = common.FilterLogFields(fields)
+
+	stm.mu.RLock()
+	apacToken := stm.apacSatToken
+	stm.mu.RUnlock()
+
+	if apacToken.Token == "" || apacToken.IsTokenExpired(fields) {
+		log.WithFields(fields).Debug("no local APAC token found or expired, getting token from SatService")
+		err := SetLocalApacSatToken(fields, partner)
+		if err != nil {
+			return nil, err
+		}
+		stm.mu.RLock()
+		defer stm.mu.RUnlock()
+		return stm.apacSatToken, nil
+	}
+	log.WithFields(fields).Debug("used local APAC SAT token cache")
+	return apacToken, nil
+}
+
 // SetLocalSatToken - setting up local sat token from SatService
 func SetLocalSatToken(fields log.Fields) error {
 	// going to SatService to get sattoken
@@ -132,6 +163,28 @@ func SetLocalSatToken(fields log.Fields) error {
 		Expiry:   GetTokenExpiryTime(),
 		TokenTTL: cb2Token.ExpiresIn,
 	}
+	return nil
+}
+
+func SetLocalApacSatToken(fields log.Fields, partner string) error {
+	cb2Token, err := GetApacSatTokenFromSatService(fields, partner)
+	if err != nil {
+		return err
+	}
+	name := Ws.SatServiceConnector.SatServiceName()
+	if Ws.ApacSatServiceConnector != nil {
+		name = Ws.ApacSatServiceConnector.SatServiceName()
+	}
+	keyname := fmt.Sprintf("sat_token_%s", name)
+	stm.mu.Lock()
+	stm.apacSatToken = &SatToken{
+		Token:    cb2Token.AccessToken,
+		Source:   name,
+		KeyName:  keyname,
+		Expiry:   GetTokenExpiryTime(),
+		TokenTTL: cb2Token.ExpiresIn,
+	}
+	stm.mu.Unlock()
 	return nil
 }
 
@@ -154,6 +207,18 @@ func GetSatTokenFromSatService(fields log.Fields) (*SatToken, error) {
 		Expiry:   GetTokenExpiryTime(),
 		TokenTTL: satToken.ExpiresIn,
 	}, nil
+}
+
+func GetApacSatTokenFromSatService(fields log.Fields, partner string) (*SatServiceResponse, error) {
+	log.WithFields(fields).Debug("getting sat token from APAC SatService")
+	if Ws.ApacSatServiceConnector == nil {
+		log.WithFields(fields).Warn("APAC SAT connector is nil, falling back to default SAT connector")
+		return Ws.GetSatTokenFromSatService(fields)
+	}
+	if partner != "" {
+		return Ws.ApacSatServiceConnector.GetSatTokenFromSatService(fields, partner)
+	}
+	return Ws.ApacSatServiceConnector.GetSatTokenFromSatService(fields)
 }
 
 // IsTokenExpired - making sure token is still valid

@@ -26,6 +26,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -62,8 +63,10 @@ type XconfServer struct {
 	db.DatabaseClient
 	*common.ServerConfig
 	SatServiceConnector
+	ApacSatServiceConnector SatServiceConnector
 	DeviceServiceConnector
 	AccountServiceConnector
+	ApacAccountServiceConnector AccountServiceConnector
 	TaggingConnector
 	*AppMetricsConfig
 	GroupServiceConnector
@@ -83,8 +86,10 @@ type ExternalConnectors struct {
 	db.CassandraConnector
 	DeviceServiceConnector
 	AccountServiceConnector
+	ApacAccountServiceConnector AccountServiceConnector
 	TaggingConnector
 	SatServiceConnector
+	ApacSatServiceConnector SatServiceConnector
 	GroupServiceConnector
 	GroupServiceSyncConnector
 }
@@ -197,6 +202,31 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 
 	xpcTracer := tracing.NewXpcTracer(sc.Config)
 
+	satConnector := NewSatServiceConnector(conf, tlsConfig, ec.SatServiceConnector)
+	apacSatConnector := NewSatServiceConnector(conf, tlsConfig, ec.ApacSatServiceConnector)
+	if apacCodebigHost := conf.GetString("xconfwebconfig.xconf.apac_codebig_host"); apacCodebigHost != "" {
+		apacSatConnector.SetSatServiceHost(apacCodebigHost)
+	}
+	apacSatClientID := os.Getenv("APAC_SAT_CLIENT_ID")
+	if util.IsBlank(apacSatClientID) {
+		apacSatClientID = conf.GetString("xconfwebconfig.xconf.apac_sat_client_id")
+	}
+	apacSatClientSecret := os.Getenv("APAC_SAT_CLIENT_SECRET")
+	if util.IsBlank(apacSatClientSecret) {
+		apacSatClientSecret = conf.GetString("xconfwebconfig.xconf.apac_sat_client_secret")
+	}
+	if !util.IsBlank(apacSatClientID) && !util.IsBlank(apacSatClientSecret) {
+		apacSatConnector.SetSatClientCredentials(apacSatClientID, apacSatClientSecret)
+	} else if !util.IsBlank(apacSatClientID) || !util.IsBlank(apacSatClientSecret) {
+		log.Info("APAC SAT credential override is partially configured; using default SAT client credentials")
+	}
+
+	accountConnector := NewAccountServiceConnector(conf, tlsConfig, ec.AccountServiceConnector)
+	apacAccountConnector := NewAccountServiceConnector(conf, tlsConfig, ec.ApacAccountServiceConnector)
+	if apacTitanHost := conf.GetString("xconfwebconfig.xconf.apac_titan_host"); apacTitanHost != "" {
+		apacAccountConnector.SetAccountServiceHost(apacTitanHost)
+	}
+
 	return &XconfServer{
 		Server: &http.Server{
 			Addr:         fmt.Sprintf("%s:%s", serviceHostname, conf.GetString("xconfwebconfig.server.port")),
@@ -208,8 +238,10 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 		SecurityTokenConfig:          securityTokenConfig,
 		LogUploadSecurityTokenConfig: loguploadSecurityTokenConfig,
 		FirmwareSecurityTokenConfig:  firmwareSecurityTokenConfig,
-		SatServiceConnector:          NewSatServiceConnector(conf, tlsConfig, ec.SatServiceConnector),
-		AccountServiceConnector:      NewAccountServiceConnector(conf, tlsConfig, ec.AccountServiceConnector),
+		SatServiceConnector:          satConnector,
+		ApacSatServiceConnector:      apacSatConnector,
+		AccountServiceConnector:      accountConnector,
+		ApacAccountServiceConnector:  apacAccountConnector,
 		DeviceServiceConnector:       NewDeviceServiceConnector(conf, tlsConfig, ec.DeviceServiceConnector),
 		TaggingConnector:             NewTaggingConnector(conf, tlsConfig, ec.TaggingConnector),
 		GroupServiceConnector:        NewGroupServiceConnector(conf, tlsConfig, ec.GroupServiceConnector),
