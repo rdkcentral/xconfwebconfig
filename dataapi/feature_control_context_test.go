@@ -725,3 +725,117 @@ func TestGetAccountInfoFromGrpService_AccountTypePrecedence(t *testing.T) {
 		})
 	}
 }
+
+func TestUseApacRoute_DecisionMatrix(t *testing.T) {
+	originalXc := Xc
+	defer func() { Xc = originalXc }()
+
+	tests := []struct {
+		name     string
+		xc       *XconfConfigs
+		context  map[string]string
+		expected bool
+	}{
+		{
+			name: "returns false when config is nil",
+			xc:   nil,
+			context: map[string]string{
+				common.PARTNER_ID: "foxtel",
+				common.ACCOUNT_ID: "unknown",
+			},
+			expected: false,
+		},
+		{
+			name: "returns false when APAC routing flag is disabled",
+			xc: &XconfConfigs{
+				EnableApacRouting: false,
+				ApacPartnerSet:    util.NewSet("FOXTEL"),
+			},
+			context: map[string]string{
+				common.PARTNER_ID: "foxtel",
+				common.ACCOUNT_ID: "unknown",
+			},
+			expected: false,
+		},
+		{
+			name: "returns true when enabled, partner matches, and account id is unknown",
+			xc: &XconfConfigs{
+				EnableApacRouting: true,
+				ApacPartnerSet:    util.NewSet("FOXTEL"),
+			},
+			context: map[string]string{
+				common.PARTNER_ID: "foxtel",
+				common.ACCOUNT_ID: "unknown",
+			},
+			expected: true,
+		},
+		{
+			name: "returns false when enabled and account id is known",
+			xc: &XconfConfigs{
+				EnableApacRouting: true,
+				ApacPartnerSet:    util.NewSet("FOXTEL"),
+			},
+			context: map[string]string{
+				common.PARTNER_ID: "foxtel",
+				common.ACCOUNT_ID: "acc-123",
+			},
+			expected: false,
+		},
+		{
+			name: "returns false when enabled and partner does not match APAC set",
+			xc: &XconfConfigs{
+				EnableApacRouting: true,
+				ApacPartnerSet:    util.NewSet("FOXTEL"),
+			},
+			context: map[string]string{
+				common.PARTNER_ID: "sky",
+				common.ACCOUNT_ID: "unknown",
+			},
+			expected: false,
+		},
+		{
+			name: "returns false when partner is blank",
+			xc: &XconfConfigs{
+				EnableApacRouting: true,
+				ApacPartnerSet:    util.NewSet("FOXTEL"),
+			},
+			context: map[string]string{
+				common.PARTNER_ID: "",
+				common.ACCOUNT_ID: "unknown",
+			},
+			expected: false,
+		},
+		{
+			name: "returns false when APAC partner set is nil",
+			xc: &XconfConfigs{
+				EnableApacRouting: true,
+				ApacPartnerSet:    nil,
+			},
+			context: map[string]string{
+				common.PARTNER_ID: "foxtel",
+				common.ACCOUNT_ID: "unknown",
+			},
+			expected: false,
+		},
+		{
+			name: "returns false when APAC partner set is empty",
+			xc: &XconfConfigs{
+				EnableApacRouting: true,
+				ApacPartnerSet:    util.NewSet(),
+			},
+			context: map[string]string{
+				common.PARTNER_ID: "foxtel",
+				common.ACCOUNT_ID: "unknown",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			Xc = tt.xc
+			actual := useApacRoute(tt.context)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}

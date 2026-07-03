@@ -209,7 +209,7 @@ func TestGetFeatureSettingByUnknownPartnerId(t *testing.T) {
 	taggingMockServer := dataapi.SetupTaggingMockServerOkResponseDynamic(t, *server, fmt.Sprintf(`["%s"]`, MAC_AND_PARTNER_TAG), fmt.Sprintf(URL_TAGS_PARTNER_AND_MAC_ADDRESS, XYZ_PARTNER, MAC_ADDRESS))
 	defer taggingMockServer.Close()
 	expectedFeatureResponse := []rfc.FeatureResponse{
-		rfc.CreateFeatureResponseObject(xwdataapi.CreatePartnerIdFeature("unknown")),
+		rfc.CreateFeatureResponseObject(xwdataapi.CreatePartnerIdFeature("xyz")),
 	}
 	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, fmt.Sprintf("?partnerId=unknown&estbMacAddress=%s", MAC_ADDRESS), nil, expectedFeatureResponse)
 }

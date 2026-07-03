@@ -18,6 +18,7 @@
 package http
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -35,6 +36,9 @@ type MockSatServiceConnector struct {
 	clientSecret            string
 	tokenUrlTemplate        string
 	tokenPartnerUrlTemplate string
+	callCount               int
+	partners                []string
+	tokenByPartner          map[string]string
 }
 
 func (m *MockSatServiceConnector) SatServiceName() string {
@@ -71,15 +75,113 @@ func (m *MockSatServiceConnector) SetTokenPartnerUrlTemplate(template string) {
 }
 
 func (m *MockSatServiceConnector) GetSatTokenFromSatService(fields log.Fields, vargs ...string) (*SatServiceResponse, error) {
+	m.callCount++
+	partner := ""
+	if len(vargs) > 0 {
+		partner = vargs[0]
+		m.partners = append(m.partners, partner)
+	}
+
+	accessToken := fmt.Sprintf("mock_test_token_%d", m.callCount)
+	if token, ok := m.tokenByPartner[partner]; ok {
+		accessToken = token
+	}
+
 	// Return mock data without making HTTP requests - URL templates don't matter
 	return &SatServiceResponse{
-		AccessToken:  "mock_test_token_12345",
+		AccessToken:  accessToken,
 		ExpiresIn:    86400,
 		Scope:        "scope1 scope2",
 		TokenType:    "Bearer",
 		ResponseCode: 200,
 		Description:  "Mock token for testing",
 	}, nil
+}
+
+func TestGetLocalApacSatToken_FetchesAndCaches(t *testing.T) {
+	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
+	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks()
+	mock := &MockSatServiceConnector{tokenByPartner: map[string]string{"foxtel": "apac_foxtel_token"}}
+	server.ApacSatServiceConnector = mock
+	InitSatTokenManager(server)
+
+	fields := log.Fields{"test": "apac_cache"}
+	t1, err1 := GetLocalApacSatToken(fields, "foxtel")
+	t2, err2 := GetLocalApacSatToken(fields, "foxtel")
+
+	assert.NoError(t, err1)
+	assert.NoError(t, err2)
+	assert.Equal(t, "apac_foxtel_token", t1.Token)
+	assert.Equal(t, "apac_foxtel_token", t2.Token)
+	assert.Equal(t, 1, mock.callCount)
+	assert.Equal(t, []string{"foxtel"}, mock.partners)
+}
+
+func TestGetLocalApacSatToken_RefreshesOnExpiry(t *testing.T) {
+	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
+	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks()
+	mock := &MockSatServiceConnector{}
+	server.ApacSatServiceConnector = mock
+	InitSatTokenManager(server)
+
+	fields := log.Fields{"test": "apac_refresh"}
+	t1, err1 := GetLocalApacSatToken(fields, "foxtel")
+	assert.NoError(t, err1)
+
+	stm.mu.Lock()
+	stm.apacSatToken.Expiry = "2000-01-01 00:00:00"
+	stm.mu.Unlock()
+
+	t2, err2 := GetLocalApacSatToken(fields, "foxtel")
+	assert.NoError(t, err2)
+	assert.NotEqual(t, t1.Token, t2.Token)
+	assert.Equal(t, 2, mock.callCount)
+}
+
+func TestGetLocalApacSatToken_PropagatesPartnerAcrossFetches(t *testing.T) {
+	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
+	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks()
+	mock := &MockSatServiceConnector{tokenByPartner: map[string]string{"foxtel": "token_foxtel", "sky": "token_sky"}}
+	server.ApacSatServiceConnector = mock
+	InitSatTokenManager(server)
+
+	fields := log.Fields{"test": "apac_partner_propagation"}
+	_, err1 := GetLocalApacSatToken(fields, "foxtel")
+	assert.NoError(t, err1)
+
+	// Force a cache miss so the next partner-specific request triggers a new fetch.
+	stm.mu.Lock()
+	stm.apacSatToken.Expiry = "2000-01-01 00:00:00"
+	stm.mu.Unlock()
+
+	t2, err2 := GetLocalApacSatToken(fields, "sky")
+	assert.NoError(t, err2)
+	assert.Equal(t, "token_sky", t2.Token)
+	assert.Equal(t, []string{"foxtel", "sky"}, mock.partners)
+	assert.Equal(t, 2, mock.callCount)
+}
+
+func TestGetApacSatTokenFromSatService_FallbackWhenApacConnectorNil(t *testing.T) {
+	sc, _ := common.NewServerConfig("../config/sample_xconfwebconfig.conf")
+	server := NewXconfServer(sc, true, nil)
+	server.SetupMocks()
+
+	defaultMock := &MockSatServiceConnector{tokenByPartner: map[string]string{"": "default_token"}}
+	server.SatServiceConnector = defaultMock
+	server.ApacSatServiceConnector = nil
+	InitSatTokenManager(server)
+
+	fields := log.Fields{"test": "apac_nil_fallback"}
+	tok, err := GetApacSatTokenFromSatService(fields, "foxtel")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, tok)
+	assert.Equal(t, "default_token", tok.AccessToken)
+	assert.Equal(t, 1, defaultMock.callCount)
+	assert.Empty(t, defaultMock.partners)
 }
 
 // Test SatTokenMgr getter/setter functions

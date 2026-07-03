@@ -29,8 +29,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var satServiceName string
-
 type SatServiceConnector interface {
 	SatServiceName() string
 	SatServiceHost() string
@@ -67,7 +65,7 @@ func NewSatServiceConnector(conf *configuration.Config, tlsConfig *tls.Config, e
 		return externalSatConnector
 	} else {
 		// load SAT credentials
-		satServiceName = conf.GetString("xconfwebconfig.xconf.sat_service_name")
+		satServiceName := conf.GetString("xconfwebconfig.xconf.sat_service_name")
 		satClientId := os.Getenv("SAT_CLIENT_ID")
 		if util.IsBlank(satClientId) {
 			confKey := fmt.Sprintf("xconfwebconfig.%v.client_id", satServiceName)
@@ -162,7 +160,7 @@ func (c *DefaultSatService) GetSatTokenFromSatService(fields log.Fields, vargs .
 	} else {
 		url = fmt.Sprintf(c.tokenUrlTemplate, c.SatServiceHost())
 	}
-	rbytes, err := c.DoWithRetries("POST", url, c.headers, nil, fields, satServiceName)
+	rbytes, err := c.DoWithRetries("POST", url, c.headers, nil, fields, c.SatServiceName())
 	if err != nil {
 		return cb2Res, err
 	}

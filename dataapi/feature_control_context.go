@@ -600,6 +600,9 @@ func useApacRoute(contextMap map[string]string) bool {
 	if partner == "" {
 		return false
 	}
+	if Xc.ApacPartnerSet == nil || Xc.ApacPartnerSet.IsEmpty() {
+		return false
+	}
 	partnerMatched := Xc.ApacPartnerSet.Contains(partner)
 	if !partnerMatched {
 		return false
