@@ -303,6 +303,15 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 						log.WithFields(fields).Error("AddEstbFirmwareContext: Failed to unmarshal only AccountProducts")
 					}
 				}
+
+				kvmap := map[string]string{
+					db.EstbMacColumnValue:  contextMap[common.ESTB_MAC],
+					db.TimeZoneColumnValue: contextMap[common.TIME_ZONE],
+				}
+				err := db.GetDatabaseClient().UpdateFwPenetrationMetrics(kvmap)
+				if err != nil {
+					log.Error(fmt.Sprintf("Can't save Timezone in penetration metrics, estbMac=%s, error=%+v", contextMap[common.ESTB_MAC], err))
+				}
 			}
 		} else {
 			log.WithFields(log.Fields{"error": err}).Errorf("Error getting accountId info from Grp Svc")

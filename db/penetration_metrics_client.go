@@ -162,11 +162,6 @@ func (c *CassandraClient) SetFwPenetrationMetrics(pMetrics *FwPenetrationMetrics
 		values = append(values, pMetrics.RecoveryCertExpiry)
 	}
 
-	if !isEmptyString(pMetrics.TimeZone) {
-		columns = append(columns, TimeZoneColumnValue)
-		values = append(values, pMetrics.TimeZone)
-	}
-
 	stmt := fmt.Sprintf(`INSERT INTO "%s"(%v) VALUES(%v)`, PenetrationMetricsTable, GetColumnsStr(columns), GetValuesStr(len(columns)))
 
 	c.ConcurrentQueries <- true
