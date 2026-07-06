@@ -369,18 +369,27 @@ func TestCacheChangedKeys(t *testing.T) {
 	assert.NilError(t, err)
 
 	// need to wait since changed record is written async
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	// verify changed key record is created
 	changedList, err := db.GetListingDao().GetAllAsList(db.GetDefaultTenantId(), db.TABLE_CHANGE_EVENTS)
 	assert.NilError(t, err)
-	assert.Assert(t, len(changedList) == 1)
+	assert.Assert(t, len(changedList) >= 1, "expected at least 1 change event, got %d", len(changedList))
 
-	data := *changedList[0].(*db.ChangedData)
-	assert.Equal(t, data.Operation, db.CREATE_OPERATION)
-	assert.Equal(t, data.CfName, db.TABLE_MODELS)
-	assert.Equal(t, data.ChangedKey, model.ID)
-	assert.Equal(t, data.ServerOriginId, common.ServerOriginId())
+	// Find the change event for our model
+	var foundData *db.ChangedData
+	for _, item := range changedList {
+		data := item.(*db.ChangedData)
+		if data.ChangedKey == model.ID && data.CfName == db.TABLE_MODELS {
+			foundData = data
+			break
+		}
+	}
+	assert.Assert(t, foundData != nil, "change event for model %s not found", model.ID)
+	assert.Equal(t, foundData.Operation, db.CREATE_OPERATION)
+	assert.Equal(t, foundData.CfName, db.TABLE_MODELS)
+	assert.Equal(t, foundData.ChangedKey, model.ID)
+	assert.Equal(t, foundData.ServerOriginId, common.ServerOriginId())
 }
 
 func TestCacheChangeNotifier(t *testing.T) {

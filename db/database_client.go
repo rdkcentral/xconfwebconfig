@@ -136,9 +136,10 @@ type DatabaseClient interface {
 	GetEstbIp(string) (string, error)
 	GetSecurityTokenFields(string) (*SecurityTokenDeviceInfo, error)
 
-	SetRecookingStatus(module string, partitionId string, state int) error
-	GetRecookingStatus(module string, partitionId string) (int, time.Time, error)
-	CheckFinalRecookingStatus(module string) (bool, time.Time, error)
+	SetRecookingStatus(tenantId string, module string, partitionId string, state int) error
+	GetRecookingStatus(tenantId string, module string, partitionId string) (int, time.Time, error)
+	CheckFinalRecookingStatus(tenantId string, module string) (bool, time.Time, error)
+	GetRecookingStatusDetails(tenantId string, module string) ([]RecookingStatus, error)
 
 	// XPC precook reference data
 	SetPrecookDataInXPC(RfcPrecookHash string, RfcPrecookPayload []byte) error

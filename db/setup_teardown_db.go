@@ -47,7 +47,7 @@ func (c *CassandraClient) SetUp() error {
 		case TABLE_TENANTS:
 			stmt = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" (id text, name text, updated timestamp, PRIMARY KEY (id))`, c.Keyspace, t)
 		case TABLE_CHANGE_EVENTS:
-			stmt = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" (key bigint, key2 timeuuid, value blob, PRIMARY KEY (key, key2))`, c.Keyspace, t)
+			stmt = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" (key bigint, key2 timeuuid, value blob, updated timestamp, PRIMARY KEY (key, key2))`, c.Keyspace, t)
 		case TABLE_LOGS:
 			stmt = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" (key text, column1 text, value blob, PRIMARY KEY (key, column1))`, c.Keyspace, t)
 		case TABLE_GENERIC_NS_LIST, TABLE_CONFIG_CHANGE_LOGS:
