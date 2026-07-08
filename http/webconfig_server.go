@@ -63,10 +63,10 @@ type XconfServer struct {
 	db.DatabaseClient
 	*common.ServerConfig
 	SatServiceConnector
-	ApacSatServiceConnector SatServiceConnector
+	PartnerSatServiceConnector SatServiceConnector
 	DeviceServiceConnector
 	AccountServiceConnector
-	ApacAccountServiceConnector AccountServiceConnector
+	PartnerAccountServiceConnector AccountServiceConnector
 	TaggingConnector
 	*AppMetricsConfig
 	GroupServiceConnector
@@ -86,10 +86,10 @@ type ExternalConnectors struct {
 	db.CassandraConnector
 	DeviceServiceConnector
 	AccountServiceConnector
-	ApacAccountServiceConnector AccountServiceConnector
+	PartnerAccountServiceConnector AccountServiceConnector
 	TaggingConnector
 	SatServiceConnector
-	ApacSatServiceConnector SatServiceConnector
+	PartnerSatServiceConnector SatServiceConnector
 	GroupServiceConnector
 	GroupServiceSyncConnector
 }
@@ -203,28 +203,28 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 	xpcTracer := tracing.NewXpcTracer(sc.Config)
 
 	satConnector := NewSatServiceConnector(conf, tlsConfig, ec.SatServiceConnector)
-	apacSatConnector := NewSatServiceConnector(conf, tlsConfig, ec.ApacSatServiceConnector)
-	if apacCodebigHost := conf.GetString("xconfwebconfig.xconf.apac_codebig_host"); apacCodebigHost != "" {
-		apacSatConnector.SetSatServiceHost(apacCodebigHost)
+	partnerSatConnector := NewSatServiceConnector(conf, tlsConfig, ec.PartnerSatServiceConnector)
+	if partnerSatHost := conf.GetString("xconfwebconfig.partner_services.sat.host"); partnerSatHost != "" {
+		partnerSatConnector.SetSatServiceHost(partnerSatHost)
 	}
-	apacSatClientID := os.Getenv("APAC_SAT_CLIENT_ID")
-	if util.IsBlank(apacSatClientID) {
-		apacSatClientID = conf.GetString("xconfwebconfig.xconf.apac_sat_client_id")
+	partnerSatClientID := os.Getenv("PARTNER_SAT_CLIENT_ID")
+	if util.IsBlank(partnerSatClientID) {
+		partnerSatClientID = conf.GetString("xconfwebconfig.partner_services.sat.client_id")
 	}
-	apacSatClientSecret := os.Getenv("APAC_SAT_CLIENT_SECRET")
-	if util.IsBlank(apacSatClientSecret) {
-		apacSatClientSecret = conf.GetString("xconfwebconfig.xconf.apac_sat_client_secret")
+	partnerSatClientSecret := os.Getenv("PARTNER_SAT_CLIENT_SECRET")
+	if util.IsBlank(partnerSatClientSecret) {
+		partnerSatClientSecret = conf.GetString("xconfwebconfig.partner_services.sat.client_secret")
 	}
-	if !util.IsBlank(apacSatClientID) && !util.IsBlank(apacSatClientSecret) {
-		apacSatConnector.SetSatClientCredentials(apacSatClientID, apacSatClientSecret)
-	} else if !util.IsBlank(apacSatClientID) || !util.IsBlank(apacSatClientSecret) {
-		log.Info("APAC SAT credential override is partially configured; using default SAT client credentials")
+	if !util.IsBlank(partnerSatClientID) && !util.IsBlank(partnerSatClientSecret) {
+		partnerSatConnector.SetSatClientCredentials(partnerSatClientID, partnerSatClientSecret)
+	} else if !util.IsBlank(partnerSatClientID) || !util.IsBlank(partnerSatClientSecret) {
+		log.Info("partner SAT credential override is partially configured; using default SAT client credentials")
 	}
 
 	accountConnector := NewAccountServiceConnector(conf, tlsConfig, ec.AccountServiceConnector)
-	apacAccountConnector := NewAccountServiceConnector(conf, tlsConfig, ec.ApacAccountServiceConnector)
-	if apacTitanHost := conf.GetString("xconfwebconfig.xconf.apac_titan_host"); apacTitanHost != "" {
-		apacAccountConnector.SetAccountServiceHost(apacTitanHost)
+	partnerAccountConnector := NewAccountServiceConnector(conf, tlsConfig, ec.PartnerAccountServiceConnector)
+	if partnerAccountHost := conf.GetString("xconfwebconfig.partner_services.account.host"); partnerAccountHost != "" {
+		partnerAccountConnector.SetAccountServiceHost(partnerAccountHost)
 	}
 
 	return &XconfServer{
@@ -233,25 +233,25 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 			ReadTimeout:  time.Duration(conf.GetInt32("xconfwebconfig.server.read_timeout_in_secs", 3)) * time.Second,
 			WriteTimeout: time.Duration(conf.GetInt32("xconfwebconfig.server.write_timeout_in_secs", 3)) * time.Second,
 		},
-		DatabaseClient:               dbclient,
-		ServerConfig:                 sc,
-		SecurityTokenConfig:          securityTokenConfig,
-		LogUploadSecurityTokenConfig: loguploadSecurityTokenConfig,
-		FirmwareSecurityTokenConfig:  firmwareSecurityTokenConfig,
-		SatServiceConnector:          satConnector,
-		ApacSatServiceConnector:      apacSatConnector,
-		AccountServiceConnector:      accountConnector,
-		ApacAccountServiceConnector:  apacAccountConnector,
-		DeviceServiceConnector:       NewDeviceServiceConnector(conf, tlsConfig, ec.DeviceServiceConnector),
-		TaggingConnector:             NewTaggingConnector(conf, tlsConfig, ec.TaggingConnector),
-		GroupServiceConnector:        NewGroupServiceConnector(conf, tlsConfig, ec.GroupServiceConnector),
-		GroupServiceSyncConnector:    NewGroupServiceSyncConnector(conf, tlsConfig, ec.GroupServiceSyncConnector),
-		tlsConfig:                    tlsConfig,
-		notLoggedHeaders:             notLoggedHeaders,
-		metricsEnabled:               metricsEnabled,
-		AppName:                      appName,
-		AppMetricsConfig:             appMetricsConfig,
-		XpcTracer:                    xpcTracer,
+		DatabaseClient:                 dbclient,
+		ServerConfig:                   sc,
+		SecurityTokenConfig:            securityTokenConfig,
+		LogUploadSecurityTokenConfig:   loguploadSecurityTokenConfig,
+		FirmwareSecurityTokenConfig:    firmwareSecurityTokenConfig,
+		SatServiceConnector:            satConnector,
+		PartnerSatServiceConnector:     partnerSatConnector,
+		AccountServiceConnector:        accountConnector,
+		PartnerAccountServiceConnector: partnerAccountConnector,
+		DeviceServiceConnector:         NewDeviceServiceConnector(conf, tlsConfig, ec.DeviceServiceConnector),
+		TaggingConnector:               NewTaggingConnector(conf, tlsConfig, ec.TaggingConnector),
+		GroupServiceConnector:          NewGroupServiceConnector(conf, tlsConfig, ec.GroupServiceConnector),
+		GroupServiceSyncConnector:      NewGroupServiceSyncConnector(conf, tlsConfig, ec.GroupServiceSyncConnector),
+		tlsConfig:                      tlsConfig,
+		notLoggedHeaders:               notLoggedHeaders,
+		metricsEnabled:                 metricsEnabled,
+		AppName:                        appName,
+		AppMetricsConfig:               appMetricsConfig,
+		XpcTracer:                      xpcTracer,
 	}
 }
 

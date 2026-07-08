@@ -726,7 +726,7 @@ func TestGetAccountInfoFromGrpService_AccountTypePrecedence(t *testing.T) {
 	}
 }
 
-func TestUseApacRoute_DecisionMatrix(t *testing.T) {
+func TestUsePartnerRoute_DecisionMatrix(t *testing.T) {
 	originalXc := Xc
 	defer func() { Xc = originalXc }()
 
@@ -746,10 +746,10 @@ func TestUseApacRoute_DecisionMatrix(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "returns false when APAC routing flag is disabled",
+			name: "returns false when partner routing flag is disabled",
 			xc: &XconfConfigs{
-				EnableApacRouting: false,
-				ApacPartnerSet:    util.NewSet("FOXTEL"),
+				EnablePartnerRouting: false,
+				PartnerSet:           util.NewSet("FOXTEL"),
 			},
 			context: map[string]string{
 				common.PARTNER_ID: "foxtel",
@@ -760,8 +760,8 @@ func TestUseApacRoute_DecisionMatrix(t *testing.T) {
 		{
 			name: "returns true when enabled, partner matches, and account id is unknown",
 			xc: &XconfConfigs{
-				EnableApacRouting: true,
-				ApacPartnerSet:    util.NewSet("FOXTEL"),
+				EnablePartnerRouting: true,
+				PartnerSet:           util.NewSet("FOXTEL"),
 			},
 			context: map[string]string{
 				common.PARTNER_ID: "foxtel",
@@ -772,8 +772,8 @@ func TestUseApacRoute_DecisionMatrix(t *testing.T) {
 		{
 			name: "returns false when enabled and account id is known",
 			xc: &XconfConfigs{
-				EnableApacRouting: true,
-				ApacPartnerSet:    util.NewSet("FOXTEL"),
+				EnablePartnerRouting: true,
+				PartnerSet:           util.NewSet("FOXTEL"),
 			},
 			context: map[string]string{
 				common.PARTNER_ID: "foxtel",
@@ -782,10 +782,10 @@ func TestUseApacRoute_DecisionMatrix(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "returns false when enabled and partner does not match APAC set",
+			name: "returns false when enabled and partner does not match partner set",
 			xc: &XconfConfigs{
-				EnableApacRouting: true,
-				ApacPartnerSet:    util.NewSet("FOXTEL"),
+				EnablePartnerRouting: true,
+				PartnerSet:           util.NewSet("FOXTEL"),
 			},
 			context: map[string]string{
 				common.PARTNER_ID: "sky",
@@ -796,8 +796,8 @@ func TestUseApacRoute_DecisionMatrix(t *testing.T) {
 		{
 			name: "returns false when partner is blank",
 			xc: &XconfConfigs{
-				EnableApacRouting: true,
-				ApacPartnerSet:    util.NewSet("FOXTEL"),
+				EnablePartnerRouting: true,
+				PartnerSet:           util.NewSet("FOXTEL"),
 			},
 			context: map[string]string{
 				common.PARTNER_ID: "",
@@ -806,10 +806,10 @@ func TestUseApacRoute_DecisionMatrix(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "returns false when APAC partner set is nil",
+			name: "returns false when partner set is nil",
 			xc: &XconfConfigs{
-				EnableApacRouting: true,
-				ApacPartnerSet:    nil,
+				EnablePartnerRouting: true,
+				PartnerSet:           nil,
 			},
 			context: map[string]string{
 				common.PARTNER_ID: "foxtel",
@@ -818,10 +818,10 @@ func TestUseApacRoute_DecisionMatrix(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "returns false when APAC partner set is empty",
+			name: "returns false when partner set is empty",
 			xc: &XconfConfigs{
-				EnableApacRouting: true,
-				ApacPartnerSet:    util.NewSet(),
+				EnablePartnerRouting: true,
+				PartnerSet:           util.NewSet(),
 			},
 			context: map[string]string{
 				common.PARTNER_ID: "foxtel",
@@ -834,7 +834,7 @@ func TestUseApacRoute_DecisionMatrix(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			Xc = tt.xc
-			actual := useApacRoute(tt.context)
+			actual := usePartnerRoute(tt.context)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}

@@ -90,8 +90,8 @@ type XconfConfigs struct {
 	ValidPartnerIdRegex          *regexp.Regexp
 	SecurityTokenManagerEnabled  bool
 	EnableTaggingComparison      bool
-	EnableApacRouting            bool
-	ApacPartnerSet               util.Set
+	EnablePartnerRouting         bool
+	PartnerSet                   util.Set
 }
 
 // Function to register the table name and the corresponding model/struct constructor
@@ -287,12 +287,12 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 	auxFirmwareList := getAuxiliaryFirmwares(conf.GetString("xconfwebconfig.xconf.auxiliary_extensions"))
 	partnerIdValidationEnabled := conf.GetBoolean("xconfwebconfig.xconf.partner_id_validation_enabled", false)
 
-	apacPartnerSet := util.NewSet()
-	apacPartnerList := conf.GetString("xconfwebconfig.xconf.apac_partner_list", "foxtel")
-	if !util.IsBlank(apacPartnerList) {
-		apacPartners := strings.Split(apacPartnerList, ";")
-		for _, partner := range apacPartners {
-			apacPartnerSet.Add(strings.ToUpper(strings.TrimSpace(partner)))
+	partnerSet := util.NewSet()
+	partnerList := conf.GetString("xconfwebconfig.partner_services.partner_ids", "")
+	if !util.IsBlank(partnerList) {
+		partners := strings.Split(partnerList, ";")
+		for _, partner := range partners {
+			partnerSet.Add(strings.ToUpper(strings.TrimSpace(partner)))
 		}
 	}
 
@@ -351,8 +351,8 @@ func GetXconfConfigs(conf *conf.Config) *XconfConfigs {
 		PartnerIdValidationEnabled:   partnerIdValidationEnabled,
 		SecurityTokenManagerEnabled:  conf.GetBoolean("xconfwebconfig.xconf.security_token_manager_enabled"),
 		EnableTaggingComparison:      conf.GetBoolean("xconfwebconfig.xconf.enable_tagging_comparison"),
-		EnableApacRouting:            conf.GetBoolean("xconfwebconfig.xconf.enable_apac_routing", false),
-		ApacPartnerSet:               apacPartnerSet,
+		EnablePartnerRouting:         conf.GetBoolean("xconfwebconfig.partner_services.enabled", false),
+		PartnerSet:                   partnerSet,
 	}
 	return xc
 }

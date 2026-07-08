@@ -31,9 +31,9 @@ import (
 // SatTokenMgr - token manager
 type SatTokenMgr struct {
 	*SatToken
-	apacSatToken *SatToken
-	mu           sync.RWMutex
-	testOnly     bool
+	partnerSatToken *SatToken
+	mu              sync.RWMutex
+	testOnly        bool
 }
 
 // SatToken - response object of sat token from SatService
@@ -63,15 +63,15 @@ func NewSatTokenMgr(args ...bool) *SatTokenMgr {
 	if len(args) > 0 {
 		arg := args[0]
 		return &SatTokenMgr{
-			SatToken:     &SatToken{},
-			apacSatToken: &SatToken{},
-			testOnly:     arg,
+			SatToken:        &SatToken{},
+			partnerSatToken: &SatToken{},
+			testOnly:        arg,
 		}
 	}
 	return &SatTokenMgr{
-		SatToken:     &SatToken{},
-		apacSatToken: &SatToken{},
-		testOnly:     false,
+		SatToken:        &SatToken{},
+		partnerSatToken: &SatToken{},
+		testOnly:        false,
 	}
 }
 
@@ -120,30 +120,30 @@ func GetLocalSatToken(fields log.Fields) (*SatToken, error) {
 	return stm.SatToken, nil
 }
 
-func GetLocalApacSatToken(fields log.Fields, partner string) (*SatToken, error) {
+func GetLocalPartnerSatToken(fields log.Fields, partner string) (*SatToken, error) {
 	if stm.TestOnly() {
 		stm.mu.RLock()
 		defer stm.mu.RUnlock()
-		return stm.apacSatToken, nil
+		return stm.partnerSatToken, nil
 	}
 	fields = common.FilterLogFields(fields)
 
 	stm.mu.RLock()
-	apacToken := stm.apacSatToken
+	partnerToken := stm.partnerSatToken
 	stm.mu.RUnlock()
 
-	if apacToken.Token == "" || apacToken.IsTokenExpired(fields) {
-		log.WithFields(fields).Debug("no local APAC token found or expired, getting token from SatService")
-		err := SetLocalApacSatToken(fields, partner)
+	if partnerToken.Token == "" || partnerToken.IsTokenExpired(fields) {
+		log.WithFields(fields).Debug("no local partner token found or expired, getting token from SatService")
+		err := SetLocalPartnerSatToken(fields, partner)
 		if err != nil {
 			return nil, err
 		}
 		stm.mu.RLock()
 		defer stm.mu.RUnlock()
-		return stm.apacSatToken, nil
+		return stm.partnerSatToken, nil
 	}
-	log.WithFields(fields).Debug("used local APAC SAT token cache")
-	return apacToken, nil
+	log.WithFields(fields).Debug("used local partner SAT token cache")
+	return partnerToken, nil
 }
 
 // SetLocalSatToken - setting up local sat token from SatService
@@ -166,18 +166,18 @@ func SetLocalSatToken(fields log.Fields) error {
 	return nil
 }
 
-func SetLocalApacSatToken(fields log.Fields, partner string) error {
-	cb2Token, err := GetApacSatTokenFromSatService(fields, partner)
+func SetLocalPartnerSatToken(fields log.Fields, partner string) error {
+	cb2Token, err := GetPartnerSatTokenFromSatService(fields, partner)
 	if err != nil {
 		return err
 	}
 	name := Ws.SatServiceConnector.SatServiceName()
-	if Ws.ApacSatServiceConnector != nil {
-		name = Ws.ApacSatServiceConnector.SatServiceName()
+	if Ws.PartnerSatServiceConnector != nil {
+		name = Ws.PartnerSatServiceConnector.SatServiceName()
 	}
 	keyname := fmt.Sprintf("sat_token_%s", name)
 	stm.mu.Lock()
-	stm.apacSatToken = &SatToken{
+	stm.partnerSatToken = &SatToken{
 		Token:    cb2Token.AccessToken,
 		Source:   name,
 		KeyName:  keyname,
@@ -209,16 +209,16 @@ func GetSatTokenFromSatService(fields log.Fields) (*SatToken, error) {
 	}, nil
 }
 
-func GetApacSatTokenFromSatService(fields log.Fields, partner string) (*SatServiceResponse, error) {
-	log.WithFields(fields).Debug("getting sat token from APAC SatService")
-	if Ws.ApacSatServiceConnector == nil {
-		log.WithFields(fields).Warn("APAC SAT connector is nil, falling back to default SAT connector")
+func GetPartnerSatTokenFromSatService(fields log.Fields, partner string) (*SatServiceResponse, error) {
+	log.WithFields(fields).Debug("getting sat token from partner SatService")
+	if Ws.PartnerSatServiceConnector == nil {
+		log.WithFields(fields).Warn("Partner SAT connector is nil, falling back to default SAT connector")
 		return Ws.GetSatTokenFromSatService(fields)
 	}
 	if partner != "" {
-		return Ws.ApacSatServiceConnector.GetSatTokenFromSatService(fields, partner)
+		return Ws.PartnerSatServiceConnector.GetSatTokenFromSatService(fields, partner)
 	}
-	return Ws.ApacSatServiceConnector.GetSatTokenFromSatService(fields)
+	return Ws.PartnerSatServiceConnector.GetSatTokenFromSatService(fields)
 }
 
 // IsTokenExpired - making sure token is still valid

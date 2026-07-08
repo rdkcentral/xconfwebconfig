@@ -42,7 +42,7 @@ const (
 	DTGR_PARTNER_ID  = "dt-gr"
 	GR_PREFIX        = "GR"
 	SN_PREFIX        = "sn-"
-	apacRouteKey     = "apac_route"
+	partnerRouteKey  = "partner_route"
 )
 
 type PodData struct {
@@ -212,8 +212,8 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 
 	tfields := common.FilterLogFields(fields)
 	accountServiceConnector := ws.AccountServiceConnector
-	if strings.EqualFold(contextMap[apacRouteKey], "true") && ws.ApacAccountServiceConnector != nil {
-		accountServiceConnector = ws.ApacAccountServiceConnector
+	if strings.EqualFold(contextMap[partnerRouteKey], "true") && ws.PartnerAccountServiceConnector != nil {
+		accountServiceConnector = ws.PartnerAccountServiceConnector
 	}
 	if Xc.EnableXacGroupService {
 		podData, td = getAccountInfoFromGrpService(ws, contextMap, fields)
@@ -340,8 +340,8 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 	}
 	var err error
 	accountServiceConnector := ws.AccountServiceConnector
-	if strings.EqualFold(contextMap[apacRouteKey], "true") && ws.ApacAccountServiceConnector != nil {
-		accountServiceConnector = ws.ApacAccountServiceConnector
+	if strings.EqualFold(contextMap[partnerRouteKey], "true") && ws.PartnerAccountServiceConnector != nil {
+		accountServiceConnector = ws.PartnerAccountServiceConnector
 	}
 	if Xc.EnableXacGroupService {
 		if util.IsValidMacAddress(contextMap[common.ESTB_MAC_ADDRESS]) || util.IsValidMacAddress(contextMap[common.ECM_MAC_ADDRESS]) {
@@ -507,15 +507,15 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	}
 
 	contextMap[common.PASSED_PARTNER_ID] = contextMap[common.PARTNER_ID]
-	if useApacRoute(contextMap) {
-		contextMap[apacRouteKey] = "true"
+	if usePartnerRoute(contextMap) {
+		contextMap[partnerRouteKey] = "true"
 	}
 
 	// getting local sat token
 	var localToken *xhttp.SatToken
 	var err error
-	if strings.EqualFold(contextMap[apacRouteKey], "true") {
-		localToken, err = xhttp.GetLocalApacSatToken(fields, strings.ToLower(contextMap[common.PASSED_PARTNER_ID]))
+	if strings.EqualFold(contextMap[partnerRouteKey], "true") {
+		localToken, err = xhttp.GetLocalPartnerSatToken(fields, strings.ToLower(contextMap[common.PASSED_PARTNER_ID]))
 	} else {
 		localToken, err = xhttp.GetLocalSatToken(fields)
 	}
@@ -589,8 +589,8 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 	return podData, tags, td
 }
 
-func useApacRoute(contextMap map[string]string) bool {
-	enabled := Xc != nil && Xc.EnableApacRouting
+func usePartnerRoute(contextMap map[string]string) bool {
+	enabled := Xc != nil && Xc.EnablePartnerRouting
 	partner := strings.ToUpper(strings.TrimSpace(contextMap[common.PARTNER_ID]))
 	accountID := strings.TrimSpace(contextMap[common.ACCOUNT_ID])
 	accountUnknown := accountID == "" || util.IsUnknownValue(accountID)
@@ -600,10 +600,10 @@ func useApacRoute(contextMap map[string]string) bool {
 	if partner == "" {
 		return false
 	}
-	if Xc.ApacPartnerSet == nil || Xc.ApacPartnerSet.IsEmpty() {
+	if Xc.PartnerSet == nil || Xc.PartnerSet.IsEmpty() {
 		return false
 	}
-	partnerMatched := Xc.ApacPartnerSet.Contains(partner)
+	partnerMatched := Xc.PartnerSet.Contains(partner)
 	if !partnerMatched {
 		return false
 	}
