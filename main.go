@@ -143,14 +143,30 @@ func main() {
 		done <- true
 	}()
 
-	log.Infof("server is starting at %s, port %s", started, server.Addr)
-	go func() {
-		// goroutine 2 is running the server
-		if err := server.ListenAndServe(); err != nil {
-			log.Errorf("ListenAndServe Error %+v, exiting", err)
-		}
-		done <- true
-	}()
+	// Check if HTTPS is enabled
+	httpsEnabled := sc.GetBoolean("xconfwebconfig.server.https_enabled", false)
+	certFile := sc.GetString("xconfwebconfig.server.cert_file", "")
+	keyFile := sc.GetString("xconfwebconfig.server.key_file", "")
+	
+	if httpsEnabled && certFile != "" && keyFile != "" {
+		log.Infof("server is starting with HTTPS at %s, port %s", started, server.Addr)
+		go func() {
+			// goroutine 2 is running the server with HTTPS
+			if err := server.ListenAndServeTLS(certFile, keyFile); err != nil {
+				log.Errorf("ListenAndServeTLS Error %+v, exiting", err)
+			}
+			done <- true
+		}()
+	} else {
+		log.Infof("server is starting with HTTP at %s, port %s", started, server.Addr)
+		go func() {
+			// goroutine 2 is running the server with HTTP
+			if err := server.ListenAndServe(); err != nil {
+				log.Errorf("ListenAndServe Error %+v, exiting", err)
+			}
+			done <- true
+		}()
+	}
 
 	// Waiting for either a kill signal or a ListenAndServe error
 	<-done
