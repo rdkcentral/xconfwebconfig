@@ -211,6 +211,9 @@ func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Con
 			sslOpts.Config = &tls.Config{
 				ServerName:         sslServerName,
 				InsecureSkipVerify: true,
+				CipherSuites: []uint16{
+					tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+				},
 			}
 			sslOpts.EnableHostVerification = true
 		}
