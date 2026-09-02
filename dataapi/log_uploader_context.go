@@ -93,7 +93,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 				accountType := xAccountId.GetAccountType()
 				contextMap[common.ACCOUNT_ID] = accountId
 				contextMap[common.ACCOUNT_HASH] = util.CalculateHash(contextMap[common.ACCOUNT_ID])
-				contextMap[common.ACCOUNT_TYPE] = accountType
+				contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
 				log.WithFields(fields).Debug("AddLogUploaderContext Successfully fetched AcntId and AcntType from Grp Svc")
 			}
 
@@ -116,7 +116,7 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 					}
 
 					if accountType, ok := accountData["Type"]; ok && accountType != "" {
-						contextMap[common.ACCOUNT_TYPE] = accountType
+						contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
 					}
 
 					if accountState, ok := accountData["State"]; ok && accountState != "" {

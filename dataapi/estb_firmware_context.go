@@ -262,7 +262,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 				accountId = xAccountId.GetAccountId()
 				accountType = xAccountId.GetAccountType()
 				contextMap[common.ACCOUNT_ID] = accountId
-				contextMap[common.ACCOUNT_TYPE] = accountType
+				contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
 				contextMap[common.ACCOUNT_HASH] = util.CalculateHash(contextMap[common.ACCOUNT_ID])
 				log.WithFields(fields).Debugf("AddEstbFirmwareContext Successfully fetched AcntId and AcntType from Grp Svc")
 			}
@@ -286,7 +286,7 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					}
 
 					if accountType, ok := accountData["Type"]; ok && accountType != "" {
-						contextMap[common.ACCOUNT_TYPE] = accountType
+						contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
 					}
 
 					if accountState, ok := accountData["State"]; ok && accountState != "" {
