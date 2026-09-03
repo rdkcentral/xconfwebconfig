@@ -131,7 +131,10 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 		if telemetryProfile == nil {
 			xhttp.WriteXconfResponseAsText(w, 404, []byte("\"<h2>404 NOT FOUND</h2><div> telemetry profile not found</div>\""))
 		} else {
-			response, _ := util.JSONMarshal(*telemetryProfile)
+			response, err := util.JSONMarshal(*telemetryProfile)
+			if err != nil {
+				log.WithFields(common.FilterLogFields(fields)).Errorf("GetLogUploaderSettings failed to marshal telemetry profile: %v", err)
+			}
 			xhttp.WriteXconfResponse(w, 200, response)
 		}
 	} else {
@@ -210,7 +213,10 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 			}
 			LogResultSettings(result, telemetryRule, settingRules, fields)
 			settingsResponse := logupload.CreateSettingsResponseObject(result)
-			response, _ := util.JSONMarshal(settingsResponse)
+			response, err := util.JSONMarshal(settingsResponse)
+			if err != nil {
+				log.WithFields(common.FilterLogFields(fields)).Errorf("GetLogUploaderSettings failed to marshal settings response: %v", err)
+			}
 			xhttp.WriteXconfResponse(w, 200, response)
 		}
 	}

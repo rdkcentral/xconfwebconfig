@@ -361,13 +361,19 @@ func (e *EstbFirmwareRuleBase) ExtractConfigFromAction(context *coreef.Converted
 
 		context.AddBypassFiltersConverted(firmware.TIME_FILTER)
 
-		config, _ := coreef.GetFirmwareConfigOneDB(ruleAction.IntermediateVersion)
+		config, err := coreef.GetFirmwareConfigOneDB(ruleAction.IntermediateVersion)
+		if err != nil {
+			log.Errorf("PercentFilter failed to get intermediate version firmware config %s: %v", ruleAction.IntermediateVersion, err)
+		}
 		if config != nil && !strings.EqualFold(context.GetFirmwareVersionConverted(), config.FirmwareVersion) {
 			// return IntermediateVersion firmware config
 			appliedVersionInfo[FIRMWARE_SOURCE] = "IV,doesntMeetMinCheck"
 			return ruleAction.IntermediateVersion
 		} else {
-			config, _ = coreef.GetFirmwareConfigOneDB(ruleAction.ConfigId) // lkg config
+			config, err = coreef.GetFirmwareConfigOneDB(ruleAction.ConfigId) // lkg config
+			if err != nil {
+				log.Errorf("PercentFilter failed to get LKG firmware config %s: %v", ruleAction.ConfigId, err)
+			}
 			if config != nil {
 				// return LKG firmware config
 				appliedVersionInfo[FIRMWARE_SOURCE] = "LKG,doesntMeetMinCheck"
@@ -377,7 +383,10 @@ func (e *EstbFirmwareRuleBase) ExtractConfigFromAction(context *coreef.Converted
 		return e.ExtractAnyPresentConfig(ruleAction)
 	}
 
-	config, _ := coreef.GetFirmwareConfigOneDB(ruleAction.ConfigId)
+	config, err := coreef.GetFirmwareConfigOneDB(ruleAction.ConfigId)
+	if err != nil {
+		log.Errorf("PercentFilter failed to get firmware config %s: %v", ruleAction.ConfigId, err)
+	}
 	if config != nil {
 		appliedVersionInfo[FIRMWARE_SOURCE] = "LKG,meetMinCheck"
 	}
