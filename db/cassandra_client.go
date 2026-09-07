@@ -141,7 +141,11 @@ func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Con
 	localDc := conf.GetString("xconfwebconfig.database.local_dc")
 	cluster.PoolConfig.HostSelectionPolicy = gocql.TokenAwareHostPolicy(gocql.RoundRobinHostPolicy())
 	if len(localDc) > 0 {
-		cluster.HostFilter = gocql.DataCentreHostFilter(localDc)
+		// DCAware prefers local_dc but keeps remote hosts as fallback; a HostFilter here
+		// would hard-drop them and turn a local-DC outage into a total outage.
+		cluster.PoolConfig.HostSelectionPolicy = gocql.TokenAwareHostPolicy(
+			gocql.DCAwareRoundRobinPolicy(localDc),
+		)
 	}
 
 	isSslEnabled := conf.GetBoolean("xconfwebconfig.database.is_ssl_enabled")
@@ -203,19 +207,24 @@ func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Con
 	}
 
 	if isSslEnabled {
-		sslOpts := &gocql.SslOptions{
-			EnableHostVerification: false,
-		}
+		// Go 1.22+ removed RSA key-exchange cipher suites from the default TLS
+		// ClientHello. Cassandra 3.x requires TLS_RSA_WITH_AES_128_CBC_SHA.
+		// Certificate and hostname verification are enabled by default; set
+		// xconfwebconfig.database.tls_insecure_skip_verify=true only for local/dev.
+		tlsInsecureSkipVerify := conf.GetBoolean("xconfwebconfig.database.tls_insecure_skip_verify", false)
+		sslCaPath := conf.GetString("xconfwebconfig.database.ssl_ca_path")
 		sslServerName := conf.GetString("xconfwebconfig.database.ssl_server_name")
-		if len(sslServerName) > 0 {
-			sslOpts.Config = &tls.Config{
-				ServerName:         sslServerName,
-				InsecureSkipVerify: true,
-				CipherSuites: []uint16{
-					tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-				},
-			}
-			sslOpts.EnableHostVerification = true
+		tlsConfig := &tls.Config{
+			CipherSuites: []uint16{
+				tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+			},
+			InsecureSkipVerify: tlsInsecureSkipVerify, //nolint:gosec // config-driven, defaults false
+			ServerName:         sslServerName,
+		}
+		sslOpts := &gocql.SslOptions{
+			Config:                 tlsConfig,
+			CaPath:                 sslCaPath,
+			EnableHostVerification: !tlsInsecureSkipVerify,
 		}
 		cluster.SslOpts = sslOpts
 	}
