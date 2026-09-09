@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 
 	conversion "github.com/rdkcentral/xconfwebconfig/protobuf"
@@ -115,7 +116,7 @@ func (c *DefaultGroupService) SetGroupPrefix(prefix string) {
 }
 
 func (c *DefaultGroupService) GetRfcPrecookDetails(cpeMac string, fields log.Fields) (*conversion.XconfDevice, error) {
-	url := fmt.Sprintf(c.getRfcPrecookUrlTemplate, c.GroupServiceHost(), cpeMac)
+	url := fmt.Sprintf(c.getRfcPrecookUrlTemplate, c.GroupServiceHost(), url.PathEscape(cpeMac))
 	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
@@ -131,7 +132,7 @@ func (c *DefaultGroupService) GetRfcPrecookDetails(cpeMac string, fields log.Fie
 }
 
 func (c *DefaultGroupService) GetCpeGroups(cpeMac string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(c.getCpeGroupsUrlTemplate, c.GroupServiceHost(), cpeMac)
+	url := fmt.Sprintf(c.getCpeGroupsUrlTemplate, c.GroupServiceHost(), url.PathEscape(cpeMac))
 	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
@@ -165,7 +166,7 @@ func (c *DefaultGroupService) CreateListFromGroupServiceProto(cpeGroup *conversi
 }
 
 func (c *DefaultGroupService) GetFeatureTagsHashedItems(name string, fields log.Fields) (map[string]string, error) {
-	url := fmt.Sprintf(c.getHashesUrlTemplate, c.GroupServiceHost(), name)
+	url := fmt.Sprintf(c.getHashesUrlTemplate, c.GroupServiceHost(), url.PathEscape(name))
 	rbytes, err := c.DoWithRetries("GET", url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
@@ -180,7 +181,7 @@ func (c *DefaultGroupService) GetFeatureTagsHashedItems(name string, fields log.
 }
 
 func (c *DefaultGroupService) GetAccountIdData(mac string, fields log.Fields) (*conversion.XBOAccount, error) {
-	url := fmt.Sprintf(c.getAccountIdUrlTemplate, c.host, mac)
+	url := fmt.Sprintf(c.getAccountIdUrlTemplate, c.host, url.PathEscape(mac))
 	rbytes, err := c.DoWithRetries(http.MethodGet, url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
@@ -196,7 +197,7 @@ func (c *DefaultGroupService) GetAccountIdData(mac string, fields log.Fields) (*
 }
 
 func (c *DefaultGroupService) GetAccountProductsData(accountId string, fields log.Fields) (map[string]string, error) {
-	url := fmt.Sprintf(c.getAccountProductsUrlTemplate, c.GroupServiceHost(), accountId)
+	url := fmt.Sprintf(c.getAccountProductsUrlTemplate, c.GroupServiceHost(), url.PathEscape(accountId))
 	rbytes, err := c.DoWithRetries(http.MethodGet, url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
