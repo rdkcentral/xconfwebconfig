@@ -22,14 +22,23 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/util"
 )
 
-// FeatureRule FeatureControlRule2 table
+// FeatureRule feature_control_rules table
 type FeatureRule struct {
 	Id              string   `json:"id"`
+	Updated         int64    `json:"updated"`
 	Name            string   `json:"name"`
 	Rule            *re.Rule `json:"rule"`
 	Priority        int      `json:"priority"`
 	FeatureIds      []string `json:"featureIds"`
 	ApplicationType string   `json:"applicationType"`
+}
+
+func (obj *FeatureRule) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *FeatureRule) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *FeatureRule) SetApplicationType(appType string) {

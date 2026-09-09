@@ -39,11 +39,29 @@ const (
 	RoundRobinFilterClass     SingletonFilterClass = "com.comcast.xconf.estbfirmware.DownloadLocationRoundRobinFilterValue"
 )
 
-// SingletonFilterValue table - this struct serves as a container for the two subtypes
+// SingletonFilterValue singleton_filter_values table - this struct serves as a container for the two subtypes
 type SingletonFilterValue struct {
 	ID                                    string                                 `json:"id"`
 	PercentFilterValue                    *PercentFilterValue                    `json:"-"`
 	DownloadLocationRoundRobinFilterValue *DownloadLocationRoundRobinFilterValue `json:"-"`
+}
+
+func (obj *SingletonFilterValue) GetUpdated() int64 {
+	if obj.PercentFilterValue != nil {
+		return obj.PercentFilterValue.Updated
+	} else if obj.DownloadLocationRoundRobinFilterValue != nil {
+		return obj.DownloadLocationRoundRobinFilterValue.Updated
+	}
+	// Default to 0 if no subtype is set, but this should not happen in practice
+	return 0
+}
+
+func (obj *SingletonFilterValue) SetUpdated(ts int64) {
+	if obj.PercentFilterValue != nil {
+		obj.PercentFilterValue.Updated = ts
+	} else if obj.DownloadLocationRoundRobinFilterValue != nil {
+		obj.DownloadLocationRoundRobinFilterValue.Updated = ts
+	}
 }
 
 func (obj *SingletonFilterValue) Clone() (*SingletonFilterValue, error) {

@@ -49,7 +49,7 @@ const (
 	TFTP_SUFFIX               = "_tftp"
 )
 
-func ConvertFirmwareRuleToIpFilter(firmwareRule *firmware.FirmwareRule) *IpFilter {
+func ConvertFirmwareRuleToIpFilter(tenantId string, firmwareRule *firmware.FirmwareRule) *IpFilter {
 	filter := NewEmptyIpFilter()
 
 	filter.Name = firmwareRule.Name
@@ -57,7 +57,7 @@ func ConvertFirmwareRuleToIpFilter(firmwareRule *firmware.FirmwareRule) *IpFilte
 	conds := re.ToConditions(&firmwareRule.Rule)
 	for _, cond := range conds {
 		if RuleFactoryIP.Equals(cond.GetFreeArg()) {
-			filter.IpAddressGroup = GetIpAddressGroup(cond)
+			filter.IpAddressGroup = GetIpAddressGroup(tenantId, cond)
 		}
 	}
 	return filter
@@ -74,12 +74,12 @@ func ConvertIpFilterToFirmwareRule(ipFilter *IpFilter) *firmware.FirmwareRule {
 	return rule
 }
 
-func GetIpAddressGroup(cond *re.Condition) *shared.IpAddressGroup {
+func GetIpAddressGroup(tenantId string, cond *re.Condition) *shared.IpAddressGroup {
 	operation := cond.GetOperation()
 
 	if RuleFactoryIN_LIST == operation {
 		listId := cond.GetFixedArg().GetValue().(string)
-		list, _ := shared.GetGenericNamedListOneDB(listId)
+		list, _ := shared.GetGenericNamedListOneDB(tenantId, listId)
 		if list != nil {
 			return shared.ConvertToIpAddressGroup(list)
 		} else {
@@ -126,7 +126,7 @@ func IsLegacyLocalTimeFreeArg(freeArg re.FreeArg) bool {
 }
 
 // convertFirmwareRuleToIpRuleBean ...
-func ConvertFirmwareRuleToIpRuleBean(firmwareRule *firmware.FirmwareRule) *IpRuleBean {
+func ConvertFirmwareRuleToIpRuleBean(tenantId string, firmwareRule *firmware.FirmwareRule) *IpRuleBean {
 	bean := IpRuleBean{}
 	bean.Name = firmwareRule.Name
 	bean.Id = firmwareRule.ID
@@ -135,7 +135,7 @@ func ConvertFirmwareRuleToIpRuleBean(firmwareRule *firmware.FirmwareRule) *IpRul
 	for _, r := range rules {
 		cond := r.GetCondition()
 		if IsLegacyIpFreeArg(cond.GetFreeArg()) || RuleFactoryIP.Equals(cond.GetFreeArg()) {
-			bean.IpAddressGroup = GetIpAddressGroup(cond)
+			bean.IpAddressGroup = GetIpAddressGroup(tenantId, cond)
 		} else if RuleFactoryENV.Equals(cond.GetFreeArg()) {
 			bean.EnvironmentId = cond.GetFixedArg().GetValue().(string)
 		} else if RuleFactoryMODEL.Equals(cond.GetFreeArg()) {
@@ -206,14 +206,14 @@ func containsAnyCondition(rule *re.Rule) bool {
 	return (rule != nil && rule.Condition != nil) || (rule != nil && rule.CompoundParts != nil && len(rule.CompoundParts) > 0)
 }
 
-func ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(firmwareRule *firmware.FirmwareRule) (bean *IpRuleBean, err error) {
-	bean = ConvertFirmwareRuleToIpRuleBean(firmwareRule)
+func ConvertFirmwareRuleToIpRuleBeanAddFirmareConfig(tenantId string, firmwareRule *firmware.FirmwareRule) (bean *IpRuleBean, err error) {
+	bean = ConvertFirmwareRuleToIpRuleBean(tenantId, firmwareRule)
 	action := firmwareRule.ApplicableAction
 	if action == nil || action.ConfigId == "" {
 		err = fmt.Errorf("FirmwareRule [id=%s, name=%s] is corrupted: ApplicableAction is missing", firmwareRule.ID, firmwareRule.Name)
 		log.Error(err)
 	} else {
-		if cfg, e := GetFirmwareConfigOneDB(action.ConfigId); e == nil {
+		if cfg, e := GetFirmwareConfigOneDB(tenantId, action.ConfigId); e == nil {
 			bean.FirmwareConfig = cfg
 		}
 	}
@@ -334,10 +334,10 @@ func ConvertIntoPercentRange(configEntries []firmware.ConfigEntry) []*firmware.C
 	return result
 }
 
-func ReplaceConfigIdWithFirmwareVersion(bean *PercentageBean) *PercentageBean {
+func ReplaceConfigIdWithFirmwareVersion(tenantId string, bean *PercentageBean) *PercentageBean {
 	if len(bean.Distributions) > 0 {
 		for _, configEntry := range bean.Distributions {
-			firmwareVersion := GetFirmwareVersion(configEntry.ConfigId)
+			firmwareVersion := GetFirmwareVersion(tenantId, configEntry.ConfigId)
 			if firmwareVersion != "" {
 				configEntry.ConfigId = firmwareVersion
 			}
@@ -345,14 +345,14 @@ func ReplaceConfigIdWithFirmwareVersion(bean *PercentageBean) *PercentageBean {
 	}
 
 	if bean.LastKnownGood != "" {
-		firmwareVersion := GetFirmwareVersion(bean.LastKnownGood)
+		firmwareVersion := GetFirmwareVersion(tenantId, bean.LastKnownGood)
 		if firmwareVersion != "" {
 			bean.LastKnownGood = firmwareVersion
 		}
 	}
 
 	if bean.IntermediateVersion != "" {
-		firmwareVersion := GetFirmwareVersion(bean.IntermediateVersion)
+		firmwareVersion := GetFirmwareVersion(tenantId, bean.IntermediateVersion)
 		if firmwareVersion != "" {
 			bean.IntermediateVersion = firmwareVersion
 		}
@@ -385,7 +385,7 @@ func ConvertFirmwareRuleToMacRuleBeanWrapper(firmwareRule *firmware.FirmwareRule
 	return &macRuleBean
 }
 
-func ConvertFirmwareRuleToEnvModelRuleBean(firmwareRule *firmware.FirmwareRule) *EnvModelBean {
+func ConvertFirmwareRuleToEnvModelRuleBean(tenantId string, firmwareRule *firmware.FirmwareRule) *EnvModelBean {
 	envModelRuleBean := EnvModelBean{}
 	envModelRuleBean.Name = firmwareRule.Name
 	envModelRuleBean.Id = firmwareRule.ID
@@ -400,7 +400,7 @@ func ConvertFirmwareRuleToEnvModelRuleBean(firmwareRule *firmware.FirmwareRule) 
 	}
 	action := firmwareRule.ApplicableAction
 	if action != nil && action.ConfigId != "" {
-		config, err := GetFirmwareConfigOneDB(action.ConfigId)
+		config, err := GetFirmwareConfigOneDB(tenantId, action.ConfigId)
 		if err != nil {
 			log.Error(fmt.Sprintf("GetFirmwareConfigOneDB: %v", err))
 		}

@@ -34,7 +34,7 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
 	xwdataapi "github.com/rdkcentral/xconfwebconfig/dataapi"
 	"github.com/rdkcentral/xconfwebconfig/dataapi/featurecontrol"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
@@ -183,6 +183,18 @@ func TestFeatureIsNotReturnedForUnknownPartnerTag(t *testing.T) {
 	createTagFeatureRule(PARTNER_TAG)
 	emptyFeatureResponse := []rfc.FeatureResponse{}
 	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, "?partnerId=unknown", nil, emptyFeatureResponse)
+}
+
+func TestFeatureIsNotReturnedForNoaccountPartnerTag(t *testing.T) {
+	DeleteAllEntities()
+	server, router := dataapi.GetTestXconfServer(testFile)
+
+	taggingMockServer := dataapi.SetupTaggingMockServerOkResponseDynamic(t, *server, fmt.Sprintf(`["%s"]`, PARTNER_TAG), fmt.Sprintf(URL_TAGS_PARTNER, XYZ_PARTNER))
+	defer taggingMockServer.Close()
+
+	createTagFeatureRule(PARTNER_TAG)
+	emptyFeatureResponse := []rfc.FeatureResponse{}
+	performGetSettingsRequestAndVerifyFeatureControl(t, server, router, "?partnerId=noaccount", nil, emptyFeatureResponse)
 }
 
 func Test200StatusCodeWhenTaggingServiceUnavailableAndEmptyConfigHash(t *testing.T) {
@@ -700,11 +712,11 @@ func createTagFeatureRule(tagNameForRule string) *rfc.Feature {
 }
 
 func setFeatureRule(featureRule *rfc.FeatureRule) {
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_FEATURE_CONTROL_RULE, featureRule.Id, featureRule)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FEATURE_CONTROL_RULES, featureRule.Id, featureRule)
 }
 
 func setFeature(feature *rfc.Feature) {
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_XCONF_FEATURE, feature.ID, feature)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_FEATURES, feature.ID, feature)
 }
 
 func createAndSaveFeature() *rfc.Feature {
