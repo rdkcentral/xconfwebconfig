@@ -342,9 +342,10 @@ type TelemetryElement struct {
 	Component        string `json:"component,omitempty"`
 }
 
-// TelemetryProfile Telemetry table
+// TelemetryProfile telemetry_profiles table
 type TelemetryProfile struct {
 	ID               string             `json:"id"`
+	Updated          int64              `json:"updated"`
 	TelemetryProfile []TelemetryElement `json:"telemetryProfile"`
 	Schedule         string             `json:"schedule"`
 	Expires          int64              `json:"expires"`
@@ -352,6 +353,14 @@ type TelemetryProfile struct {
 	UploadRepository string             `json:"uploadRepository:URL"`
 	UploadProtocol   UploadProtocol     `json:"uploadRepository:uploadProtocol"`
 	ApplicationType  string             `json:"applicationType"`
+}
+
+func (obj *TelemetryProfile) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *TelemetryProfile) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *TelemetryProfile) Clone() (*TelemetryProfile, error) {
@@ -376,10 +385,11 @@ func NewTelemetryProfileDescriptor() *TelemetryProfileDescriptor {
 	return &TelemetryProfileDescriptor{}
 }
 
-// PermanentTelemetryProfile PermanentTelemetry table
+// PermanentTelemetryProfile permanent_telemetry_profiles table
 type PermanentTelemetryProfile struct {
 	Type             string             `json:"@type,omitempty"`
 	ID               string             `json:"id"`
+	Updated          int64              `json:"updated"`
 	TelemetryProfile []TelemetryElement `json:"telemetryProfile"`
 	Schedule         string             `json:"schedule"`
 	Expires          int64              `json:"expires"`
@@ -387,6 +397,14 @@ type PermanentTelemetryProfile struct {
 	UploadRepository string             `json:"uploadRepository:URL"`
 	UploadProtocol   UploadProtocol     `json:"uploadRepository:uploadProtocol"`
 	ApplicationType  string             `json:"applicationType,omitempty"`
+}
+
+func (obj *PermanentTelemetryProfile) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *PermanentTelemetryProfile) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (s *PermanentTelemetryProfile) Equals(t *PermanentTelemetryProfile) bool {
@@ -529,7 +547,7 @@ func NullifyUnwantedFieldsPermanentTelemetryProfile(profile *PermanentTelemetryP
 	return profile
 }
 
-// TelemetryRule TelemetryRules table
+// TelemetryRule telemetry_rules table
 type TelemetryRule struct {
 	re.Rule
 	ID               string `json:"id"`
@@ -537,6 +555,14 @@ type TelemetryRule struct {
 	BoundTelemetryID string `json:"boundTelemetryId"`
 	Name             string `json:"name"`
 	ApplicationType  string `json:"applicationType"`
+}
+
+func (obj *TelemetryRule) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *TelemetryRule) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *TelemetryRule) Clone() (*TelemetryRule, error) {
@@ -640,7 +666,7 @@ func (t *TimestampedRule) Equals(x *TimestampedRule) bool {
 	}
 }
 
-// TelemetryTwoRule TelemetryTwoRules table
+// TelemetryTwoRule telemetry_two_rules table
 type TelemetryTwoRule struct {
 	re.Rule
 	ID                string   `json:"id"`
@@ -649,6 +675,14 @@ type TelemetryTwoRule struct {
 	ApplicationType   string   `json:"applicationType"`
 	BoundTelemetryIDs []string `json:"boundTelemetryIds"`
 	NoOp              bool     `json:"noOp"`
+}
+
+func (obj *TelemetryTwoRule) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *TelemetryTwoRule) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *TelemetryTwoRule) Clone() (*TelemetryTwoRule, error) {
@@ -721,7 +755,7 @@ func (t *TelemetryTwoRule) Equals(o *TelemetryTwoRule) bool {
 	return true
 }
 
-// TelemetryTwoProfile TelemetryTwoProfiles table
+// TelemetryTwoProfile telemetry_two_profiles table
 type TelemetryTwoProfile struct {
 	Type            string `json:"@type,omitempty"`
 	ID              string `json:"id"`
@@ -729,6 +763,14 @@ type TelemetryTwoProfile struct {
 	Name            string `json:"name"`
 	Jsonconfig      string `json:"jsonconfig"`
 	ApplicationType string `json:"applicationType"`
+}
+
+func (obj *TelemetryTwoProfile) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *TelemetryTwoProfile) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *TelemetryTwoProfile) SetApplicationType(appType string) {
@@ -798,12 +840,10 @@ func NewTelemetryTwoProfileInf() interface{} {
 	}
 }
 
-//var cachedSimpleDao ds.CachedSimpleDao
-
 var GetCachedSimpleDaoFunc = db.GetCachedSimpleDao
 
-func DeleteExpiredTelemetryProfile(cacheUpdateWindowSize int64) {
-	telemetryProfileMapInst, err := GetCachedSimpleDaoFunc().GetAllAsMap(db.TABLE_TELEMETRY)
+func DeleteExpiredTelemetryProfile(tenantId string, cacheUpdateWindowSize int64) {
+	telemetryProfileMapInst, err := GetCachedSimpleDaoFunc().GetAllAsMap(tenantId, db.TABLE_TELEMETRY_PROFILES)
 	if err != nil {
 		log.Warn("no telemetryProfileList found for ExpireTemporaryTelemetryRules()")
 	} else {
@@ -812,22 +852,22 @@ func DeleteExpiredTelemetryProfile(cacheUpdateWindowSize int64) {
 			telemetryProfile := v.(TelemetryProfile)
 			if (telemetryProfile.Expires + cacheUpdateWindowSize) <= time.Now().UTC().Unix()*1000 {
 				log.Debugf("{%s} is expired, removing", timestampedRule)
-				GetCachedSimpleDaoFunc().DeleteOne(db.TABLE_TELEMETRY, timestampedRule)
+				GetCachedSimpleDaoFunc().DeleteOne(tenantId, db.TABLE_TELEMETRY_PROFILES, timestampedRule)
 			}
 		}
 	}
 }
 
-func DeleteTelemetryProfile(rowKey string) {
-	GetCachedSimpleDaoFunc().DeleteOne(db.TABLE_TELEMETRY, rowKey)
+func DeleteTelemetryProfile(tenantId string, rowKey string) {
+	GetCachedSimpleDaoFunc().DeleteOne(tenantId, db.TABLE_TELEMETRY_PROFILES, rowKey)
 }
 
-func SetTelemetryProfile(rowKey string, telemetry TelemetryProfile) {
-	GetCachedSimpleDaoFunc().SetOne(db.TABLE_TELEMETRY, rowKey, telemetry)
+func SetTelemetryProfile(tenantId string, rowKey string, telemetry TelemetryProfile) {
+	GetCachedSimpleDaoFunc().SetOne(tenantId, db.TABLE_TELEMETRY_PROFILES, rowKey, telemetry)
 }
 
-func GetOneTelemetryProfile(rowKey string) *TelemetryProfile {
-	telemetryInst, err := GetCachedSimpleDaoFunc().GetOne(db.TABLE_TELEMETRY, rowKey)
+func GetOneTelemetryProfile(tenantId string, rowKey string) *TelemetryProfile {
+	telemetryInst, err := GetCachedSimpleDaoFunc().GetOne(tenantId, db.TABLE_TELEMETRY_PROFILES, rowKey)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no telemetryProfile found for:%s ", rowKey))
 		return nil
@@ -836,8 +876,8 @@ func GetOneTelemetryProfile(rowKey string) *TelemetryProfile {
 	return &telemetry
 }
 
-func GetTimestampedRules() []TimestampedRule {
-	timestampedRuleSet, err := GetCachedSimpleDaoFunc().GetKeys(db.TABLE_TELEMETRY)
+func GetTimestampedRules(tenantId string) []TimestampedRule {
+	timestampedRuleSet, err := GetCachedSimpleDaoFunc().GetKeys(tenantId, db.TABLE_TELEMETRY_PROFILES)
 	if err != nil {
 		log.Warn("no TimestampedRule found")
 		return nil
@@ -850,8 +890,8 @@ func GetTimestampedRules() []TimestampedRule {
 	return rules
 }
 
-func GetRulesFromTimestampedRules() []re.Rule {
-	timestampedRuleSet, err := GetCachedSimpleDaoFunc().GetKeys(db.TABLE_TELEMETRY)
+func GetRulesFromTimestampedRules(tenantId string) []re.Rule {
+	timestampedRuleSet, err := GetCachedSimpleDaoFunc().GetKeys(tenantId, db.TABLE_TELEMETRY_PROFILES)
 	if err != nil {
 		log.Warn("no TimestampedRule found")
 		return nil
@@ -864,8 +904,8 @@ func GetRulesFromTimestampedRules() []re.Rule {
 	return rules
 }
 
-func GetTelemetryProfileMap() *map[string]TelemetryProfile {
-	telemetryProfileMap, err := GetCachedSimpleDaoFunc().GetAllAsMap(db.TABLE_TELEMETRY)
+func GetTelemetryProfileMap(tenantId string) *map[string]TelemetryProfile {
+	telemetryProfileMap, err := GetCachedSimpleDaoFunc().GetAllAsMap(tenantId, db.TABLE_TELEMETRY_PROFILES)
 	if err != nil {
 		log.Warn("no telemetryProfileMap found")
 		return nil
@@ -879,9 +919,9 @@ func GetTelemetryProfileMap() *map[string]TelemetryProfile {
 	return &finalMap
 }
 
-func GetTelemetryProfileList() []*TelemetryProfile {
+func GetTelemetryProfileList(tenantId string) []*TelemetryProfile {
 	all := []*TelemetryProfile{}
-	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(db.TABLE_TELEMETRY, 0)
+	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(tenantId, db.TABLE_TELEMETRY_PROFILES, 0)
 	if err != nil {
 		log.Warn("no TelemetryProfile found")
 		return nil
@@ -893,9 +933,9 @@ func GetTelemetryProfileList() []*TelemetryProfile {
 	return all
 }
 
-func GetTelemetryRuleListForAs() []*TelemetryRule {
+func GetTelemetryRuleListForAs(tenantId string) []*TelemetryRule {
 	all := []*TelemetryRule{}
-	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(db.TABLE_TELEMETRY_RULES, 0)
+	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(tenantId, db.TABLE_TELEMETRY_RULES, 0)
 	if err != nil {
 		log.Warn("no TelemetryRule found")
 		return nil
@@ -907,15 +947,15 @@ func GetTelemetryRuleListForAs() []*TelemetryRule {
 	return all
 }
 
-func GetTelemetryRuleList() []*TelemetryRule {
+func GetTelemetryRuleList(tenantId string) []*TelemetryRule {
 	cm := db.GetCacheManager()
 	cacheKey := "TelemetryRuleList"
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_TELEMETRY_RULES, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(tenantId, db.TABLE_TELEMETRY_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*TelemetryRule)
 	}
 
-	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(db.TABLE_TELEMETRY_RULES, 0)
+	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(tenantId, db.TABLE_TELEMETRY_RULES, 0)
 	if err != nil {
 		log.Warn("no TelemetryRule found")
 		return []*TelemetryRule{}
@@ -933,14 +973,14 @@ func GetTelemetryRuleList() []*TelemetryRule {
 	}
 
 	if len(all) > 0 {
-		cm.ApplicationCacheSet(db.TABLE_TELEMETRY_RULES, cacheKey, all)
+		cm.ApplicationCacheSet(tenantId, db.TABLE_TELEMETRY_RULES, cacheKey, all)
 	}
 
 	return all
 }
 
-func GetOnePermanentTelemetryProfile(rowKey string) *PermanentTelemetryProfile {
-	telemetryInst, err := GetCachedSimpleDaoFunc().GetOne(db.TABLE_PERMANENT_TELEMETRY, rowKey)
+func GetOnePermanentTelemetryProfile(tenantId string, rowKey string) *PermanentTelemetryProfile {
+	telemetryInst, err := GetCachedSimpleDaoFunc().GetOne(tenantId, db.TABLE_PERMANENT_TELEMETRY_PROFILES, rowKey)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no telemetryProfile found for:%s ", rowKey))
 		return nil
@@ -949,9 +989,9 @@ func GetOnePermanentTelemetryProfile(rowKey string) *PermanentTelemetryProfile {
 	return telemetry
 }
 
-func GetPermanentTelemetryProfileList() []*PermanentTelemetryProfile {
+func GetPermanentTelemetryProfileList(tenantId string) []*PermanentTelemetryProfile {
 	all := []*PermanentTelemetryProfile{}
-	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(db.TABLE_PERMANENT_TELEMETRY, 0)
+	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(tenantId, db.TABLE_PERMANENT_TELEMETRY_PROFILES, 0)
 	if err != nil {
 		log.Warn("no TelemetryProfile found")
 		return nil
@@ -963,14 +1003,14 @@ func GetPermanentTelemetryProfileList() []*PermanentTelemetryProfile {
 	return all
 }
 
-func GetTelemetryTwoRuleList() []*TelemetryTwoRule {
+func GetTelemetryTwoRuleList(tenantId string) []*TelemetryTwoRule {
 	cm := db.GetCacheManager()
 	cacheKey := "TelemetryTwoRuleList"
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_TELEMETRY_TWO_RULES, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(tenantId, db.TABLE_TELEMETRY_TWO_RULES, cacheKey)
 	if cacheInst != nil {
 		return cacheInst.([]*TelemetryTwoRule)
 	}
-	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(db.TABLE_TELEMETRY_TWO_RULES, 0)
+	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(tenantId, db.TABLE_TELEMETRY_TWO_RULES, 0)
 	if err != nil {
 		log.Warn("no TelemetryTwoRule found")
 		return nil
@@ -987,14 +1027,14 @@ func GetTelemetryTwoRuleList() []*TelemetryTwoRule {
 			all = append(all, telemetryTwoRule)
 		}
 	}
-	cm.ApplicationCacheSet(db.TABLE_TELEMETRY_TWO_RULES, cacheKey, all)
+	cm.ApplicationCacheSet(tenantId, db.TABLE_TELEMETRY_TWO_RULES, cacheKey, all)
 
 	return all
 }
 
-func GetTelemetryTwoRuleListForAS() []*TelemetryTwoRule {
+func GetTelemetryTwoRuleListForAS(tenantId string) []*TelemetryTwoRule {
 	all := []*TelemetryTwoRule{}
-	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(db.TABLE_TELEMETRY_TWO_RULES, 0)
+	tRuleList, err := GetCachedSimpleDaoFunc().GetAllAsList(tenantId, db.TABLE_TELEMETRY_TWO_RULES, 0)
 	if err != nil {
 		log.Warn("no TelemetryTwoRule found")
 		return nil
@@ -1007,8 +1047,8 @@ func GetTelemetryTwoRuleListForAS() []*TelemetryTwoRule {
 	return all
 }
 
-func GetOneTelemetryTwoProfile(rowKey string) *TelemetryTwoProfile {
-	telemetryInst, err := GetCachedSimpleDaoFunc().GetOne(db.TABLE_TELEMETRY_TWO_PROFILES, rowKey)
+func GetOneTelemetryTwoProfile(tenantId string, rowKey string) *TelemetryTwoProfile {
+	telemetryInst, err := GetCachedSimpleDaoFunc().GetOne(tenantId, db.TABLE_TELEMETRY_TWO_PROFILES, rowKey)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no TelemetryTwoProfile found for: %s ", rowKey))
 		return nil

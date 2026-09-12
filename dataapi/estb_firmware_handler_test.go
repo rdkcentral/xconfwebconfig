@@ -152,6 +152,23 @@ func TestGetEstbLastlogPath_ValidMAC(t *testing.T) {
 	assert.Equal(t, http.StatusOK, recorder.Code)
 }
 
+func TestGetEstbLastlogPath_IgnoresPartnerQueryForNow(t *testing.T) {
+	mac := "AA:BB:CC:DD:EE:FF"
+	reqUnknown := httptest.NewRequest(http.MethodGet, "/estbfirmware/lastlog?mac="+mac+"&partnerId=unknown", nil)
+	recorderUnknown := httptest.NewRecorder()
+
+	GetEstbLastlogPath(recorderUnknown, reqUnknown)
+
+	reqUnmapped := httptest.NewRequest(http.MethodGet, "/estbfirmware/lastlog?mac="+mac+"&partnerId=SOMENEWPARTNER", nil)
+	recorderUnmapped := httptest.NewRecorder()
+
+	GetEstbLastlogPath(recorderUnmapped, reqUnmapped)
+
+	assert.Equal(t, http.StatusOK, recorderUnknown.Code)
+	assert.Equal(t, http.StatusOK, recorderUnmapped.Code)
+	assert.Equal(t, recorderUnknown.Body.String(), recorderUnmapped.Body.String())
+}
+
 // GetEstbChangelogsPath Tests
 func TestGetEstbChangelogsPath_InvalidMAC(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/estbfirmware/changelogs?mac=invalid", nil)
@@ -178,6 +195,23 @@ func TestGetEstbChangelogsPath_ValidMAC(t *testing.T) {
 	GetEstbChangelogsPath(recorder, req)
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
+}
+
+func TestGetEstbChangelogsPath_IgnoresPartnerQueryForNow(t *testing.T) {
+	mac := "AA:BB:CC:DD:EE:FF"
+	reqUnknown := httptest.NewRequest(http.MethodGet, "/estbfirmware/changelogs?mac="+mac+"&partnerId=unknown", nil)
+	recorderUnknown := httptest.NewRecorder()
+
+	GetEstbChangelogsPath(recorderUnknown, reqUnknown)
+
+	reqUnmapped := httptest.NewRequest(http.MethodGet, "/estbfirmware/changelogs?mac="+mac+"&partnerId=SOMENEWPARTNER", nil)
+	recorderUnmapped := httptest.NewRecorder()
+
+	GetEstbChangelogsPath(recorderUnmapped, reqUnmapped)
+
+	assert.Equal(t, http.StatusOK, recorderUnknown.Code)
+	assert.Equal(t, http.StatusOK, recorderUnmapped.Code)
+	assert.Equal(t, recorderUnknown.Body.String(), recorderUnmapped.Body.String())
 }
 
 // GetCheckMinFirmwareHandler Tests

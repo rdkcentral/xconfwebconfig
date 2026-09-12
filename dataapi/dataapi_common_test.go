@@ -204,6 +204,36 @@ func TestNormalizeCommonContext(t *testing.T) {
 	}
 }
 
+func TestNormalizeCommonContext_PartnerIdWhitespaceOnly(t *testing.T) {
+	contextMap := map[string]string{
+		common.PARTNER_ID: "   ",
+	}
+	NormalizeCommonContext(contextMap, "estbMac", "ecmMac")
+
+	// After trimming, partnerId becomes empty, so it's set to empty string in the map
+	assert.Equal(t, "", contextMap[common.PARTNER_ID])
+}
+
+func TestNormalizeCommonContext_PartnerIdTooLong(t *testing.T) {
+	contextMap := map[string]string{
+		common.PARTNER_ID: "this-is-a-very-long-partner-id",
+	}
+	NormalizeCommonContext(contextMap, "estbMac", "ecmMac")
+
+	// PartnerID is > 24 chars, should be normalized to "INVALID"
+	assert.Equal(t, "INVALID", contextMap[common.PARTNER_ID])
+}
+
+func TestNormalizeCommonContext_PartnerIdWithWhitespaceAndTooLong(t *testing.T) {
+	contextMap := map[string]string{
+		common.PARTNER_ID: "  this-is-a-very-long-partner-id  ",
+	}
+	NormalizeCommonContext(contextMap, "estbMac", "ecmMac")
+
+	// After trimming whitespace, PartnerID is > 24 chars, should be "INVALID"
+	assert.Equal(t, "INVALID", contextMap[common.PARTNER_ID])
+}
+
 func TestNormalizeCommonContext_PopulatesEstbHashFromNormalizedMac(t *testing.T) {
 	contextMap := map[string]string{
 		"estbMac": "aa:bb:cc:dd:ee:ff",
