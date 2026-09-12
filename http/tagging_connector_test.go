@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/go-akka/configuration"
@@ -269,6 +270,242 @@ func TestDefaultTaggingService_GetTagsForContext_Success(t *testing.T) {
 	assert.Equal(t, 2, len(result))
 	assert.Contains(t, result, "context-tag1")
 	assert.Contains(t, result, "context-tag2")
+}
+
+func TestDefaultTaggingService_GetTagsForPartnerAndMacAddress_EscapesPathSegments(t *testing.T) {
+	partnerId := "partner/../attacker?inject=1"
+	macAddress := "AA:BB:CC/..:DD?EE"
+
+	var receivedPath string
+	var receivedRequestURI string
+	var receivedQuery string
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.EscapedPath()
+		receivedRequestURI = r.RequestURI
+		receivedQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]"))
+	}))
+	defer mockServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultTaggingService{
+		HttpClient:                        NewHttpClient(config, "test-service", nil),
+		host:                              mockServer.URL,
+		getTagsForPartnerAndMacAddressUrl: "%s/tags/partner/%s/mac/%s",
+	}
+
+	fields := log.Fields{"test": "path_escape_regression"}
+	_, err := service.GetTagsForPartnerAndMacAddress(partnerId, macAddress, "test-token", fields)
+
+	assert.NoError(t, err)
+	expectedPath := fmt.Sprintf("/tags/partner/%s/mac/%s", url.PathEscape(partnerId), url.PathEscape(macAddress))
+	assert.Equal(t, expectedPath, receivedPath)
+	assert.Equal(t, expectedPath, receivedRequestURI)
+	assert.Equal(t, "", receivedQuery)
+}
+
+func TestDefaultTaggingService_GetTagsForMacAddress_EscapesPathSegment(t *testing.T) {
+	macAddress := "AA:BB:CC/..:DD?EE"
+
+	var receivedPath string
+	var receivedRequestURI string
+	var receivedQuery string
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.EscapedPath()
+		receivedRequestURI = r.RequestURI
+		receivedQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]"))
+	}))
+	defer mockServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultTaggingService{
+		HttpClient:              NewHttpClient(config, "test-service", nil),
+		host:                    mockServer.URL,
+		getTagsForMacAddressUrl: "%s/tags/mac/%s",
+	}
+
+	fields := log.Fields{"test": "path_escape_regression"}
+	_, err := service.GetTagsForMacAddress(macAddress, "test-token", fields)
+
+	assert.NoError(t, err)
+	expectedPath := fmt.Sprintf("/tags/mac/%s", url.PathEscape(macAddress))
+	assert.Equal(t, expectedPath, receivedPath)
+	assert.Equal(t, expectedPath, receivedRequestURI)
+	assert.Equal(t, "", receivedQuery)
+}
+
+func TestDefaultTaggingService_GetTagsForPartner_EscapesPathSegment(t *testing.T) {
+	partnerId := "partner/../attacker?inject=1"
+
+	var receivedPath string
+	var receivedRequestURI string
+	var receivedQuery string
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.EscapedPath()
+		receivedRequestURI = r.RequestURI
+		receivedQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]"))
+	}))
+	defer mockServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultTaggingService{
+		HttpClient:           NewHttpClient(config, "test-service", nil),
+		host:                 mockServer.URL,
+		getTagsForPartnerUrl: "%s/tags/partner/%s",
+	}
+
+	fields := log.Fields{"test": "path_escape_regression"}
+	_, err := service.GetTagsForPartner(partnerId, "test-token", fields)
+
+	assert.NoError(t, err)
+	expectedPath := fmt.Sprintf("/tags/partner/%s", url.PathEscape(partnerId))
+	assert.Equal(t, expectedPath, receivedPath)
+	assert.Equal(t, expectedPath, receivedRequestURI)
+	assert.Equal(t, "", receivedQuery)
+}
+
+func TestDefaultTaggingService_GetTagsForAccount_EscapesPathSegment(t *testing.T) {
+	accountId := "account/../123?inject=true"
+
+	var receivedPath string
+	var receivedRequestURI string
+	var receivedQuery string
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.EscapedPath()
+		receivedRequestURI = r.RequestURI
+		receivedQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]"))
+	}))
+	defer mockServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultTaggingService{
+		HttpClient:           NewHttpClient(config, "test-service", nil),
+		host:                 mockServer.URL,
+		getTagsForAccountUrl: "%s/tags/account/%s",
+	}
+
+	fields := log.Fields{"test": "path_escape_regression"}
+	_, err := service.GetTagsForAccount(accountId, "test-token", fields)
+
+	assert.NoError(t, err)
+	expectedPath := fmt.Sprintf("/tags/account/%s", url.PathEscape(accountId))
+	assert.Equal(t, expectedPath, receivedPath)
+	assert.Equal(t, expectedPath, receivedRequestURI)
+	assert.Equal(t, "", receivedQuery)
+}
+
+func TestDefaultTaggingService_GetTagsForMacAddressAndAccount_EscapesPathSegments(t *testing.T) {
+	macAddress := "AA:BB:CC/..:DD?EE"
+	accountId := "account/../123?inject=true"
+
+	var receivedPath string
+	var receivedRequestURI string
+	var receivedQuery string
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.EscapedPath()
+		receivedRequestURI = r.RequestURI
+		receivedQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]"))
+	}))
+	defer mockServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultTaggingService{
+		HttpClient:                        NewHttpClient(config, "test-service", nil),
+		host:                              mockServer.URL,
+		getTagsForMacAddressAndAccountUrl: "%s/tags/mac/%s/account/%s",
+	}
+
+	fields := log.Fields{"test": "path_escape_regression"}
+	_, err := service.GetTagsForMacAddressAndAccount(macAddress, accountId, "test-token", fields)
+
+	assert.NoError(t, err)
+	expectedPath := fmt.Sprintf("/tags/mac/%s/account/%s", url.PathEscape(macAddress), url.PathEscape(accountId))
+	assert.Equal(t, expectedPath, receivedPath)
+	assert.Equal(t, expectedPath, receivedRequestURI)
+	assert.Equal(t, "", receivedQuery)
+}
+
+func TestDefaultTaggingService_GetTagsForPartnerAndAccount_EscapesPathSegments(t *testing.T) {
+	partnerId := "partner/../attacker?inject=1"
+	accountId := "account/../123?inject=true"
+
+	var receivedPath string
+	var receivedRequestURI string
+	var receivedQuery string
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.EscapedPath()
+		receivedRequestURI = r.RequestURI
+		receivedQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]"))
+	}))
+	defer mockServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultTaggingService{
+		HttpClient:                     NewHttpClient(config, "test-service", nil),
+		host:                           mockServer.URL,
+		getTagsForPartnerAndAccountUrl: "%s/tags/partner/%s/account/%s",
+	}
+
+	fields := log.Fields{"test": "path_escape_regression"}
+	_, err := service.GetTagsForPartnerAndAccount(partnerId, accountId, "test-token", fields)
+
+	assert.NoError(t, err)
+	expectedPath := fmt.Sprintf("/tags/partner/%s/account/%s", url.PathEscape(partnerId), url.PathEscape(accountId))
+	assert.Equal(t, expectedPath, receivedPath)
+	assert.Equal(t, expectedPath, receivedRequestURI)
+	assert.Equal(t, "", receivedQuery)
+}
+
+func TestDefaultTaggingService_GetTagsForPartnerAndMacAddressAndAccount_EscapesPathSegments(t *testing.T) {
+	partnerId := "partner/../attacker?inject=1"
+	macAddress := "AA:BB:CC/..:DD?EE"
+	accountId := "account/../123?inject=true"
+
+	var receivedPath string
+	var receivedRequestURI string
+	var receivedQuery string
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.EscapedPath()
+		receivedRequestURI = r.RequestURI
+		receivedQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]"))
+	}))
+	defer mockServer.Close()
+
+	config := configuration.ParseString("")
+	service := &DefaultTaggingService{
+		HttpClient: NewHttpClient(config, "test-service", nil),
+		host:       mockServer.URL,
+		getTagsForPartnerAndMacAddressAndAccountUrl: "%s/tags/partner/%s/mac/%s/account/%s",
+	}
+
+	fields := log.Fields{"test": "path_escape_regression"}
+	_, err := service.GetTagsForPartnerAndMacAddressAndAccount(partnerId, macAddress, accountId, "test-token", fields)
+
+	assert.NoError(t, err)
+	expectedPath := fmt.Sprintf("/tags/partner/%s/mac/%s/account/%s", url.PathEscape(partnerId), url.PathEscape(macAddress), url.PathEscape(accountId))
+	assert.Equal(t, expectedPath, receivedPath)
+	assert.Equal(t, expectedPath, receivedRequestURI)
+	assert.Equal(t, "", receivedQuery)
 }
 
 // Test error scenarios
