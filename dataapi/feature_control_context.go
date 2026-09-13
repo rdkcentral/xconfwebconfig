@@ -220,6 +220,7 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 			return podData, td
 		}
 	}
+	//This code is to enable xac grp service and only for AccountType based models or for all models when list is empty
 	if Xc.EnableXacGroupService {
 		//This works only for the models listed in AccountTypeModel
 		if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToUpper(contextMap[common.MODEL])) {
@@ -358,6 +359,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 			return td
 		}
 	}
+	//This code is to enable xac grp service and only for AccountType based models or for all models when list is empty
 	if Xc.EnableXacGroupService {
 		if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToUpper(contextMap[common.MODEL])) {
 			var xAccountId *conversion.XBOAccount
