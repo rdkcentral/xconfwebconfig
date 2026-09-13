@@ -18,7 +18,6 @@
 module github.com/rdkcentral/xconfwebconfig
 
 go 1.26.5
-
 toolchain go1.25.11
 
 require (

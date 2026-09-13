@@ -197,7 +197,7 @@ func (c *DefaultGroupService) GetAccountIdData(mac string, fields log.Fields) (*
 }
 
 func (c *DefaultGroupService) GetAccountProductsData(accountId string, fields log.Fields) (map[string]string, error) {
-	url := fmt.Sprintf(c.getAccountProductsUrlTemplate, c.GroupServiceHost(), accountId)
+	url := fmt.Sprintf(c.getAccountProductsUrlTemplate, c.GroupServiceHost(), url.PathEscape(accountId))
 	rbytes, err := c.DoWithRetries(http.MethodGet, url, nil, nil, fields, groupServiceName)
 	if err != nil {
 		return nil, err
