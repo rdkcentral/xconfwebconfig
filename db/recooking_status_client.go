@@ -10,7 +10,7 @@ const (
 	XcrpPartionIdColumnName      = "partition_id"
 	XcrpStateColumnName          = "state"
 	XcrpUpdatedTimeColumnName    = "updated_time"
-	XcrpRecookingStatusTableName = "RecookingStatus"
+	XcrpRecookingStatusTableName = "recooking_status"
 	XcrpAppNameColumnName        = "app_name"
 )
 

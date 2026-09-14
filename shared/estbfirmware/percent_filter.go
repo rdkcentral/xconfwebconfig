@@ -90,6 +90,14 @@ func NewPercentFilterValue(whiteList *shared.IpAddressGroup, percentage float32,
 	}
 }
 
+func (obj *PercentFilterValue) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *PercentFilterValue) SetUpdated(ts int64) {
+	obj.Updated = ts
+}
+
 func (p *PercentFilterValue) SetId(id string) error {
 	if PERCENT_FILTER_SINGLETON_ID != id {
 		return errors.New("PercentFilterValue id is PERCENT_FILTER_VALUE")
@@ -157,7 +165,7 @@ func NewPercentageBean() *PercentageBean {
 	}
 }
 
-func (p *PercentageBean) Validate() error {
+func (p *PercentageBean) Validate(tenantId string) error {
 	if util.IsBlank(p.Name) {
 		return errors.New("Name could not be blank")
 	}
@@ -201,7 +209,7 @@ func (p *PercentageBean) Validate() error {
 				return errors.New("StartPercentRange should be less than EndPercentRange")
 			}
 
-			config, err := GetFirmwareConfigOneDB(entry.ConfigId)
+			config, err := GetFirmwareConfigOneDB(tenantId, entry.ConfigId)
 			if err != nil {
 				return fmt.Errorf("FirmwareConfig with id %s does not exist", entry.ConfigId)
 			}
@@ -220,7 +228,7 @@ func (p *PercentageBean) Validate() error {
 	}
 
 	if !util.IsBlank(p.LastKnownGood) {
-		lkgConfig, err := GetFirmwareConfigOneDB(p.LastKnownGood)
+		lkgConfig, err := GetFirmwareConfigOneDB(tenantId, p.LastKnownGood)
 		if err != nil {
 			return fmt.Errorf("LastKnownGood: config with id %s does not exist", p.LastKnownGood)
 		}
@@ -243,7 +251,7 @@ func (p *PercentageBean) Validate() error {
 		if !p.FirmwareCheckRequired {
 			return errors.New("Can't set IntermediateVersion when firmware check is disabled")
 		}
-		intermediateConfig, err := GetFirmwareConfigOneDB(p.IntermediateVersion)
+		intermediateConfig, err := GetFirmwareConfigOneDB(tenantId, p.IntermediateVersion)
 		if err != nil {
 			return fmt.Errorf("IntermediateVersion: config with id %s does not exist", p.LastKnownGood)
 		}
@@ -255,7 +263,7 @@ func (p *PercentageBean) Validate() error {
 	return nil
 }
 
-func (p *PercentageBean) ValidateForAS() error {
+func (p *PercentageBean) ValidateForAS(tenantId string) error {
 	if util.IsBlank(p.Name) {
 		return errors.New("Name could not be blank")
 	}
@@ -299,7 +307,7 @@ func (p *PercentageBean) ValidateForAS() error {
 				return errors.New("StartPercentRange should be less than EndPercentRange")
 			}
 
-			config, err := GetFirmwareConfigOneDB(entry.ConfigId)
+			config, err := GetFirmwareConfigOneDB(tenantId, entry.ConfigId)
 			if err != nil {
 				return fmt.Errorf("FirmwareConfig with id %s does not exist", entry.ConfigId)
 			}
@@ -318,7 +326,7 @@ func (p *PercentageBean) ValidateForAS() error {
 	}
 
 	if !util.IsBlank(p.LastKnownGood) {
-		lkgConfig, err := GetFirmwareConfigOneDB(p.LastKnownGood)
+		lkgConfig, err := GetFirmwareConfigOneDB(tenantId, p.LastKnownGood)
 		if err != nil {
 			return fmt.Errorf("LastKnownGood: config with id %s does not exist", p.LastKnownGood)
 		}
@@ -341,7 +349,7 @@ func (p *PercentageBean) ValidateForAS() error {
 		if !p.FirmwareCheckRequired {
 			return errors.New("Can't set IntermediateVersion when firmware check is disabled")
 		}
-		intermediateConfig, err := GetFirmwareConfigOneDB(p.IntermediateVersion)
+		intermediateConfig, err := GetFirmwareConfigOneDB(tenantId, p.IntermediateVersion)
 		if err != nil {
 			return fmt.Errorf("IntermediateVersion: config with id %s does not exist", p.LastKnownGood)
 		}
@@ -391,8 +399,8 @@ func (p *PercentFilterValue) GetEnvModelPercentage(name string) *EnvModelPercent
 	return nil
 }
 
-func GetDefaultPercentFilterValueOneDB() (*PercentFilterValue, error) {
-	dbinst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_SINGLETON_FILTER_VALUE, PERCENT_FILTER_SINGLETON_ID)
+func GetDefaultPercentFilterValueOneDB(tenantId string) (*PercentFilterValue, error) {
+	dbinst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_SINGLETON_FILTER_VALUES, PERCENT_FILTER_SINGLETON_ID)
 
 	if err != nil {
 		log.Error(fmt.Sprintf("GetDefaultPercentFilterValueOneDB %v", err))

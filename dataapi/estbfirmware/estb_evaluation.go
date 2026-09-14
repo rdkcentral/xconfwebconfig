@@ -142,8 +142,8 @@ func DownloadLocationRoundRobinFilterContainsVersion(firmwareVersions string, co
 /**
  * @return true if firmware output must be returned, false if must be blocked
  */
-func PercentFilterfilter(evaluationResult *EvaluationResult, context *coreef.ConvertedContext) bool {
-	filterValue, _ := coreef.GetDefaultPercentFilterValueOneDB()
+func PercentFilterfilter(tenantId string, evaluationResult *EvaluationResult, context *coreef.ConvertedContext) bool {
+	filterValue, _ := coreef.GetDefaultPercentFilterValueOneDB(tenantId)
 	matchedEnvModelName := ""
 	if evaluationResult.MatchedRule != nil && firmware.ENV_MODEL_RULE == evaluationResult.MatchedRule.Type {
 		matchedEnvModelName = evaluationResult.MatchedRule.Name
@@ -166,13 +166,13 @@ func PercentFilterfilter(evaluationResult *EvaluationResult, context *coreef.Con
 					context.AddForceFiltersConverted(firmware.REBOOT_IMMEDIATELY_FILTER)
 				}
 				context.AddBypassFiltersConverted(firmware.TIME_FILTER)
-				config, _ := coreef.GetFirmwareConfigOneDB(envModelPercentage.IntermediateVersion)
+				config, _ := coreef.GetFirmwareConfigOneDB(tenantId, envModelPercentage.IntermediateVersion)
 				if config != nil && context.GetFirmwareVersionConverted() != config.FirmwareVersion {
 					// return IntermediateVersion firmware config
 					evaluationResult.FirmwareConfig = coreef.NewFirmwareConfigFacade(config)
 					evaluationResult.AppliedVersionInfo["firmwareVersionSource"] = "IV,doesntMeetMinCheck"
 				} else {
-					config, _ := coreef.GetFirmwareConfigOneDB(envModelPercentage.LastKnownGood)
+					config, _ := coreef.GetFirmwareConfigOneDB(tenantId, envModelPercentage.LastKnownGood)
 					if config != nil {
 						// return LKG firmware config
 						evaluationResult.FirmwareConfig = coreef.NewFirmwareConfigFacade(config)
@@ -183,7 +183,7 @@ func PercentFilterfilter(evaluationResult *EvaluationResult, context *coreef.Con
 			}
 			result := fitsPercent(evaluationResult, context, whiteList, percentage)
 			if !result {
-				config, _ := coreef.GetFirmwareConfigOneDB(envModelPercentage.LastKnownGood)
+				config, _ := coreef.GetFirmwareConfigOneDB(tenantId, envModelPercentage.LastKnownGood)
 				if config != nil && context.GetFirmwareVersionConverted() != config.FirmwareVersion {
 					// return LKG firmware config if versions are different
 					evaluationResult.FirmwareConfig = coreef.NewFirmwareConfigFacade(config)

@@ -155,6 +155,8 @@ func AddLogUploaderContext(ws *xhttp.XconfServer, r *http.Request, contextMap ma
 			}
 		}
 	}
+	// call this method after any backend lookups that might populate partner info, but before group service call so tenantId is available for cached partner tags
+	contextMap[common.TENANT_ID] = xhttp.ResolveTenantIdFromPartner(contextMap[common.PARTNER_ID])
 	coastTags := AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
 	log.Debug(fmt.Sprintf("AddLogUploaderContext ... end contextMap %v", contextMap))
 	return coastTags, nil
@@ -192,10 +194,10 @@ func CleanupLusUploadRepository(settings *logupload.Settings, apiVersion string)
 	}
 }
 
-func LogResultSettings(settings *logupload.Settings, telemetryRule *logupload.TelemetryRule, settingRules []*logupload.SettingRule, fields log.Fields) {
+func LogResultSettings(tenantId string, settings *logupload.Settings, telemetryRule *logupload.TelemetryRule, settingRules []*logupload.SettingRule, fields log.Fields) {
 	ruleNames := make([]string, 0, len(settings.RuleIDs))
 	for ruleId, _ := range settings.RuleIDs {
-		dcmRule := loguploader.GetOneDcmRuleFunc(ruleId)
+		dcmRule := loguploader.GetOneDcmRuleFunc(tenantId, ruleId)
 		if dcmRule != nil && len(dcmRule.Name) > 0 {
 			ruleNames = append(ruleNames, dcmRule.Name)
 		}
@@ -225,7 +227,7 @@ type TelemetryEvaluationResult struct {
 func GetTelemetryTwoProfileResponeDicts(contextMap map[string]string, fields log.Fields) (*TelemetryEvaluationResult, error) {
 	telemetryProfileService := telemetry.NewTelemetryProfileService()
 	matchedRules := telemetryProfileService.ProcessTelemetryTwoRules(contextMap)
-	matchedProfiles := telemetryProfileService.GetTelemetryTwoProfileByTelemetryRules(matchedRules, fields)
+	matchedProfiles := telemetryProfileService.GetTelemetryTwoProfileByTelemetryRules(contextMap[common.TENANT_ID], matchedRules, fields)
 	dicts := []util.Dict{}
 	for _, profile := range matchedProfiles {
 		// profile = nil should not happen

@@ -148,6 +148,24 @@ func SetupSatServiceMockServerOkResponse(t *testing.T, server xwhttp.XconfServer
 	return SatServiceMockServer
 }
 
+// IsMockDatabaseEnabled returns true if USE_MOCK_DB environment variable is set to "true"
+// Default is true (mock mode) for CI/CD environments without real Cassandra
+func IsMockDatabaseEnabled() bool {
+	val := os.Getenv("USE_MOCK_DB")
+	if val == "" {
+		return true // default to mock mode
+	}
+	return strings.ToLower(val) == "true"
+}
+
+// SkipIfMockDatabase skips the test if running in mock database mode
+// Use this for tests that require a real Cassandra connection
+func SkipIfMockDatabase(t *testing.T) {
+	if IsMockDatabaseEnabled() {
+		t.Skip("Skipping test that requires real database - USE_MOCK_DB is true or not set")
+	}
+}
+
 func SetupSatServiceMockServerErrorResponse(t *testing.T, server xwhttp.XconfServer) *httptest.Server {
 	satServiceMockServer := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

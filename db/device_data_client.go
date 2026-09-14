@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	EcmMacColumnName    = "cpe_mac"
+	CpeMacColumnName    = "cpe_mac"
 	PodSerialColumnName = "pod_id"
 )
 
@@ -33,7 +33,7 @@ func (c *CassandraClient) GetEcmMacFromPodTable(serialNum string) (string, error
 
 	var ecmMac []byte
 
-	stmt := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ? LIMIT 1", EcmMacColumnName, fmt.Sprintf("%s.%s", c.GetDeviceKeyspace(), c.GetDevicePodTableName()), PodSerialColumnName)
+	stmt := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ? LIMIT 1", CpeMacColumnName, fmt.Sprintf("%s.%s", c.GetDeviceKeyspace(), c.GetDevicePodTableName()), PodSerialColumnName)
 	err := c.Query(stmt, serialNum).Scan(&ecmMac)
 	if err != nil {
 		return "", err

@@ -29,6 +29,7 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/db"
 	"github.com/rdkcentral/xconfwebconfig/shared/firmware"
 	"github.com/rdkcentral/xconfwebconfig/util"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -57,7 +58,7 @@ type RuleInfo struct {
 	Blocking bool   `json:"blocking,omitempty"`
 }
 
-// ConfigChangeLog Logs2 table
+// ConfigChangeLog config_change_logs table (old name: Logs2)
 type ConfigChangeLog struct {
 	ID                 string                `json:"id,omitempty"`
 	Updated            int64                 `json:"updated,omitempty"`
@@ -67,6 +68,15 @@ type ConfigChangeLog struct {
 	Explanation        string                `json:"explanation,omitempty"`
 	FirmwareConfig     *FirmwareConfigFacade `json:"config"`
 	HasMinimumFirmware bool                  `json:"hasMinimumFirmware"`
+	TenantId           string                `json:"tenantId,omitempty"` // not available in Logs2 table
+}
+
+func (obj *ConfigChangeLog) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *ConfigChangeLog) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func NewRuleInfo(filterOrRule interface{}) *RuleInfo {
@@ -148,9 +158,15 @@ func NewConfigChangeLog(convertedContext *ConvertedContext, explanation string, 
 	}
 }
 
-func GetLastConfigLog(mac string) *ConfigChangeLog {
+func GetLastConfigLog(tenantId string, mac string) *ConfigChangeLog {
 	var lastConfigLog *ConfigChangeLog
-	data, err := db.GetListingDao().GetOne(db.TABLE_LOGS, mac, LAST_CONFIG_LOG_ID)
+	tableName := db.TABLE_CONFIG_CHANGE_LOGS
+	if db.IsDualWriteEnabled() {
+		// When dual write is enabled, read from old Logs2 table for backward compatibility,
+		// until Logs2 table is fully migrated
+		tableName = db.TABLE_LOGS
+	}
+	data, err := db.GetListingDao().GetOne(tenantId, tableName, mac, LAST_CONFIG_LOG_ID)
 	if err == nil {
 		config, ok := data.(*ConfigChangeLog)
 		if ok {
@@ -160,9 +176,15 @@ func GetLastConfigLog(mac string) *ConfigChangeLog {
 	return lastConfigLog
 }
 
-func GetConfigChangeLogsOnly(mac string) []*ConfigChangeLog {
+func GetConfigChangeLogsOnly(tenantId string, mac string) []*ConfigChangeLog {
 	configChangeLogs := make([]*ConfigChangeLog, 0)
-	data, err := db.GetListingDao().GetAll(db.TABLE_LOGS, mac)
+	tableName := db.TABLE_CONFIG_CHANGE_LOGS
+	if db.IsDualWriteEnabled() {
+		// When dual write is enabled, read from old Logs2 table for backward compatibility,
+		// until Logs2 table is fully migrated
+		tableName = db.TABLE_LOGS
+	}
+	data, err := db.GetListingDao().GetAll(tenantId, tableName, mac)
 	if err == nil {
 		configLogs := []*ConfigChangeLog{}
 		for _, log := range data {
@@ -180,40 +202,64 @@ func GetConfigChangeLogsOnly(mac string) []*ConfigChangeLog {
 	return configChangeLogs
 }
 
-func SetLastConfigLog(mac string, configChangeLog *ConfigChangeLog) error {
+func SetLastConfigLog(tenantId string, mac string, configChangeLog *ConfigChangeLog) error {
+	configChangeLog.TenantId = tenantId
 	jsonData, err := json.Marshal(configChangeLog)
 	if err != nil {
 		return err
 	}
-	return db.GetListingDao().SetOne(db.TABLE_LOGS, mac, LAST_CONFIG_LOG_ID, []byte(jsonData))
-}
-
-func SetConfigChangeLog(mac string, configChangeLog *ConfigChangeLog) error {
-	id, err := GetCurrentId(mac)
-	if err == nil {
-		configChangeLog.ID = id
-		jsonData, err := json.Marshal(configChangeLog)
-		if err == nil {
-			return db.GetListingDao().SetOne(db.TABLE_LOGS, mac, id, []byte(jsonData))
+	if db.IsDualWriteEnabled() {
+		// Write to Logs2 table for backward compatibility, but Logs2 will be eventually removed
+		err = db.GetListingDao().SetOne(tenantId, db.TABLE_LOGS, mac, LAST_CONFIG_LOG_ID, []byte(jsonData), configChangeLog.Updated)
+		if err != nil {
+			return err
 		}
 	}
-	return err
+	return db.GetListingDao().SetOne(tenantId, db.TABLE_CONFIG_CHANGE_LOGS, mac, LAST_CONFIG_LOG_ID, []byte(jsonData), configChangeLog.Updated)
 }
 
-func GetCurrentId(mac string) (string, error) {
+func SetConfigChangeLog(tenantId string, mac string, configChangeLog *ConfigChangeLog) error {
+	configChangeLog.TenantId = tenantId
+	logTables := []string{db.TABLE_CONFIG_CHANGE_LOGS}
+	if db.IsDualWriteEnabled() {
+		// Write to Logs2 table for backward compatibility, but Logs2 will be eventually removed
+		logTables = append(logTables, db.TABLE_LOGS)
+	}
+	for _, tableName := range logTables {
+		id, err := GetCurrentChangeLogId(tenantId, tableName, mac)
+		if err == nil {
+			configChangeLog.ID = id
+			jsonData, err := json.Marshal(configChangeLog)
+			if err == nil {
+				err = db.GetListingDao().SetOne(tenantId, tableName, mac, id, []byte(jsonData), configChangeLog.Updated)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func GetCurrentChangeLogId(tenantId string, tableName string, mac string) (string, error) {
 	// Get count from DB
 	rangeInfo := &db.RangeInfo{
-		StartValue: numberToColumnName(0),
-		EndValue:   numberToColumnName(BOUNDS + 1),
+		StartValue: GetChangeLogColumnName(0),
+		EndValue:   GetChangeLogColumnName(BOUNDS + 1),
 	}
-	data, err := db.GetListingDao().GetRange(db.TABLE_LOGS, mac, rangeInfo)
+	data, err := db.GetListingDao().GetRange(tenantId, tableName, mac, rangeInfo)
 	if err != nil {
 		return "", err
 	}
 	var configLogs []*ConfigChangeLog
-	for _, log := range data {
-		configLog, ok := log.(*ConfigChangeLog)
+	for _, entry := range data {
+		configLog, ok := entry.(*ConfigChangeLog)
 		if ok {
+			// ensure tenantId matches the provided tenantId if it is set in the configLog
+			if configLog.TenantId != "" && configLog.TenantId != tenantId {
+				log.Errorf("TenantId mismatch for ConfigChangeLog (mac: %s): expected %s, got %s", mac, tenantId, configLog.TenantId)
+				continue
+			}
 			configLogs = append(configLogs, configLog)
 		}
 	}
@@ -237,9 +283,9 @@ func GetCurrentId(mac string) (string, error) {
 		count--
 	}
 
-	return numberToColumnName(count), nil
+	return GetChangeLogColumnName(count), nil
 }
 
-func numberToColumnName(number int) string {
+func GetChangeLogColumnName(number int) string {
 	return fmt.Sprintf("%s_%d", prefix, number)
 }

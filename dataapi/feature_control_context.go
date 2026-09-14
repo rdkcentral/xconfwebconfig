@@ -220,7 +220,6 @@ func AddContextForPods(ws *xhttp.XconfServer, contextMap map[string]string, satT
 			return podData, td
 		}
 	}
-	//This code is to enable xac grp service and only for AccountType based models or for all models when list is empty
 	if Xc.EnableXacGroupService {
 		//This works only for the models listed in AccountTypeModel
 		if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToUpper(contextMap[common.MODEL])) {
@@ -359,8 +358,6 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 			return td
 		}
 	}
-
-	//This code is to enable xac grp service and only for AccountType based models or for all models when list is empty
 	if Xc.EnableXacGroupService {
 		if Xc.AccountTypeModelSet.IsEmpty() || Xc.AccountTypeModelSet.Contains(strings.ToUpper(contextMap[common.MODEL])) {
 			var xAccountId *conversion.XBOAccount
@@ -529,7 +526,6 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 
 	log.Debug(fmt.Sprintf("AddFeatureControlContext start ... contextMap %v", contextMap))
 	contextMap[common.PASSED_PARTNER_ID] = contextMap[common.PARTNER_ID]
-
 	// getting local sat token
 	var localToken *xhttp.SatToken
 	var err error
@@ -601,6 +597,8 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 		td = AddFeatureControlContextFromAccountService(ws, contextMap, satToken, fields)
 		xhttp.IncreaseUnknownIdCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 	}
+	// call this method after any backend lookups that might populate partner info, but before group service call so tenantId is available for cached partner tags
+	contextMap[common.TENANT_ID] = xhttp.ResolveTenantIdFromPartner(contextMap[common.PARTNER_ID])
 	tags := AddContextFromTaggingService(ws, contextMap, satToken, configSetHash, true, fields)
 	ftTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, false, fields)
 	CompareTaggingSources(contextMap, tags, ftTags, fields)

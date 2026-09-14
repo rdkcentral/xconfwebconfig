@@ -30,17 +30,21 @@ import (
 // EntityType enum
 type EntityType string
 
-const (
-	TelemetryProfile EntityType = "TELEMETRY_PROFILE"
-)
-
 // ChangeOperation enum
 type ChangeOperation string
 
-// TelemetryTwoChange XconfApprovedTelemetryTwoChange table
+const (
+	TelemetryProfile EntityType = "TELEMETRY_PROFILE"
+
+	Create ChangeOperation = "CREATE"
+	Update ChangeOperation = "UPDATE"
+	Delete ChangeOperation = "DELETE"
+)
+
+// ApprovedTelemetryTwoChange telemetry_approved_two_changes table
 type ApprovedTelemetryTwoChange TelemetryTwoChange
 
-// TelemetryTwoChange XconfTelemetryTwoChange table
+// TelemetryTwoChange telemetry_two_changes table
 type TelemetryTwoChange struct {
 	ID              string                         `json:"id"`
 	Updated         int64                          `json:"updated"`
@@ -54,17 +58,19 @@ type TelemetryTwoChange struct {
 	ApprovedUser    string                         `json:"approvedUser,omitempty"`
 }
 
-const (
-	Create ChangeOperation = "CREATE"
-	Update                 = "UPDATE"
-	Delete                 = "DELETE"
-)
+func (obj *TelemetryTwoChange) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *TelemetryTwoChange) SetUpdated(ts int64) {
+	obj.Updated = ts
+}
 
 type EntityInterface interface {
 	getName() string
 }
 
-// Change XconfChange table
+// Change telemetry_changes table
 type Change struct {
 	ID              string                               `json:"id"`
 	Updated         int64                                `json:"updated"`
@@ -76,6 +82,14 @@ type Change struct {
 	Operation       ChangeOperation                      `json:"operation"`
 	Author          string                               `json:"author"`
 	ApprovedUser    string                               `json:"approvedUser"`
+}
+
+func (obj *Change) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *Change) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (c Change) GetID() string {
@@ -238,7 +252,7 @@ func (c *Change) byTelemetryProfileName(name string) bool {
 	return strings.EqualFold(c.NewEntity.Name, name) || strings.EqualFold(c.OldEntity.Name, name)
 }
 
-// ApprovedChange XconfApprovedChange table
+// ApprovedChange telemetry_approved_changes table
 type ApprovedChange Change
 
 // NewApprovedChangeInf constructor

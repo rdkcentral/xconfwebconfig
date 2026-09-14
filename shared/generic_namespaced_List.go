@@ -54,6 +54,14 @@ type NamespacedList struct {
 	TypeName string   `json:"typeName"`
 }
 
+func (obj *NamespacedList) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *NamespacedList) SetUpdated(ts int64) {
+	obj.Updated = ts
+}
+
 func (obj *NamespacedList) Clone() (*NamespacedList, error) {
 	cloneObj, err := util.Copy(obj)
 	if err != nil {
@@ -67,12 +75,20 @@ func NewNamespacedListInf() interface{} {
 	return &NamespacedList{}
 }
 
-// GenericNamespacedList GenericXconfNamedList table
+// GenericNamespacedList generic_named_lists table
 type GenericNamespacedList struct {
 	ID       string   `json:"id"`
 	Updated  int64    `json:"updated,omitempty"`
 	Data     []string `json:"data"`
 	TypeName string   `json:"typeName,omitempty"`
+}
+
+func (obj *GenericNamespacedList) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *GenericNamespacedList) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *GenericNamespacedList) Clone() (*GenericNamespacedList, error) {
@@ -83,7 +99,7 @@ func (obj *GenericNamespacedList) Clone() (*GenericNamespacedList, error) {
 	return cloneObj.(*GenericNamespacedList), nil
 }
 
-func (obj *GenericNamespacedList) Validate() error {
+func (obj *GenericNamespacedList) Validate(tenantId string) error {
 	matched, _ := regexp.MatchString("^[-a-zA-Z0-9_.' ]+$", obj.ID)
 	if !matched {
 		return errors.New("name is invalid")
@@ -100,14 +116,14 @@ func (obj *GenericNamespacedList) Validate() error {
 		return err
 	}
 
-	if err := obj.ValidateDataIntersection(); err != nil {
+	if err := obj.ValidateDataIntersection(tenantId); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (obj *GenericNamespacedList) ValidateForAdminService() error {
+func (obj *GenericNamespacedList) ValidateForAdminService(tenantId string) error {
 	matched, _ := regexp.MatchString("^[-a-zA-Z0-9_.' ]+$", obj.ID)
 	if !matched {
 		return errors.New("name is invalid")
@@ -124,7 +140,7 @@ func (obj *GenericNamespacedList) ValidateForAdminService() error {
 		return err
 	}
 
-	if err := obj.ValidateDataIntersection(); err != nil {
+	if err := obj.ValidateDataIntersection(tenantId); err != nil {
 		return err
 	}
 
@@ -235,14 +251,14 @@ func (g *GenericNamespacedList) IsIpList() bool {
 	return false
 }
 
-func (obj *GenericNamespacedList) ValidateDataIntersection() error {
+func (obj *GenericNamespacedList) ValidateDataIntersection(tenantId string) error {
 	if obj.TypeName == MAC_LIST {
 		itemsSet := util.Set{}
 		itemsSet.Add(obj.Data...)
 
 		intersectionMap := make(map[string][]string)
 
-		namespacedLists, err := GetGenericNamedListListsByTypeDB(obj.TypeName)
+		namespacedLists, err := GetGenericNamedListListsByTypeDB(tenantId, obj.TypeName)
 		if err != nil {
 			return err
 		}
@@ -280,33 +296,42 @@ func (obj *GenericNamespacedList) ValidateDataIntersection() error {
 	return nil
 }
 
-func GetGenericNamedListSetByType(typeName string) (*util.Set, error) {
+func GetGenericNamedListSetByType(tenantId string, typeName string) (*util.Set, error) {
 	if !IsValidType(typeName) {
 		return nil, fmt.Errorf("Invalid GenericNamespacedList typeName %s", typeName)
 	}
 	cm := db.GetCacheManager()
 	cacheKey := typeName
-	cacheInst := cm.ApplicationCacheGet(db.TABLE_GENERIC_NS_LIST, cacheKey)
+	cacheInst := cm.ApplicationCacheGet(tenantId, db.TABLE_GENERIC_NS_LIST, cacheKey)
 	if cacheInst != nil {
-		return cacheInst.(*util.Set), nil
+		switch setVal := cacheInst.(type) {
+		case *util.Set:
+			if setVal != nil {
+				return setVal, nil
+			}
+		case util.Set:
+			copied := setVal
+			return &copied, nil
+		}
 	}
-	result := util.NewSet()
-	entry, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_GENERIC_NS_LIST, 0)
+
+	entry, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_GENERIC_NS_LIST, 0)
 	if err != nil {
 		return nil, err
 	}
+	result := util.NewSet()
 	for _, obj := range entry {
 		nl := obj.(*GenericNamespacedList)
 		if nl.TypeName == typeName {
 			result.Add(nl.Data...)
 		}
 	}
-	cm.ApplicationCacheSet(db.TABLE_GENERIC_NS_LIST, cacheKey, &result)
+	cm.ApplicationCacheSet(tenantId, db.TABLE_GENERIC_NS_LIST, cacheKey, &result)
 	return &result, nil
 }
 
-func GetGenericNamedListOneDB(id string) (*GenericNamespacedList, error) {
-	instlst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_GENERIC_NS_LIST, id)
+func GetGenericNamedListOneDB(tenantId string, id string) (*GenericNamespacedList, error) {
+	instlst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_GENERIC_NS_LIST, id)
 	if err != nil {
 		return nil, err
 	}
@@ -319,8 +344,8 @@ func GetGenericNamedListOneDB(id string) (*GenericNamespacedList, error) {
 	return lstptr, nil
 }
 
-func GetGenericNamedListListsDB() ([]*GenericNamespacedList, error) {
-	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_GENERIC_NS_LIST, 0)
+func GetGenericNamedListListsDB(tenantId string) ([]*GenericNamespacedList, error) {
+	list, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_GENERIC_NS_LIST, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -336,13 +361,13 @@ func GetGenericNamedListListsDB() ([]*GenericNamespacedList, error) {
 	return glist, nil
 }
 
-func GetGenericNamedListListsByTypeDB(typeName string) ([]*GenericNamespacedList, error) {
+func GetGenericNamedListListsByTypeDB(tenantId string, typeName string) ([]*GenericNamespacedList, error) {
 	if !IsValidType(typeName) {
 		return nil, fmt.Errorf("Invalid GenericNamespacedList typeName %s", typeName)
 	}
 
 	result := []*GenericNamespacedList{}
-	list, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_GENERIC_NS_LIST, 0)
+	list, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_GENERIC_NS_LIST, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -355,9 +380,9 @@ func GetGenericNamedListListsByTypeDB(typeName string) ([]*GenericNamespacedList
 	return result, nil
 }
 
-func CreateGenericNamedListOneDB(newList *GenericNamespacedList) error {
+func CreateGenericNamedListOneDB(tenantId string, newList *GenericNamespacedList) error {
 	newList.Updated = util.GetTimestamp()
-	err := db.GetCachedSimpleDao().SetOne(db.TABLE_GENERIC_NS_LIST, newList.ID, newList)
+	err := db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_GENERIC_NS_LIST, newList.ID, newList)
 	return err
 }
 
@@ -365,8 +390,8 @@ func (g *GenericNamespacedList) String() string {
 	return fmt.Sprintf("GenericNamespacedList(%v |%v| %v)", g.ID, g.TypeName, g.Data)
 }
 
-func GetGenericNamedListOneByType(id string, typeName string) (*GenericNamespacedList, error) {
-	lst, err := GetGenericNamedListOneDB(id)
+func GetGenericNamedListOneByType(tenantId string, id string, typeName string) (*GenericNamespacedList, error) {
+	lst, err := GetGenericNamedListOneDB(tenantId, id)
 	if err != nil {
 		return nil, err
 	}
@@ -378,8 +403,8 @@ func GetGenericNamedListOneByType(id string, typeName string) (*GenericNamespace
 	return nil, nil
 }
 
-func GetGenericNamedListOneByTypeNonCached(id string, typeName string) (*GenericNamespacedList, error) {
-	instlst, err := db.GetCompressingDataDao().GetOne(db.TABLE_GENERIC_NS_LIST, id)
+func GetGenericNamedListOneByTypeNonCached(tenantId string, id string, typeName string) (*GenericNamespacedList, error) {
+	instlst, err := db.GetCompressingDataDao().GetOne(tenantId, db.TABLE_GENERIC_NS_LIST, id)
 	if err != nil {
 		return nil, err
 	}
@@ -396,8 +421,8 @@ func GetGenericNamedListOneByTypeNonCached(id string, typeName string) (*Generic
 	return lstptr, nil
 }
 
-func DeleteOneGenericNamedList(id string) error {
-	err := db.GetCachedSimpleDao().DeleteOne(db.TABLE_GENERIC_NS_LIST, id)
+func DeleteOneGenericNamedList(tenantId string, id string) error {
+	err := db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_GENERIC_NS_LIST, id)
 	if err != nil {
 		return err
 	}

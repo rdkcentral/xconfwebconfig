@@ -142,6 +142,9 @@ func GetExplanation(contextMap map[string]string, evaluationResult *estbfirmware
 	for key, value := range contextMap {
 		fmt.Fprintf(&input, "%s=%s\n", key, value)
 	}
+	if evaluationResult == nil {
+		return fmt.Sprintf("Request: %s\\ndid not produce an evaluation result.", input.String())
+	}
 	var explanation strings.Builder
 	if evaluationResult.MatchedRule == nil {
 		fmt.Fprintf(&explanation, "Request: %s\\ndid not match any rule.", input.String())
@@ -310,10 +313,10 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					if Ws.Config.GetBoolean("xconfwebconfig.xconf.enable_fw_penetration_metrics", false) {
 						if contextMap[common.TIME_ZONE] != "" {
 							kvmap := map[string]string{
-								db.EstbMacColumnValue:  contextMap[common.ESTB_MAC],
+								db.EstbMacColumnName:   contextMap[common.ESTB_MAC],
 								db.TimeZoneColumnValue: contextMap[common.TIME_ZONE],
 							}
-							err := db.GetDatabaseClient().UpdateFwPenetrationMetrics(kvmap)
+							err := db.GetDatabaseClient().SetPenetrationData(kvmap)
 							if err != nil {
 								log.Errorf("Can't save Timezone in penetration metrics, estbMac=%s, error=%+v", contextMap[common.ESTB_MAC], err)
 							}
@@ -337,6 +340,8 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 		}
 	}
 	coastTags := AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
+	// call this method after any backend lookups that might populate partner info, but before group service call so tenantId is available for cached partner tags
+	contextMap[common.TENANT_ID] = xhttp.ResolveTenantIdFromPartner(contextMap[common.PARTNER_ID])
 	xconfTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC, contextMap, true, fields)
 	CompareTaggingSources(contextMap, coastTags, xconfTags, fields)
 	log.Debug(fmt.Sprintf("AddEstbFirmwareContext ... end contextMap %v", contextMap))
@@ -369,14 +374,14 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 		if contextMap[common.FIRMWARE_VERSION] != "" {
 			log.Trace("Logging last config request.")
 			lastConfigLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, true)
-			err := coreef.SetLastConfigLog(mac, lastConfigLog)
+			err := coreef.SetLastConfigLog(contextMap[common.TENANT_ID], mac, lastConfigLog)
 			if err != nil {
 				log.Error(fmt.Sprintf("Can't save last log config request: %+v", err))
 			}
 			if evaluationResult.MatchedRule != nil && !evaluationResult.Blocked && evaluationResult.FirmwareConfig != nil && !strings.EqualFold(contextMap[common.FIRMWARE_VERSION], evaluationResult.FirmwareConfig.GetFirmwareVersion()) {
 				log.Trace(fmt.Sprintf("logging config change from %s to %s", evaluationResult.FirmwareConfig.GetFirmwareVersion(), contextMap[common.FIRMWARE_VERSION]))
 				configChangeLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, false)
-				err = coreef.SetConfigChangeLog(mac, configChangeLog)
+				err = coreef.SetConfigChangeLog(contextMap[common.TENANT_ID], mac, configChangeLog)
 				if err != nil {
 					log.Error(fmt.Sprintf("Can't save config change log request: %+v", err))
 				}
@@ -404,7 +409,8 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 				fwAppliedRule = evaluationResult.MatchedRule.GetName()
 			}
 
-			pTable := &db.FwPenetrationMetrics{
+			pData := &db.FwPenetrationData{
+				TenantId:                contextMap[common.TENANT_ID],
 				EstbMac:                 mac,
 				Partner:                 partner,
 				Model:                   contextMap[common.MODEL],
@@ -418,7 +424,7 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 				RecoveryCertExpiry:      contextMap[common.RECOVERY_CERT_EXPIRY],
 			}
 
-			err := db.GetDatabaseClient().SetFwPenetrationMetrics(pTable)
+			err := db.GetDatabaseClient().SetFwPenetrationData(pData)
 			if err != nil {
 				log.Error(fmt.Sprintf("Can't save FW penetration metrics, estbMac=%s, error=%+v", mac, err))
 			}

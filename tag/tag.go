@@ -16,6 +16,14 @@ func NewTagInf() interface{} {
 	return &Tag{}
 }
 
+func (obj *Tag) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *Tag) SetUpdated(ts int64) {
+	obj.Updated = ts
+}
+
 func (obj *Tag) Clone() (*Tag, error) {
 	cloneObj, err := util.Copy(obj)
 	if err != nil {

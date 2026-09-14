@@ -129,9 +129,18 @@ func NormalizeCommonContext(contextMap map[string]string, estbMacKey string, ecm
 			contextMap[ecmMacKey] = normalizedEcmMac
 		}
 	}
-	partnerId := contextMap[common.PARTNER_ID]
-	if partnerId != "" {
+	partnerId := strings.TrimSpace(contextMap[common.PARTNER_ID])
+	if len(partnerId) > 24 {
+		contextMap[common.PARTNER_ID] = "INVALID"
+	} else if partnerId != "" {
 		contextMap[common.PARTNER_ID] = strings.ToUpper(partnerId)
+	} else if _, exists := contextMap[common.PARTNER_ID]; exists {
+		// Only clear the value if the key was already present in the map
+		contextMap[common.PARTNER_ID] = ""
+	}
+	tenantId := contextMap[common.TENANT_ID]
+	if tenantId != "" {
+		contextMap[common.TENANT_ID] = strings.ToUpper(tenantId)
 	}
 }
 
@@ -260,7 +269,7 @@ func AddGroupServiceFTContext(ws *xhttp.XconfServer, macAddressKey string, conte
 			log.WithFields(fields).Debugf("Getting all data from GroupService /ft keyspace for partnerId=%s", partner)
 
 			if Xc.GroupServiceCacheEnabled {
-				Tags := groupServiceDao.GetGroupServiceFeatureTags(partner)
+				Tags := groupServiceDao.GetGroupServiceFeatureTags(contextMap[common.TENANT_ID], partner)
 				for key, value := range Tags {
 					if keyWithoutPrefix, ok := RemovePrefix(key, Xc.PartnerTagsPrefixList); ok {
 						if getPrefixData {

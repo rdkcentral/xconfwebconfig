@@ -19,9 +19,9 @@ package db
 
 // XdasCacheDao interface for XDAS cache operations
 type GroupServiceCacheDao interface {
-	GetGroupServiceFeatureTags(cacheKey string) map[string]string
-	SetGroupServiceFeatureTags(cacheKey string, tags map[string]string) error
-	DeleteGroupServiceFeatureTags(cacheKey string) error
+	GetGroupServiceFeatureTags(tenantId string, cacheKey string) map[string]string
+	SetGroupServiceFeatureTags(tenantId string, cacheKey string, tags map[string]string) error
+	DeleteGroupServiceFeatureTags(tenantId string, cacheKey string) error
 }
 
 type GroupServiceCacheDaoImpl struct{}
@@ -32,16 +32,16 @@ func GetGroupServiceCacheDao() GroupServiceCacheDao {
 }
 
 // GetGroupServiceFeatureTags retrieves GroupService feature tags from the cache
-func (dao GroupServiceCacheDaoImpl) GetGroupServiceFeatureTags(cacheKey string) map[string]string {
-	return GetCacheManager().GetGroupServiceFeatureTags(cacheKey)
+func (dao GroupServiceCacheDaoImpl) GetGroupServiceFeatureTags(tenantId string, cacheKey string) map[string]string {
+	return GetCacheManager().GetGroupServiceFeatureTags(tenantId, cacheKey)
 }
 
 // SetGroupServiceFeatureTags stores GroupService feature tags in the cache
-func (dao GroupServiceCacheDaoImpl) SetGroupServiceFeatureTags(cacheKey string, tags map[string]string) error {
-	return GetCacheManager().SetGroupServiceFeatureTags(cacheKey, tags)
+func (dao GroupServiceCacheDaoImpl) SetGroupServiceFeatureTags(tenantId string, cacheKey string, tags map[string]string) error {
+	return GetCacheManager().SetGroupServiceFeatureTags(tenantId, cacheKey, tags)
 }
 
 // DeleteGroupServiceFeatureTags removes GroupService feature tags from the cache
-func (dao GroupServiceCacheDaoImpl) DeleteGroupServiceFeatureTags(cacheKey string) error {
-	return GetCacheManager().DeleteGroupServiceFeatureTags(cacheKey)
+func (dao GroupServiceCacheDaoImpl) DeleteGroupServiceFeatureTags(tenantId string, cacheKey string) error {
+	return GetCacheManager().DeleteGroupServiceFeatureTags(tenantId, cacheKey)
 }

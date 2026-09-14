@@ -24,6 +24,7 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	dataef "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	sharedef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -41,14 +42,17 @@ func GetEstbFirmwareSwuBseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	var isIpAddressPresent bool
 	var ipAddress string
+	contextMap := make(map[string]string)
 	queryParams := r.URL.Query()
 	if len(queryParams) > 0 && queryParams.Has(common.IP_ADDRESS) {
 		ipAddress = queryParams.Get(common.IP_ADDRESS)
 		isIpAddressPresent = true
 	}
+	if len(queryParams) > 0 && queryParams.Has(common.PARTNER_ID) {
+		contextMap[common.PARTNER_ID] = queryParams.Get(common.PARTNER_ID)
+	}
 	if !isIpAddressPresent {
 		if r.ContentLength != 0 {
-			contextMap := make(map[string]string)
 			body := xw.Body()
 			if body != "" {
 				parseProcBody(body, contextMap)
@@ -65,15 +69,15 @@ func GetEstbFirmwareSwuBseHandler(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponseAsText(w, 400, []byte(fmt.Sprintf("Required IpAddress value: '%s' is not a valid IpAddress", ipAddress)))
 		return
 	}
+	tenantId := xhttp.ResolveTenantIdFromPartner(contextMap[common.PARTNER_ID])
 	estbFirmwareRuleBase := dataef.NewEstbFirmwareRuleBaseDefault()
-	bseConfiguration, _ := estbFirmwareRuleBase.GetBseConfiguration(ip)
+	bseConfiguration, _ := estbFirmwareRuleBase.GetBseConfiguration(tenantId, ip)
 	if bseConfiguration == nil {
 		xhttp.WriteXconfResponseAsText(w, 404, []byte("\"<h2>404 NOT FOUND</h2>\""))
 		return
 	}
 	response, _ := util.JSONMarshal(*bseConfiguration)
 	xhttp.WriteXconfResponse(w, 200, response)
-
 }
 
 func GetEstbFirmwareSwuHandler(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +97,6 @@ func GetEstbFirmwareSwuHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if status == 200 {
-
 		// only invoke security manager code if flag is enabled
 		// also check if SecurityTokenOnlyForNewOfferedFw is enabled, make sure a new fw is offered
 		if Xc.SecurityTokenManagerEnabled && (!Ws.SecurityTokenConfig.SecurityTokenOnlyForNewOfferedFwEnabled || evaluationResult.FirmwareConfig.GetFirmwareVersion() != contextMap[common.FIRMWARE_VERSION]) {
@@ -273,6 +276,8 @@ func GetEstbFirmwareVersionInfoPath(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponseAsText(w, 403, []byte("FORBIDDEN"))
 	} else {
 		AddEstbFirmwareContext(Ws, r, contextMap, true, true, fields)
+		// call this method after any backend lookups that might populate partner info
+		contextMap[common.TENANT_ID] = xhttp.ResolveTenantIdFromPartner(contextMap[common.PARTNER_ID])
 		estbFirmwareRuleBase := dataef.NewEstbFirmwareRuleBaseDefault()
 		runningVersionInfo := estbFirmwareRuleBase.GetAppliedActivationVersionType(contextMap, contextMap[common.APPLICATION_TYPE])
 		fields["context"] = contextMap
@@ -288,7 +293,8 @@ func GetEstbLastlogPath(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponseAsText(w, 400, []byte(errStr))
 	} else {
 		mac := util.NormalizeMacAddress(mac)
-		lastConfigLog := sharedef.GetLastConfigLog(mac)
+		tenantId := db.GetDefaultTenantId()
+		lastConfigLog := sharedef.GetLastConfigLog(tenantId, mac)
 		if lastConfigLog != nil {
 			LogPreDisplayCleanup(lastConfigLog)
 			response, _ := util.JSONMarshal(*lastConfigLog)
@@ -306,7 +312,8 @@ func GetEstbChangelogsPath(w http.ResponseWriter, r *http.Request) {
 		xhttp.WriteXconfResponseAsText(w, 400, []byte(errStr))
 	} else {
 		mac := util.NormalizeMacAddress(mac)
-		configChangeLogs := sharedef.GetConfigChangeLogsOnly(mac)
+		tenantId := db.GetDefaultTenantId()
+		configChangeLogs := sharedef.GetConfigChangeLogsOnly(tenantId, mac)
 		if len(configChangeLogs) > 0 {
 			for _, log := range configChangeLogs {
 				LogPreDisplayCleanup(log)

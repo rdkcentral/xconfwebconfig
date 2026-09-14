@@ -18,6 +18,6 @@
 
 CREATE KEYSPACE IF NOT EXISTS "ApplicationsDiscoveryDataService" WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
 
-USE "ApplicationsDiscoveryDataService";
+CREATE KEYSPACE IF NOT EXISTS xconf WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
 
-SOURCE 'db_create_tables.cql'
+SOURCE 'db_create_tables_xconf.cql'
