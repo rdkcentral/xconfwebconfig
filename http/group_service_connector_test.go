@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/go-akka/configuration"
@@ -360,6 +361,25 @@ func TestDefaultGroupService_CreateListFromGroupServiceProto_NoPrefix(t *testing
 	assert.Contains(t, result, "StormReadyFw")
 	assert.Contains(t, result, "Wanfailover")
 	assert.NotContains(t, result, "Gwfailover")
+}
+
+func TestDefaultGroupService_GetAccountProductsData_EscapesPathSegment(t *testing.T) {
+	gotPath := ""
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.EscapedPath()
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte{})
+	}))
+	defer mockServer.Close()
+	service := &DefaultGroupService{
+		HttpClient:                    NewHttpClient(configuration.ParseString(""), "group_service", nil),
+		host:                          mockServer.URL,
+		getAccountProductsUrlTemplate: "%s/account/products/%s",
+	}
+	_, err := service.GetAccountProductsData("acct/../123?x=y", log.Fields{"test": "path_escape_regression"})
+
+	assert.NoError(t, err)
+	assert.Equal(t, fmt.Sprintf("/account/products/%s", url.PathEscape("acct/../123?x=y")), gotPath)
 }
 
 // Test GetCpeGroups function with mocked HTTP responses

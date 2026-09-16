@@ -22,6 +22,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -111,7 +112,7 @@ func (c *DefaultAccountService) SetAccountServiceHost(host string) {
 }
 
 func (c *DefaultAccountService) GetAccountData(serviceAccountId string, token string, fields log.Fields) (Account, error) {
-	url := fmt.Sprintf(c.getAccountPath, c.AccountServiceHost(), serviceAccountId)
+	url := fmt.Sprintf(c.getAccountPath, c.AccountServiceHost(), url.PathEscape(serviceAccountId))
 	headers := map[string]string{
 		common.HeaderAuthorization: fmt.Sprintf("Bearer %s", token),
 		common.HeaderUserAgent:     common.HeaderXconfDataService,
@@ -129,7 +130,7 @@ func (c *DefaultAccountService) GetAccountData(serviceAccountId string, token st
 }
 
 func (c *DefaultAccountService) GetDevices(macKey string, macValue string, token string, fields log.Fields) (AccountServiceDevices, error) {
-	url := fmt.Sprintf(c.getDevicesPath, c.AccountServiceHost(), macKey, macValue)
+	url := fmt.Sprintf(c.getDevicesPath, c.AccountServiceHost(), url.QueryEscape(macKey), url.QueryEscape(macValue))
 	headers := map[string]string{
 		common.HeaderAuthorization: fmt.Sprintf("Bearer %s", token),
 		common.HeaderUserAgent:     common.HeaderXconfDataService,

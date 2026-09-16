@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -138,37 +139,37 @@ func (c *DefaultTaggingService) MakeGetTagsRequest(url string, token string, var
 }
 
 func (c *DefaultTaggingService) GetTagsForMacAddress(macAddress string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(c.getTagsForMacAddressUrl, c.TaggingHost(), macAddress)
+	url := fmt.Sprintf(c.getTagsForMacAddressUrl, c.TaggingHost(), url.PathEscape(macAddress))
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForPartner(partnerId string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(c.getTagsForPartnerUrl, c.TaggingHost(), partnerId)
+	url := fmt.Sprintf(c.getTagsForPartnerUrl, c.TaggingHost(), url.PathEscape(partnerId))
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForPartnerAndMacAddress(partnerId string, macAddress string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(c.getTagsForPartnerAndMacAddressUrl, c.TaggingHost(), partnerId, macAddress)
+	url := fmt.Sprintf(c.getTagsForPartnerAndMacAddressUrl, c.TaggingHost(), url.PathEscape(partnerId), url.PathEscape(macAddress))
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForMacAddressAndAccount(macAddress string, accountId string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(c.getTagsForMacAddressAndAccountUrl, c.TaggingHost(), macAddress, accountId)
+	url := fmt.Sprintf(c.getTagsForMacAddressAndAccountUrl, c.TaggingHost(), url.PathEscape(macAddress), url.PathEscape(accountId))
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForAccount(accountId string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(c.getTagsForAccountUrl, c.TaggingHost(), accountId)
+	url := fmt.Sprintf(c.getTagsForAccountUrl, c.TaggingHost(), url.PathEscape(accountId))
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForPartnerAndMacAddressAndAccount(partnerId string, macAddress string, accountId string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(c.getTagsForPartnerAndMacAddressAndAccountUrl, c.TaggingHost(), partnerId, macAddress, accountId)
+	url := fmt.Sprintf(c.getTagsForPartnerAndMacAddressAndAccountUrl, c.TaggingHost(), url.PathEscape(partnerId), url.PathEscape(macAddress), url.PathEscape(accountId))
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
 func (c *DefaultTaggingService) GetTagsForPartnerAndAccount(partnerId string, accountId string, token string, fields log.Fields) ([]string, error) {
-	url := fmt.Sprintf(c.getTagsForPartnerAndAccountUrl, c.TaggingHost(), partnerId, accountId)
+	url := fmt.Sprintf(c.getTagsForPartnerAndAccountUrl, c.TaggingHost(), url.PathEscape(partnerId), url.PathEscape(accountId))
 	return c.MakeGetTagsRequest(url, token, fields)
 }
 
