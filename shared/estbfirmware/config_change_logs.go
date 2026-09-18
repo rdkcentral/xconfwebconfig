@@ -231,11 +231,12 @@ func SetConfigChangeLog(tenantId string, mac string, configChangeLog *ConfigChan
 		if err == nil {
 			configChangeLog.ID = id
 			jsonData, err := json.Marshal(configChangeLog)
-			if err == nil {
-				err = db.GetListingDao().SetOne(tenantId, tableName, mac, id, []byte(jsonData), configChangeLog.Updated)
-				if err != nil {
-					return err
-				}
+			if err != nil {
+				return err
+			}
+			err = db.GetListingDao().SetOne(tenantId, tableName, mac, id, []byte(jsonData), configChangeLog.Updated)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -255,7 +256,7 @@ func GetCurrentChangeLogId(tenantId string, tableName string, mac string) (strin
 	var configLogs []*ConfigChangeLog
 	for _, entry := range data {
 		configLog, ok := entry.(*ConfigChangeLog)
-		if ok {
+		if ok && configLog != nil {
 			// ensure tenantId matches the provided tenantId if it is set in the configLog
 			if configLog.TenantId != "" && configLog.TenantId != tenantId {
 				log.Errorf("TenantId mismatch for ConfigChangeLog (mac: %s): expected %s, got %s", mac, tenantId, configLog.TenantId)

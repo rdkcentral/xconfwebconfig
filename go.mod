@@ -19,8 +19,6 @@ module github.com/rdkcentral/xconfwebconfig
 
 go 1.26.5
 
-toolchain go1.25.11
-
 require (
 	github.com/Comcast/goburrow-cache v1.0.7
 	github.com/aead/siphash v1.0.1

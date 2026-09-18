@@ -34,7 +34,7 @@ var getCachedTenantIds = func() []string {
 	}
 
 	// Check lightweight in-process cache first (works even if optional application cache is disabled)
-	if entry, ok := tenantIdsCache.Load().(*tenantIdsCacheEntry); ok {
+	if entry, ok := tenantIdsCache.Load().(*tenantIdsCacheEntry); ok && entry != nil {
 		if time.Now().UnixNano()-entry.timestamp < int64(tenantCacheTTL) {
 			return entry.ids
 		}
