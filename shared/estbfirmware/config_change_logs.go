@@ -134,7 +134,7 @@ func NewConfigChangeLogInf() interface{} {
 	return &ConfigChangeLog{}
 }
 
-func NewConfigChangeLog(convertedContext *ConvertedContext, explanation string, firmwareConfig *FirmwareConfigFacade, appliedFilters []interface{}, evaluatedRule *firmware.FirmwareRule, isLastLog bool) *ConfigChangeLog {
+func NewConfigChangeLog(convertedContext *ConvertedContext, explanation string, firmwareConfig *FirmwareConfigFacade, appliedFilters []interface{}, evaluatedRule *firmware.FirmwareRule, isLastLog bool, tenantId string) *ConfigChangeLog {
 	var rule *RuleInfo
 	if evaluatedRule != nil {
 		rule = NewRuleInfo(evaluatedRule)
@@ -155,6 +155,7 @@ func NewConfigChangeLog(convertedContext *ConvertedContext, explanation string, 
 		Filters:        filters,
 		Explanation:    explanation,
 		FirmwareConfig: firmwareConfig,
+		TenantId:       tenantId,
 	}
 }
 

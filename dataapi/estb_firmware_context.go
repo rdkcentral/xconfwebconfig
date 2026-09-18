@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -74,27 +73,6 @@ var (
 type AuxiliaryFirmware struct {
 	Prefix    string
 	Extension string
-}
-
-func IsMacPresentAndValid(queryParams url.Values) (bool, string, string) {
-	var mac string
-	var errorStr string
-	if len(queryParams) > 0 {
-		for k, v := range queryParams {
-			if k == common.MAC {
-				mac = v[0]
-			}
-		}
-	}
-	if mac == "" {
-		errorStr = fmt.Sprintf("Required String parameter '%s' is not present", common.MAC)
-		return false, mac, errorStr
-	}
-	if !util.IsValidMacAddress(mac) {
-		errorStr = fmt.Sprintf("Mac is invalid: %s", mac)
-		return false, mac, errorStr
-	}
-	return true, mac, errorStr
 }
 
 func GetTimeInLocalTimezone(currentTime time.Time, contextMap map[string]string) {
@@ -360,27 +338,20 @@ func GetMissingAndEmptyQueryParams(contextMap map[string]string, missingFields *
 	}
 }
 
-func LogPreDisplayCleanup(lastConfigLog *coreef.ConfigChangeLog) {
-	if lastConfigLog != nil {
-		lastConfigLog.ID = ""
-		lastConfigLog.Updated = 0
-	}
-}
-
 func LogResponse(contextMap map[string]string, convertedContext *coreef.ConvertedContext, explanation string, evaluationResult *estbfirmware.EvaluationResult, fields log.Fields) {
 	DoSplunkLog(contextMap, evaluationResult, fields)
 	go func() {
 		mac := contextMap[common.ESTB_MAC]
 		if contextMap[common.FIRMWARE_VERSION] != "" {
 			log.Trace("Logging last config request.")
-			lastConfigLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, true)
+			lastConfigLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, true, contextMap[common.TENANT_ID])
 			err := coreef.SetLastConfigLog(contextMap[common.TENANT_ID], mac, lastConfigLog)
 			if err != nil {
 				log.Error(fmt.Sprintf("Can't save last log config request: %+v", err))
 			}
 			if evaluationResult.MatchedRule != nil && !evaluationResult.Blocked && evaluationResult.FirmwareConfig != nil && !strings.EqualFold(contextMap[common.FIRMWARE_VERSION], evaluationResult.FirmwareConfig.GetFirmwareVersion()) {
 				log.Trace(fmt.Sprintf("logging config change from %s to %s", evaluationResult.FirmwareConfig.GetFirmwareVersion(), contextMap[common.FIRMWARE_VERSION]))
-				configChangeLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, false)
+				configChangeLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, false, contextMap[common.TENANT_ID])
 				err = coreef.SetConfigChangeLog(contextMap[common.TENANT_ID], mac, configChangeLog)
 				if err != nil {
 					log.Error(fmt.Sprintf("Can't save config change log request: %+v", err))
