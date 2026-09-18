@@ -45,7 +45,7 @@ const (
 	RfcEstbIpColumnName               = "rfc_estb_ip"
 	RfcTsColumnName                   = "rfc_ts"
 	RfcPostProcColumnName             = "rfc_post_proc"
-	TimeZoneColumnValue               = "time_zone"
+	TimeZoneColumnName                = "time_zone"
 )
 
 // PenetrationData struct
@@ -245,7 +245,7 @@ func (c *CassandraClient) SetRfcPenetrationData(pData *RfcPenetrationData, isRet
 		values = append(values, pData.TitanAccountId)
 	}
 	if !isEmptyString(pData.TimeZone) {
-		columns = append(columns, TimeZoneColumnValue)
+		columns = append(columns, TimeZoneColumnName)
 		values = append(values, pData.TimeZone)
 	}
 
@@ -259,9 +259,6 @@ func (c *CassandraClient) SetRfcPenetrationData(pData *RfcPenetrationData, isRet
 }
 
 func (c *CassandraClient) SetPenetrationData(kvmap map[string]string) error {
-	c.ConcurrentQueries <- true
-	defer func() { <-c.ConcurrentQueries }()
-
 	columns := []string{}
 	values := []any{}
 
@@ -365,7 +362,7 @@ func (c *CassandraClient) GetFwPenetrationData(estbMac string) (*FwPenetrationDa
 				// fallback for existing int64 values
 				pData.FwTs = itfvalue
 			}
-		case TimeZoneColumnValue:
+		case TimeZoneColumnName:
 			if itfvalue, ok := v.(string); ok {
 				if len(itfvalue) > 0 {
 					pData.TimeZone = itfvalue
@@ -434,7 +431,7 @@ func (c *CassandraClient) GetRfcPenetrationData(estbMac string) (*RfcPenetration
 				// fallback for existing int64 values
 				pData.RfcTs = itfvalue
 			}
-		case TimeZoneColumnValue:
+		case TimeZoneColumnName:
 			if itfvalue, ok := v.(string); ok {
 				if len(itfvalue) > 0 {
 					pData.TimeZone = itfvalue

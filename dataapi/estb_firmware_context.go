@@ -261,19 +261,15 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					if countryCode, ok := accountData["CountryCode"]; ok && countryCode != "" {
 						contextMap[common.COUNTRY_CODE] = countryCode
 					}
-
 					if TimeZone, ok := accountData["TimeZone"]; ok && TimeZone != "" {
 						contextMap[common.TIME_ZONE] = TimeZone
 					}
-
 					if accountType, ok := accountData["Type"]; ok && accountType != "" {
 						contextMap[common.ACCOUNT_TYPE] = accountType
 					}
-
 					if accountState, ok := accountData["State"]; ok && accountState != "" {
 						contextMap[common.ACCOUNT_STATE] = accountState
 					}
-
 					if raw, ok := accountData["AccountProducts"]; ok && raw != "" {
 						var ap map[string]string
 						err = json.Unmarshal([]byte(accountData["AccountProducts"]), &ap)
@@ -291,8 +287,8 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					if Ws.Config.GetBoolean("xconfwebconfig.xconf.enable_fw_penetration_metrics", false) {
 						if contextMap[common.TIME_ZONE] != "" {
 							kvmap := map[string]string{
-								db.EstbMacColumnName:   contextMap[common.ESTB_MAC],
-								db.TimeZoneColumnValue: contextMap[common.TIME_ZONE],
+								db.EstbMacColumnName:  contextMap[common.ESTB_MAC],
+								db.TimeZoneColumnName: contextMap[common.TIME_ZONE],
 							}
 							err := db.GetDatabaseClient().SetPenetrationData(kvmap)
 							if err != nil {
@@ -317,9 +313,10 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		}
 	}
-	coastTags := AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
+
 	// call this method after any backend lookups that might populate partner info, but before group service call so tenantId is available for cached partner tags
 	contextMap[common.TENANT_ID] = xhttp.ResolveTenantIdFromPartner(contextMap[common.PARTNER_ID])
+	coastTags := AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
 	xconfTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC, contextMap, true, fields)
 	CompareTaggingSources(contextMap, coastTags, xconfTags, fields)
 	log.Debug(fmt.Sprintf("AddEstbFirmwareContext ... end contextMap %v", contextMap))
@@ -480,7 +477,7 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 		}
 
 		appliedFilters := []util.Dict{}
-		if evaluationResult.AppliedFilters != nil && len(evaluationResult.AppliedFilters) > 0 {
+		if len(evaluationResult.AppliedFilters) > 0 {
 			for _, filter := range evaluationResult.AppliedFilters {
 				var d util.Dict
 				switch v := filter.(type) {
