@@ -24,7 +24,6 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	dataef "github.com/rdkcentral/xconfwebconfig/dataapi/estbfirmware"
-	"github.com/rdkcentral/xconfwebconfig/db"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
 	sharedef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
@@ -283,45 +282,6 @@ func GetEstbFirmwareVersionInfoPath(w http.ResponseWriter, r *http.Request) {
 		fields["context"] = contextMap
 		log.WithFields(common.FilterLogFields(fields)).Info("EstbFirmwareService ActivationVersion")
 		response, _ := util.JSONMarshal(*runningVersionInfo)
-		xhttp.WriteXconfResponse(w, 200, response)
-	}
-}
-
-func GetEstbLastlogPath(w http.ResponseWriter, r *http.Request) {
-	isValid, mac, errStr := IsMacPresentAndValid(r.URL.Query())
-	if !isValid {
-		xhttp.WriteXconfResponseAsText(w, 400, []byte(errStr))
-	} else {
-		mac := util.NormalizeMacAddress(mac)
-		tenantId := db.GetDefaultTenantId()
-		lastConfigLog := sharedef.GetLastConfigLog(tenantId, mac)
-		if lastConfigLog != nil {
-			LogPreDisplayCleanup(lastConfigLog)
-			response, _ := util.JSONMarshal(*lastConfigLog)
-			xhttp.WriteXconfResponse(w, 200, response)
-		} else {
-			log.Debugf("Last log is not found for mac %s", mac)
-			xhttp.WriteXconfResponse(w, 200, []byte(""))
-		}
-	}
-}
-
-func GetEstbChangelogsPath(w http.ResponseWriter, r *http.Request) {
-	isValid, mac, errStr := IsMacPresentAndValid(r.URL.Query())
-	if !isValid {
-		xhttp.WriteXconfResponseAsText(w, 400, []byte(errStr))
-	} else {
-		mac := util.NormalizeMacAddress(mac)
-		tenantId := db.GetDefaultTenantId()
-		configChangeLogs := sharedef.GetConfigChangeLogsOnly(tenantId, mac)
-		if len(configChangeLogs) > 0 {
-			for _, log := range configChangeLogs {
-				LogPreDisplayCleanup(log)
-			}
-		} else {
-			log.Debugf("Last log is not found for mac %s", mac)
-		}
-		response, _ := util.JSONMarshal(configChangeLogs)
 		xhttp.WriteXconfResponse(w, 200, response)
 	}
 }

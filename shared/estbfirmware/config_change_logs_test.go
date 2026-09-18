@@ -104,7 +104,7 @@ func TestNewConfigChangeLog(t *testing.T) {
 		Type: "type",
 		Name: "name",
 	}
-	configChangeLog := NewConfigChangeLog(convertedContext, explanation, firmwareConfig, appliedFilters, evaluatedRule, true)
+	configChangeLog := NewConfigChangeLog(convertedContext, explanation, firmwareConfig, appliedFilters, evaluatedRule, true, db.GetDefaultTenantId())
 	assert.Equal(t, configChangeLog.ID, "0")
 	assert.Equal(t, configChangeLog.Updated, int64(0))
 	assert.Equal(t, configChangeLog.Input, convertedContext)
@@ -117,7 +117,7 @@ func TestNewConfigChangeLog(t *testing.T) {
 
 	// isLastLog = false
 	past := util.GetTimestamp(time.Now())
-	configChangeLog = NewConfigChangeLog(convertedContext, explanation, firmwareConfig, appliedFilters, evaluatedRule, false)
+	configChangeLog = NewConfigChangeLog(convertedContext, explanation, firmwareConfig, appliedFilters, evaluatedRule, false, db.GetDefaultTenantId())
 	future := util.GetTimestamp(time.Now())
 	fmt.Printf("Past: %d, Present: %d, Future: %d\n", past, configChangeLog.Updated, future)
 	assert.Equal(t, configChangeLog.ID, "0")
