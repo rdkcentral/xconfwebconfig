@@ -270,6 +270,8 @@ func (c *CassandraClient) XpcPrecookTableName() string {
 }
 
 func (c *CassandraClient) XconfRecookingStatusTableName() string {
+  
+  
 	return c.xconfRecookingStatusTableName
 }
 
