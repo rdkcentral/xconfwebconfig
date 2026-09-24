@@ -94,6 +94,16 @@ CREATE TABLE IF NOT EXISTS tag_members_bucketed (
    AND compaction = {'class': 'SizeTieredCompactionStrategy'}
    AND compression = {'sstable_compression': 'LZ4Compressor'};
 
+-- Run history and checkpoints are tenant-scoped. The sync service stores its single
+-- shared-XDAS execution lock under the reserved tenant id "__global__".
+CREATE TABLE IF NOT EXISTS tag_sync_state (
+                                             tenant_id text,
+                                             key text,
+                                             column1 text,
+                                             value text,
+                                             PRIMARY KEY ((tenant_id, key), column1)
+);
+
 CREATE TABLE IF NOT EXISTS config_change_logs (tenant_id text, key text, key2 text, value blob, updated timestamp, PRIMARY KEY ((key), key2));
 
 CREATE TABLE IF NOT EXISTS change_events (tenant_id text, key bigint, key2 timeuuid, value blob, updated timestamp, PRIMARY KEY (key, key2));
