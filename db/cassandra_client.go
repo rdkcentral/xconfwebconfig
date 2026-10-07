@@ -196,19 +196,19 @@ func (ca *DefaultCassandraConnection) NewCassandraClient(conf *configuration.Con
 	}
 
 	if isSslEnabled {
-		sslOpts := &gocql.SslOptions{
-			EnableHostVerification: false,
-		}
 		sslServerName := conf.GetString("xconfwebconfig.database.ssl_server_name")
-		if len(sslServerName) > 0 {
-			sslOpts.Config = &tls.Config{
+		if util.IsBlank(sslServerName) {
+			return nil, errors.New("xconfwebconfig.database.ssl_server_name is required when SSL is enabled")
+		}
+		sslOpts := &gocql.SslOptions{
+			EnableHostVerification: true,
+			Config: &tls.Config{
 				ServerName:         sslServerName,
 				InsecureSkipVerify: true,
 				CipherSuites: []uint16{
 					tls.TLS_RSA_WITH_AES_128_CBC_SHA,
 				},
-			}
-			sslOpts.EnableHostVerification = true
+			},
 		}
 		cluster.SslOpts = sslOpts
 	}
