@@ -139,7 +139,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 		accountId := xAccountId.GetAccountId()
 		accountType := xAccountId.GetAccountType()
 		contextMap[common.ACCOUNT_ID] = accountId
-		contextMap[common.ACCOUNT_TYPE] = accountType
+		contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
 		contextMap[common.ACCOUNT_HASH] = util.CalculateHash(contextMap[common.ACCOUNT_ID])
 		log.WithFields(fields).Debug("AddContextForPods: Successfully fetched AcntId and AcntType from Grp Svc")
 
@@ -168,7 +168,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 		}
 
 		if accountType, ok := accountData["Type"]; ok && accountType != "" {
-			contextMap[common.ACCOUNT_TYPE] = accountType
+			contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
 		}
 		if accountState, ok := accountData["State"]; ok && accountState != "" {
 			contextMap[common.ACCOUNT_STATE] = accountState
@@ -382,7 +382,10 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 					accountId = xAccountId.GetAccountId()
 					accountType := xAccountId.GetAccountType()
 					contextMap[common.ACCOUNT_ID] = accountId
-					contextMap[common.ACCOUNT_TYPE] = accountType
+					contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
+					td = &AccountServiceData{
+						AccountId: contextMap[common.ACCOUNT_ID],
+					}
 					log.WithFields(fields).Debugf("AddFeatureControlContextFromAccountService Successfully fetched AcntId and AcntType from Grp Svc")
 				}
 
@@ -391,10 +394,6 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 					if err != nil {
 						log.WithFields(fields).Errorf("AddFeatureControlContextFromAccountService Error getting accountProducts info from Grp Svc, err=%v", err)
 					} else {
-						td = &AccountServiceData{
-							AccountId: contextMap[common.ACCOUNT_ID],
-						}
-
 						if partner, ok := accountData["Partner"]; ok && partner != "" {
 							td.PartnerId = partner //adding PartnerId to AccountServiceData
 							contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
@@ -412,7 +411,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 						}
 
 						if accountType, ok := accountData["Type"]; ok && accountType != "" {
-							contextMap[common.ACCOUNT_TYPE] = accountType
+							contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
 						}
 
 						if accountState, ok := accountData["State"]; ok && accountState != "" {
@@ -564,7 +563,7 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 					}
 
 					if accountType, ok := accountData["Type"]; ok && accountType != "" {
-						contextMap[common.ACCOUNT_TYPE] = accountType
+						contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
 					}
 
 					if State, ok := accountData["State"]; ok {
