@@ -10,7 +10,6 @@ import (
 	"github.com/rdkcentral/xconfwebconfig/common"
 	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
-	sharedef "github.com/rdkcentral/xconfwebconfig/shared/estbfirmware"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -121,63 +120,6 @@ func TestGetEstbFirmwareSwuBseHandler_WithInvalidResponseWriter(t *testing.T) {
 	GetEstbFirmwareSwuBseHandler(recorder, req)
 
 	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
-}
-
-// GetEstbLastlogPath Tests
-func TestGetEstbLastlogPath_InvalidMAC(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/estbfirmware/lastlog?mac=invalid-mac", nil)
-	recorder := httptest.NewRecorder()
-
-	GetEstbLastlogPath(recorder, req)
-
-	assert.Equal(t, http.StatusBadRequest, recorder.Code)
-	assert.Contains(t, recorder.Body.String(), "Mac is invalid")
-}
-
-func TestGetEstbLastlogPath_MissingMAC(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/estbfirmware/lastlog", nil)
-	recorder := httptest.NewRecorder()
-
-	GetEstbLastlogPath(recorder, req)
-
-	assert.Equal(t, http.StatusBadRequest, recorder.Code)
-}
-
-func TestGetEstbLastlogPath_ValidMAC(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/estbfirmware/lastlog?mac=AA:BB:CC:DD:EE:FF", nil)
-	recorder := httptest.NewRecorder()
-
-	GetEstbLastlogPath(recorder, req)
-
-	assert.Equal(t, http.StatusOK, recorder.Code)
-}
-
-// GetEstbChangelogsPath Tests
-func TestGetEstbChangelogsPath_InvalidMAC(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/estbfirmware/changelogs?mac=invalid", nil)
-	recorder := httptest.NewRecorder()
-
-	GetEstbChangelogsPath(recorder, req)
-
-	assert.Equal(t, http.StatusBadRequest, recorder.Code)
-}
-
-func TestGetEstbChangelogsPath_MissingMAC(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/estbfirmware/changelogs", nil)
-	recorder := httptest.NewRecorder()
-
-	GetEstbChangelogsPath(recorder, req)
-
-	assert.Equal(t, http.StatusBadRequest, recorder.Code)
-}
-
-func TestGetEstbChangelogsPath_ValidMAC(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/estbfirmware/changelogs?mac=AA:BB:CC:DD:EE:FF", nil)
-	recorder := httptest.NewRecorder()
-
-	GetEstbChangelogsPath(recorder, req)
-
-	assert.Equal(t, http.StatusOK, recorder.Code)
 }
 
 // GetCheckMinFirmwareHandler Tests
@@ -359,23 +301,4 @@ func TestGetEstbFirmwareSwuHandler_WithInvalidResponseWriter(t *testing.T) {
 	GetEstbFirmwareSwuHandler(recorder, req)
 
 	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
-}
-
-// Helper Function Tests
-func TestLogPreDisplayCleanup_NilLog(t *testing.T) {
-	assert.NotPanics(t, func() {
-		LogPreDisplayCleanup(nil)
-	})
-}
-
-func TestLogPreDisplayCleanup_ValidLog(t *testing.T) {
-	log := &sharedef.ConfigChangeLog{
-		ID:      "test-id",
-		Updated: 1234567890,
-	}
-
-	LogPreDisplayCleanup(log)
-
-	assert.Equal(t, "", log.ID)
-	assert.Equal(t, int64(0), log.Updated)
 }

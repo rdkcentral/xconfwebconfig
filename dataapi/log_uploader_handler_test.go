@@ -44,6 +44,9 @@ func TestGetContextMapAndSettingTypes_BasicRequest(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, shared.STB, contextMap[common.APPLICATION_TYPE])
+	// tenantId shouldn't be added until after external calls
+	_, ok := contextMap[common.TENANT_ID]
+	assert.False(t, ok)
 	assert.Equal(t, "AA:BB:CC:DD:EE:FF", contextMap["eStbMac"])
 	assert.Equal(t, "PROD", contextMap["env"])
 	assert.Empty(t, settingTypes)
@@ -63,6 +66,9 @@ func TestGetContextMapAndSettingTypes_WithSettingType(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, shared.STB, contextMap[common.APPLICATION_TYPE])
+	// tenantId shouldn't be added until after external calls
+	_, ok := contextMap[common.TENANT_ID]
+	assert.False(t, ok)
 	assert.Equal(t, "AA:BB:CC:DD:EE:FF", contextMap["eStbMac"])
 	assert.Len(t, settingTypes, 1)
 	assert.Equal(t, "partnersettings", settingTypes[0])
@@ -82,6 +88,9 @@ func TestGetContextMapAndSettingTypes_WithMultipleSettingTypes(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, shared.STB, contextMap[common.APPLICATION_TYPE])
+	// tenantId shouldn't be added until after external calls
+	_, ok := contextMap[common.TENANT_ID]
+	assert.False(t, ok)
 	assert.Len(t, settingTypes, 2)
 	assert.Contains(t, settingTypes, "partnersettings")
 	assert.Contains(t, settingTypes, "epon")
@@ -96,6 +105,9 @@ func TestGetContextMapAndSettingTypes_NoApplicationType(t *testing.T) {
 
 	// Assert - should default to STB
 	assert.Equal(t, shared.STB, contextMap[common.APPLICATION_TYPE])
+	// tenantId shouldn't be added until after external calls
+	_, ok := contextMap[common.TENANT_ID]
+	assert.False(t, ok)
 	assert.Equal(t, "AA:BB:CC:DD:EE:FF", contextMap["eStbMac"])
 	assert.Empty(t, settingTypes)
 }
@@ -132,6 +144,9 @@ func TestGetContextMapAndSettingTypes_EmptyQueryParams(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, shared.STB, contextMap[common.APPLICATION_TYPE])
+	// tenantId shouldn't be added until after external calls
+	_, ok := contextMap[common.TENANT_ID]
+	assert.False(t, ok)
 	assert.Empty(t, settingTypes)
 	// Only APPLICATION_TYPE should be in the map
 	assert.Len(t, contextMap, 1)
@@ -271,6 +286,9 @@ func TestGetContextMapAndSettingTypes_OnlySettingTypes(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, shared.STB, contextMap[common.APPLICATION_TYPE])
+	// tenantId shouldn't be added until after external calls
+	_, ok := contextMap[common.TENANT_ID]
+	assert.False(t, ok)
 	assert.Len(t, settingTypes, 3)
 	assert.Contains(t, settingTypes, "type1")
 	assert.Contains(t, settingTypes, "type2")
@@ -292,6 +310,9 @@ func TestGetContextMapAndSettingTypes_MixedParamsWithSettingTypes(t *testing.T) 
 
 	// Assert
 	assert.Equal(t, shared.STB, contextMap[common.APPLICATION_TYPE])
+	// tenantId shouldn't be added until after external calls
+	_, ok := contextMap[common.TENANT_ID]
+	assert.False(t, ok)
 	assert.Equal(t, "AA:BB:CC:DD:EE:FF", contextMap["eStbMac"])
 	assert.Equal(t, "Model123", contextMap["model"])
 	assert.Equal(t, "PROD", contextMap["env"])
@@ -395,6 +416,9 @@ func TestGetContextMapAndSettingTypes_LongQueryString(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, shared.STB, contextMap[common.APPLICATION_TYPE])
+	// tenantId shouldn't be added until after external calls
+	_, ok := contextMap[common.TENANT_ID]
+	assert.False(t, ok)
 	assert.Equal(t, "AA:BB:CC:DD:EE:FF", contextMap["eStbMac"])
 	assert.Equal(t, "PROD", contextMap["env"])
 	assert.Equal(t, "Model123", contextMap["model"])
@@ -422,6 +446,9 @@ func TestGetContextMapAndSettingTypes_NilQueryParams(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, shared.STB, contextMap[common.APPLICATION_TYPE])
+	// tenantId shouldn't be added until after external calls
+	_, ok := contextMap[common.TENANT_ID]
+	assert.False(t, ok)
 	assert.Empty(t, settingTypes)
 	assert.Len(t, contextMap, 1) // Only APPLICATION_TYPE
 }

@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -76,27 +75,6 @@ type AuxiliaryFirmware struct {
 	Extension string
 }
 
-func IsMacPresentAndValid(queryParams url.Values) (bool, string, string) {
-	var mac string
-	var errorStr string
-	if len(queryParams) > 0 {
-		for k, v := range queryParams {
-			if k == common.MAC {
-				mac = v[0]
-			}
-		}
-	}
-	if mac == "" {
-		errorStr = fmt.Sprintf("Required String parameter '%s' is not present", common.MAC)
-		return false, mac, errorStr
-	}
-	if !util.IsValidMacAddress(mac) {
-		errorStr = fmt.Sprintf("Mac is invalid: %s", mac)
-		return false, mac, errorStr
-	}
-	return true, mac, errorStr
-}
-
 func GetTimeInLocalTimezone(currentTime time.Time, contextMap map[string]string) {
 	if contextMap[common.TIME_ZONE_OFFSET] != "" {
 		offsetList := strings.Split(contextMap[common.TIME_ZONE_OFFSET], ":")
@@ -141,6 +119,9 @@ func GetExplanation(contextMap map[string]string, evaluationResult *estbfirmware
 	var input strings.Builder
 	for key, value := range contextMap {
 		fmt.Fprintf(&input, "%s=%s\n", key, value)
+	}
+	if evaluationResult == nil {
+		return fmt.Sprintf("Request: %s\\ndid not produce an evaluation result.", input.String())
 	}
 	var explanation strings.Builder
 	if evaluationResult.MatchedRule == nil {
@@ -280,19 +261,15 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					if countryCode, ok := accountData["CountryCode"]; ok && countryCode != "" {
 						contextMap[common.COUNTRY_CODE] = countryCode
 					}
-
 					if TimeZone, ok := accountData["TimeZone"]; ok && TimeZone != "" {
 						contextMap[common.TIME_ZONE] = TimeZone
 					}
-
 					if accountType, ok := accountData["Type"]; ok && accountType != "" {
 						contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
 					}
-
 					if accountState, ok := accountData["State"]; ok && accountState != "" {
 						contextMap[common.ACCOUNT_STATE] = accountState
 					}
-
 					if raw, ok := accountData["AccountProducts"]; ok && raw != "" {
 						var ap map[string]string
 						err = json.Unmarshal([]byte(accountData["AccountProducts"]), &ap)
@@ -310,10 +287,10 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 					if Ws.Config.GetBoolean("xconfwebconfig.xconf.enable_fw_penetration_metrics", false) {
 						if contextMap[common.TIME_ZONE] != "" {
 							kvmap := map[string]string{
-								db.EstbMacColumnValue:  contextMap[common.ESTB_MAC],
-								db.TimeZoneColumnValue: contextMap[common.TIME_ZONE],
+								db.EstbMacColumnName:  contextMap[common.ESTB_MAC],
+								db.TimeZoneColumnName: contextMap[common.TIME_ZONE],
 							}
-							err := db.GetDatabaseClient().UpdateFwPenetrationMetrics(kvmap)
+							err := db.GetDatabaseClient().SetPenetrationData(kvmap)
 							if err != nil {
 								log.Errorf("Can't save Timezone in penetration metrics, estbMac=%s, error=%+v", contextMap[common.ESTB_MAC], err)
 							}
@@ -336,6 +313,9 @@ func AddEstbFirmwareContext(ws *xhttp.XconfServer, r *http.Request, contextMap m
 			xhttp.IncreaseAccountFetchCounter(contextMap[common.MODEL], contextMap[common.PARTNER_ID])
 		}
 	}
+
+	// call this method after any backend lookups that might populate partner info, but before group service call so tenantId is available for cached partner tags
+	contextMap[common.TENANT_ID] = xhttp.ResolveTenantIdFromPartner(contextMap[common.PARTNER_ID])
 	coastTags := AddContextFromTaggingService(ws, contextMap, satToken, "", false, fields)
 	xconfTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC, contextMap, true, fields)
 	CompareTaggingSources(contextMap, coastTags, xconfTags, fields)
@@ -355,28 +335,21 @@ func GetMissingAndEmptyQueryParams(contextMap map[string]string, missingFields *
 	}
 }
 
-func LogPreDisplayCleanup(lastConfigLog *coreef.ConfigChangeLog) {
-	if lastConfigLog != nil {
-		lastConfigLog.ID = ""
-		lastConfigLog.Updated = 0
-	}
-}
-
 func LogResponse(contextMap map[string]string, convertedContext *coreef.ConvertedContext, explanation string, evaluationResult *estbfirmware.EvaluationResult, fields log.Fields) {
 	DoSplunkLog(contextMap, evaluationResult, fields)
 	go func() {
 		mac := contextMap[common.ESTB_MAC]
 		if contextMap[common.FIRMWARE_VERSION] != "" {
 			log.Trace("Logging last config request.")
-			lastConfigLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, true)
-			err := coreef.SetLastConfigLog(mac, lastConfigLog)
+			lastConfigLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, true, contextMap[common.TENANT_ID])
+			err := coreef.SetLastConfigLog(contextMap[common.TENANT_ID], mac, lastConfigLog)
 			if err != nil {
 				log.Error(fmt.Sprintf("Can't save last log config request: %+v", err))
 			}
 			if evaluationResult.MatchedRule != nil && !evaluationResult.Blocked && evaluationResult.FirmwareConfig != nil && !strings.EqualFold(contextMap[common.FIRMWARE_VERSION], evaluationResult.FirmwareConfig.GetFirmwareVersion()) {
 				log.Trace(fmt.Sprintf("logging config change from %s to %s", evaluationResult.FirmwareConfig.GetFirmwareVersion(), contextMap[common.FIRMWARE_VERSION]))
-				configChangeLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, false)
-				err = coreef.SetConfigChangeLog(mac, configChangeLog)
+				configChangeLog := coreef.NewConfigChangeLog(convertedContext, explanation, evaluationResult.FirmwareConfig, evaluationResult.AppliedFilters, evaluationResult.MatchedRule, false, contextMap[common.TENANT_ID])
+				err = coreef.SetConfigChangeLog(contextMap[common.TENANT_ID], mac, configChangeLog)
 				if err != nil {
 					log.Error(fmt.Sprintf("Can't save config change log request: %+v", err))
 				}
@@ -404,7 +377,8 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 				fwAppliedRule = evaluationResult.MatchedRule.GetName()
 			}
 
-			pTable := &db.FwPenetrationMetrics{
+			pData := &db.FwPenetrationData{
+				TenantId:                contextMap[common.TENANT_ID],
 				EstbMac:                 mac,
 				Partner:                 partner,
 				Model:                   contextMap[common.MODEL],
@@ -418,7 +392,7 @@ func LogResponse(contextMap map[string]string, convertedContext *coreef.Converte
 				RecoveryCertExpiry:      contextMap[common.RECOVERY_CERT_EXPIRY],
 			}
 
-			err := db.GetDatabaseClient().SetFwPenetrationMetrics(pTable)
+			err := db.GetDatabaseClient().SetFwPenetrationData(pData)
 			if err != nil {
 				log.Error(fmt.Sprintf("Can't save FW penetration metrics, estbMac=%s, error=%+v", mac, err))
 			}
@@ -503,7 +477,7 @@ func DoSplunkLog(contextMap map[string]string, evaluationResult *estbfirmware.Ev
 		}
 
 		appliedFilters := []util.Dict{}
-		if evaluationResult.AppliedFilters != nil && len(evaluationResult.AppliedFilters) > 0 {
+		if len(evaluationResult.AppliedFilters) > 0 {
 			for _, filter := range evaluationResult.AppliedFilters {
 				var d util.Dict
 				switch v := filter.(type) {

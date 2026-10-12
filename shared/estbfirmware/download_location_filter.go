@@ -90,6 +90,14 @@ func NewEmptyDownloadLocationRoundRobinFilterValue() *DownloadLocationRoundRobin
 	}
 }
 
+func (obj *DownloadLocationRoundRobinFilterValue) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *DownloadLocationRoundRobinFilterValue) SetUpdated(ts int64) {
+	obj.Updated = ts
+}
+
 func (obj *DownloadLocationRoundRobinFilterValue) SetApplicationType(appType string) {
 	obj.ApplicationType = appType
 }
@@ -188,9 +196,9 @@ func (d *DownloadLocationRoundRobinFilterValue) GetDownloadLocations() []string 
 	return result
 }
 
-func GetDownloadLocationRoundRobinFilterValOneDB(filterId string) (*DownloadLocationRoundRobinFilterValue, error) {
+func GetDownloadLocationRoundRobinFilterValOneDB(tenantId string, filterId string) (*DownloadLocationRoundRobinFilterValue, error) {
 	log.Debug("GetDownloadLocationRoundRobinFilterValOneDB starts...")
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_SINGLETON_FILTER_VALUE, filterId)
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_SINGLETON_FILTER_VALUES, filterId)
 	if err != nil {
 		return nil, err
 	}
@@ -211,11 +219,11 @@ func GetDownloadLocationRoundRobinFilterValOneDB(filterId string) (*DownloadLoca
 	return nil, fmt.Errorf("DownloadLocationRoundRobinFilterValue not found for %v", filterId)
 }
 
-func GetDefaultDownloadLocationRoundRobinFilterValOneDB() (*DownloadLocationRoundRobinFilterValue, error) {
-	return GetDownloadLocationRoundRobinFilterValOneDB(ROUND_ROBIN_FILTER_SINGLETON_ID)
+func GetDefaultDownloadLocationRoundRobinFilterValOneDB(tenantId string) (*DownloadLocationRoundRobinFilterValue, error) {
+	return GetDownloadLocationRoundRobinFilterValOneDB(tenantId, ROUND_ROBIN_FILTER_SINGLETON_ID)
 }
 
-func CreateDownloadLocationRoundRobinFilterValOneDB(dl *DownloadLocationRoundRobinFilterValue) error {
+func CreateDownloadLocationRoundRobinFilterValOneDB(tenantId string, dl *DownloadLocationRoundRobinFilterValue) error {
 
 	dl.Updated = util.GetTimestamp()
 
@@ -229,15 +237,15 @@ func CreateDownloadLocationRoundRobinFilterValOneDB(dl *DownloadLocationRoundRob
 	}
 
 	// create record in DB
-	return db.GetCachedSimpleDao().SetOne(db.TABLE_SINGLETON_FILTER_VALUE, sfv.ID, sfv)
+	return db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_SINGLETON_FILTER_VALUES, sfv.ID, sfv)
 }
 
 func NewEmptyDownloadLocationFilter() *DownloadLocationFilter {
 	return &DownloadLocationFilter{}
 }
 
-func DownloadLocationFiltersByApplicationType(applicationType string) ([]*DownloadLocationFilter, error) {
-	rulelst, err := firmware.GetFirmwareRuleAllAsListDB()
+func DownloadLocationFiltersByApplicationType(tenantId string, applicationType string) ([]*DownloadLocationFilter, error) {
+	rulelst, err := firmware.GetFirmwareRuleAllAsListDB(tenantId)
 	if err != nil {
 		return nil, err
 	}
@@ -250,13 +258,13 @@ func DownloadLocationFiltersByApplicationType(applicationType string) ([]*Downlo
 		if frule.GetTemplateId() != DOWNLOAD_LOCATION_FILTER {
 			continue
 		}
-		filtedRules = append(filtedRules, setDownloadLocationFilter(frule))
+		filtedRules = append(filtedRules, setDownloadLocationFilter(tenantId, frule))
 	}
 	return filtedRules, nil
 }
 
-func DownloadLocationFiltersByName(applicationType string, name string) (*DownloadLocationFilter, error) {
-	rulelst, err := firmware.GetFirmwareRuleAllAsListDB()
+func DownloadLocationFiltersByName(tenantId string, applicationType string, name string) (*DownloadLocationFilter, error) {
+	rulelst, err := firmware.GetFirmwareRuleAllAsListDB(tenantId)
 	if err != nil {
 		return nil, err
 	}
@@ -269,19 +277,19 @@ func DownloadLocationFiltersByName(applicationType string, name string) (*Downlo
 			continue
 		}
 		if frule.Name == name {
-			return setDownloadLocationFilter(frule), nil
+			return setDownloadLocationFilter(tenantId, frule), nil
 		}
 	}
 	return nil, nil
 }
 
-func setDownloadLocationFilter(rule *firmware.FirmwareRule) *DownloadLocationFilter {
+func setDownloadLocationFilter(tenantId string, rule *firmware.FirmwareRule) *DownloadLocationFilter {
 	dlf := &DownloadLocationFilter{
 		Id:   rule.ID,
 		Name: rule.Name,
 	}
 	if rule.Rule.Condition != nil {
-		dlf.IpAddressGroup = GetIpAddressGroup(rule.Rule.Condition)
+		dlf.IpAddressGroup = GetIpAddressGroup(tenantId, rule.Rule.Condition)
 	}
 	// } else {
 	// 	listId := getListRef(rule)

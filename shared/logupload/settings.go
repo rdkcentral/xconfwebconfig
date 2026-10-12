@@ -56,7 +56,7 @@ func SettingTypeEnum(s string) int {
 	return 0
 }
 
-// SettingProfiles table
+// SettingProfiles setting_profiles table
 type SettingProfiles struct {
 	ID               string            `json:"id"`
 	Updated          int64             `json:"updated"`
@@ -64,6 +64,14 @@ type SettingProfiles struct {
 	SettingType      string            `json:"settingType"`
 	Properties       map[string]string `json:"properties"`
 	ApplicationType  string            `json:"applicationType"`
+}
+
+func (obj *SettingProfiles) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *SettingProfiles) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *SettingProfiles) Clone() (*SettingProfiles, error) {
@@ -88,7 +96,7 @@ type FormulaWithSettings struct {
 	VodSettings       *VodSettings       `json:"vodSettings"`
 }
 
-// VodSettings table
+// VodSettings vod_settings table
 type VodSettings struct {
 	ID              string            `json:"id"`
 	Updated         int64             `json:"updated"`
@@ -98,6 +106,14 @@ type VodSettings struct {
 	IPList          []string          `json:"ipList"`
 	SrmIPList       map[string]string `json:"srmIPList"`
 	ApplicationType string            `json:"applicationType"`
+}
+
+func (obj *VodSettings) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *VodSettings) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *VodSettings) Clone() (*VodSettings, error) {
@@ -115,7 +131,7 @@ func NewVodSettingsInf() interface{} {
 	}
 }
 
-// SettingRule SettingRules table
+// SettingRule setting_rules table
 type SettingRule struct {
 	ID              string  `json:"id"`
 	Updated         int64   `json:"updated"`
@@ -123,6 +139,14 @@ type SettingRule struct {
 	Rule            re.Rule `json:"rule"`
 	BoundSettingID  string  `json:"boundSettingId"`
 	ApplicationType string  `json:"applicationType"`
+}
+
+func (obj *SettingRule) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *SettingRule) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *SettingRule) Clone() (*SettingRule, error) {
@@ -421,7 +445,7 @@ func CreateSettingsResponseObject(settings *Settings) *SettingsResponse {
 	return settingsResponse
 }
 
-// DeviceSettings DeviceSettings2 table
+// DeviceSettings device_settings table
 type DeviceSettings struct {
 	ID                      string                  `json:"id"`
 	Updated                 int64                   `json:"updated"`
@@ -431,6 +455,14 @@ type DeviceSettings struct {
 	SettingsAreActive       bool                    `json:"settingsAreActive"`
 	Schedule                Schedule                `json:"schedule"`
 	ApplicationType         string                  `json:"applicationType"`
+}
+
+func (obj *DeviceSettings) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *DeviceSettings) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *DeviceSettings) Clone() (*DeviceSettings, error) {
@@ -454,7 +486,7 @@ const (
 	MODE_TO_GET_LOG_FILES_2 = "AllLogFiles"
 )
 
-// LogUploadSettings LogUploadSettings2 table
+// LogUploadSettings log_upload_settings table
 type LogUploadSettings struct {
 	ID                  string   `json:"id"`
 	Updated             int64    `json:"updated"`
@@ -473,6 +505,14 @@ type LogUploadSettings struct {
 	ApplicationType     string   `json:"applicationType"`
 }
 
+func (obj *LogUploadSettings) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *LogUploadSettings) SetUpdated(ts int64) {
+	obj.Updated = ts
+}
+
 func (obj *LogUploadSettings) Clone() (*LogUploadSettings, error) {
 	cloneObj, err := util.Copy(obj)
 	if err != nil {
@@ -488,9 +528,9 @@ func NewLogUploadSettingsInf() interface{} {
 	}
 }
 
-func GetOneDeviceSettings(id string) *DeviceSettings {
+func GetOneDeviceSettings(tenantId string, id string) *DeviceSettings {
 	var deviceSettings *DeviceSettings
-	deviceSettingsInst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_DEVICE_SETTINGS, id)
+	deviceSettingsInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_DEVICE_SETTINGS, id)
 	if err != nil {
 		log.Debug(fmt.Sprintf("no deviceSettings found for Id: %s", id))
 		return nil
@@ -499,9 +539,9 @@ func GetOneDeviceSettings(id string) *DeviceSettings {
 	return deviceSettings
 }
 
-func GetOneLogUploadSettings(id string) *LogUploadSettings {
+func GetOneLogUploadSettings(tenantId string, id string) *LogUploadSettings {
 	var logUploadSettings *LogUploadSettings
-	logUploadSettingsInst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_LOG_UPLOAD_SETTINGS, id)
+	logUploadSettingsInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_LOG_UPLOAD_SETTINGS, id)
 	if err != nil {
 		log.Debug(fmt.Sprintf("no logUploadSettings found for Id: %s", id))
 		return nil
@@ -510,9 +550,9 @@ func GetOneLogUploadSettings(id string) *LogUploadSettings {
 	return logUploadSettings
 }
 
-func GetOneUploadRepository(id string) *UploadRepository {
+func GetOneUploadRepository(tenantId string, id string) *UploadRepository {
 	var uploadRepository *UploadRepository
-	uploadRepositoryInst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_UPLOAD_REPOSITORY, id)
+	uploadRepositoryInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_UPLOAD_REPOSITORIES, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no uploadRepository found for Id: %s", id))
 		return nil
@@ -521,9 +561,9 @@ func GetOneUploadRepository(id string) *UploadRepository {
 	return uploadRepository
 }
 
-func GetLogFileList(size int) []*LogFile {
+func GetLogFileList(tenantId string, size int) []*LogFile {
 	var logFiles []*LogFile
-	logFileListInst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_LOG_FILE, size)
+	logFileListInst, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_LOG_FILES, size)
 	if err != nil {
 		log.Warn("no logFiles found ")
 		return nil
@@ -535,9 +575,9 @@ func GetLogFileList(size int) []*LogFile {
 	return logFiles
 }
 
-func GetOneVodSettings(id string) *VodSettings {
+func GetOneVodSettings(tenantId string, id string) *VodSettings {
 	var vodSettings *VodSettings
-	vodSettingsInst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_VOD_SETTINGS, id)
+	vodSettingsInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_VOD_SETTINGS, id)
 	if err != nil {
 		log.Debug(fmt.Sprintf("no vodSettings found for Id: %s", id))
 		return nil
@@ -546,9 +586,9 @@ func GetOneVodSettings(id string) *VodSettings {
 	return vodSettings
 }
 
-func GetOneLogFileList(id string) (*LogFileList, error) {
+func GetOneLogFileList(tenantId string, id string) (*LogFileList, error) {
 	var logFileList *LogFileList
-	logFileListInst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_LOG_FILE_LIST, id)
+	logFileListInst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_LOG_FILE_LISTS, id)
 	if err != nil {
 		log.Warn(fmt.Sprintf("no LogFileList found for Id: %s", id))
 		return nil, err

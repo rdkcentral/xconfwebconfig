@@ -3,7 +3,6 @@ package dataapi
 import (
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -15,62 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestIsMacPresentAndValid(t *testing.T) {
-	tests := []struct {
-		name          string
-		queryParams   url.Values
-		expectedValid bool
-		expectedMac   string
-		expectedError string
-	}{
-		{
-			name: "Valid MAC address",
-			queryParams: url.Values{
-				common.MAC: []string{"AA:BB:CC:DD:EE:FF"},
-			},
-			expectedValid: true,
-			expectedMac:   "AA:BB:CC:DD:EE:FF",
-			expectedError: "",
-		},
-		{
-			name:          "Missing MAC parameter",
-			queryParams:   url.Values{},
-			expectedValid: false,
-			expectedMac:   "",
-			expectedError: "Required String parameter 'mac' is not present",
-		},
-		{
-			name: "Invalid MAC format",
-			queryParams: url.Values{
-				common.MAC: []string{"invalid-mac"},
-			},
-			expectedValid: false,
-			expectedMac:   "invalid-mac",
-			expectedError: "Mac is invalid: invalid-mac",
-		},
-		{
-			name: "Empty MAC value",
-			queryParams: url.Values{
-				common.MAC: []string{""},
-			},
-			expectedValid: false,
-			expectedMac:   "",
-			expectedError: "Required String parameter 'mac' is not present",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			valid, mac, errStr := IsMacPresentAndValid(tt.queryParams)
-			assert.Equal(t, tt.expectedValid, valid)
-			assert.Equal(t, tt.expectedMac, mac)
-			if tt.expectedError != "" {
-				assert.Contains(t, errStr, tt.expectedError)
-			}
-		})
-	}
-}
 
 func TestGetTimeInLocalTimezone(t *testing.T) {
 	tests := []struct {
@@ -284,42 +227,6 @@ func TestGetMissingAndEmptyQueryParams(t *testing.T) {
 
 			assert.ElementsMatch(t, tt.expectedMissingFields, missingFields)
 			assert.ElementsMatch(t, tt.expectedEmptyFields, emptyFields)
-		})
-	}
-}
-
-func TestLogPreDisplayCleanup(t *testing.T) {
-	tests := []struct {
-		name           string
-		lastConfigLog  *coreef.ConfigChangeLog
-		expectedID     string
-		expectedUpdate int64
-	}{
-		{
-			name: "Clean up non-nil log",
-			lastConfigLog: &coreef.ConfigChangeLog{
-				ID:      "test-id-123",
-				Updated: 1234567890,
-			},
-			expectedID:     "",
-			expectedUpdate: 0,
-		},
-		{
-			name:           "Nil log does nothing",
-			lastConfigLog:  nil,
-			expectedID:     "",
-			expectedUpdate: 0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			LogPreDisplayCleanup(tt.lastConfigLog)
-
-			if tt.lastConfigLog != nil {
-				assert.Equal(t, tt.expectedID, tt.lastConfigLog.ID)
-				assert.Equal(t, tt.expectedUpdate, tt.lastConfigLog.Updated)
-			}
 		})
 	}
 }

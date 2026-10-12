@@ -322,7 +322,4 @@ func TestTableConstants(t *testing.T) {
 	assert.Equal(t, "model", StbContextModel)
 	assert.Equal(t, "MAC_LIST", MacList)
 	assert.Equal(t, "IP_LIST", IpList)
-	assert.Equal(t, "GenericXconfNamedList", TableGenericNSList)
-	assert.Equal(t, "FirmwareConfig", TableFirmwareConfig)
-	assert.Equal(t, "FirmwareRule4", TableFirmwareRule)
 }

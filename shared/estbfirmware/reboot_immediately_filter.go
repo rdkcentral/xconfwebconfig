@@ -31,8 +31,8 @@ type RebootImmediatelyFilter struct {
 	Name           string                   `json:"name" xml:"name"`
 }
 
-func RebootImmediatelyFiltersByApplicationType(applicationType string) ([]*RebootImmediatelyFilter, error) {
-	rulelst, err := firmware.GetFirmwareRuleAllAsListDB()
+func RebootImmediatelyFiltersByApplicationType(tenantId string, applicationType string) ([]*RebootImmediatelyFilter, error) {
+	rulelst, err := firmware.GetFirmwareRuleAllAsListDB(tenantId)
 	if err != nil {
 		return nil, err
 	}

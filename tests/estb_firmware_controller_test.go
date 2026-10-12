@@ -32,7 +32,7 @@ import (
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/dataapi"
-	ds "github.com/rdkcentral/xconfwebconfig/db"
+	"github.com/rdkcentral/xconfwebconfig/db"
 	xwhttp "github.com/rdkcentral/xconfwebconfig/http"
 	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	"github.com/rdkcentral/xconfwebconfig/shared"
@@ -113,7 +113,7 @@ func TestFirmwareConfigParametersCanNotBeOverriddenByDefinePropertiesRule(t *tes
 	percentageBean := CreatePercentageBean("test percentage bean", defaultEnvironmentId, definePropertiesModelId, "", "", defaultFirmwareVersion, "stb")
 	percentageBean.LastKnownGood = firmwareConfig.ID
 	percentageBean.FirmwareVersions = append(percentageBean.FirmwareVersions, firmwareConfig.FirmwareVersion)
-	err = SavePercentageBean(percentageBean)
+	err = SavePercentageBean(db.GetDefaultTenantId(), percentageBean)
 	assert.NilError(t, err)
 
 	defineProperties := map[string]string{}
@@ -384,7 +384,7 @@ func preCreateDownlowadLocationRoundRobinFilter(ssrHttpTempl string) *estbfirmwa
 	rrFilter.Ipv6locations = []estbfirmware.Location{{"06a0:ac48:eaa2:bdf4:6943:f310:39c3:ec1b", 100.0}}
 	rrFilter.HttpFullUrlLocation = fmt.Sprintf(ssrHttpTempl, X1_SIGN_REDIRECT)
 
-	ds.GetCachedSimpleDao().SetOne(ds.TABLE_SINGLETON_FILTER_VALUE, rrFilter.ID, rrFilter)
+	db.GetCachedSimpleDao().SetOne(db.GetDefaultTenantId(), db.TABLE_SINGLETON_FILTER_VALUES, rrFilter.ID, rrFilter)
 	return rrFilter
 }
 
@@ -435,7 +435,7 @@ func createAndSaveUseAccountPercentageBean(lkgConfig *estbfirmware.FirmwareConfi
 	firmwareVersions := useAccountBean.FirmwareVersions
 	firmwareVersions = append(firmwareVersions, lkgConfig.FirmwareVersion)
 	useAccountBean.FirmwareVersions = firmwareVersions
-	err := SavePercentageBean(useAccountBean)
+	err := SavePercentageBean(db.GetDefaultTenantId(), useAccountBean)
 	return useAccountBean, err
 }
 
@@ -452,9 +452,9 @@ func buildDefinePropertyTemplateAction(parameters map[string]string, requiredAll
 	return propertyValues
 }
 
-func SavePercentageBean(percentageBean *estbfirmware.PercentageBean) error {
+func SavePercentageBean(tenantId string, percentageBean *estbfirmware.PercentageBean) error {
 	firmwareRule := estbfirmware.ConvertPercentageBeanToFirmwareRule(*percentageBean)
-	return corefw.CreateFirmwareRuleOneDB(firmwareRule)
+	return corefw.CreateFirmwareRuleOneDB(tenantId, firmwareRule)
 }
 
 func performPostSwuRequestAndValidateBody(t *testing.T, server *xwhttp.XconfServer, router *mux.Router, headers map[string]string, context *estbfirmware.ConvertedContext, expectedResponse estbfirmware.FirmwareConfigFacadeResponse) {

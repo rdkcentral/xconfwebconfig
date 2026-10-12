@@ -18,8 +18,8 @@ type MockGroupServiceCacheDao struct {
 	mock.Mock
 }
 
-func (m *MockGroupServiceCacheDao) GetGroupServiceFeatureTags(cacheKey string) map[string]string {
-	args := m.Called(cacheKey)
+func (m *MockGroupServiceCacheDao) GetGroupServiceFeatureTags(tenantId string, cacheKey string) map[string]string {
+	args := m.Called(tenantId, cacheKey)
 	result := args.Get(0)
 	if result == nil {
 		return nil
@@ -27,13 +27,13 @@ func (m *MockGroupServiceCacheDao) GetGroupServiceFeatureTags(cacheKey string) m
 	return result.(map[string]string)
 }
 
-func (m *MockGroupServiceCacheDao) SetGroupServiceFeatureTags(cacheKey string, tags map[string]string) error {
-	args := m.Called(cacheKey, tags)
+func (m *MockGroupServiceCacheDao) SetGroupServiceFeatureTags(tenantId string, cacheKey string, tags map[string]string) error {
+	args := m.Called(tenantId, cacheKey, tags)
 	return args.Error(0)
 }
 
-func (m *MockGroupServiceCacheDao) DeleteGroupServiceFeatureTags(cacheKey string) error {
-	args := m.Called(cacheKey)
+func (m *MockGroupServiceCacheDao) DeleteGroupServiceFeatureTags(tenantId string, cacheKey string) error {
+	args := m.Called(tenantId, cacheKey)
 	return args.Error(0)
 }
 
@@ -57,7 +57,7 @@ func AddGroupServiceFTContextWithDAO(groupServiceDao db.GroupServiceCacheDao, ma
 
 			if Xc.GroupServiceCacheEnabled {
 				// THIS IS THE KEY DATABASE INTERACTION WE'RE TESTING
-				Tags := groupServiceDao.GetGroupServiceFeatureTags(partner)
+				Tags := groupServiceDao.GetGroupServiceFeatureTags(db.GetDefaultTenantId(), partner)
 				for key, value := range Tags {
 					if keyWithoutPrefix, ok := RemovePrefix(key, Xc.PartnerTagsPrefixList); ok {
 						if getPrefixData {
@@ -89,7 +89,7 @@ func TestAddGroupServiceFTContext_DatabasePath(t *testing.T) {
 		"partner_security_level":  "high",
 		"non_partner_key":         "should_be_ignored", // This should be filtered out
 	}
-	mockDAO.On("GetGroupServiceFeatureTags", "COMCAST").Return(mockTags)
+	mockDAO.On("GetGroupServiceFeatureTags", db.GetDefaultTenantId(), "COMCAST").Return(mockTags)
 
 	// Setup configuration to enable the database code path
 	partnerTagsSet := util.NewSet()
@@ -112,7 +112,7 @@ func TestAddGroupServiceFTContext_DatabasePath(t *testing.T) {
 	result := AddGroupServiceFTContextWithDAO(mockDAO, "estbMac", contextMap, false, log.Fields{})
 
 	// Verify database interaction occurred
-	mockDAO.AssertCalled(t, "GetGroupServiceFeatureTags", "COMCAST")
+	mockDAO.AssertCalled(t, "GetGroupServiceFeatureTags", db.GetDefaultTenantId(), "COMCAST")
 
 	// Verify database data was processed correctly
 	assert.Contains(t, result, "feature_enabled#true")
@@ -135,7 +135,7 @@ func TestAddGroupServiceFTContext_EmptyDatabase(t *testing.T) {
 	defer func() { Xc = originalXc }()
 
 	mockDAO := &MockGroupServiceCacheDao{}
-	mockDAO.On("GetGroupServiceFeatureTags", "EMPTY_PARTNER").Return(map[string]string{})
+	mockDAO.On("GetGroupServiceFeatureTags", db.GetDefaultTenantId(), "EMPTY_PARTNER").Return(map[string]string{})
 
 	partnerTagsSet := util.NewSet()
 	partnerTagsSet.Add("TEST_MODEL")
@@ -156,7 +156,7 @@ func TestAddGroupServiceFTContext_EmptyDatabase(t *testing.T) {
 	result := AddGroupServiceFTContextWithDAO(mockDAO, "estbMac", contextMap, false, log.Fields{})
 
 	// Verify database was called even with empty result
-	mockDAO.AssertCalled(t, "GetGroupServiceFeatureTags", "EMPTY_PARTNER")
+	mockDAO.AssertCalled(t, "GetGroupServiceFeatureTags", db.GetDefaultTenantId(), "EMPTY_PARTNER")
 
 	// Verify empty result handling
 	assert.Empty(t, result, "Should return empty tags for empty database response")
@@ -185,7 +185,7 @@ func TestAddGroupServiceFTContext_DatabaseDisabled(t *testing.T) {
 	result := AddGroupServiceFTContextWithDAO(mockDAO, "estbMac", contextMap, false, log.Fields{})
 
 	// Verify database was NOT called when disabled
-	mockDAO.AssertNotCalled(t, "GetGroupServiceFeatureTags")
+	mockDAO.AssertNotCalled(t, "GetGroupServiceFeatureTags", db.GetDefaultTenantId(), "TEST_PARTNER")
 
 	// Should return empty since database path is disabled
 	assert.Empty(t, result, "Should return empty when database is disabled")

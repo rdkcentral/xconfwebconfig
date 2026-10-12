@@ -105,7 +105,7 @@ type FirmwareConfigForMacRuleBeanResponse struct {
 	Properties               map[string]string `json:"properties,omitempty"`
 }
 
-// FirmwareConfig table
+// FirmwareConfig firmware_configs table
 type FirmwareConfig struct {
 	ID                       string            `json:"id"`
 	Updated                  int64             `json:"updated,omitempty"`
@@ -121,6 +121,14 @@ type FirmwareConfig struct {
 	RebootImmediately        bool              `json:"rebootImmediately"`
 	MandatoryUpdate          bool              `json:"mandatoryUpdate,omitempty"`
 	Properties               map[string]string `json:"properties,omitempty"`
+}
+
+func (obj *FirmwareConfig) GetUpdated() int64 {
+	return obj.Updated
+}
+
+func (obj *FirmwareConfig) SetUpdated(ts int64) {
+	obj.Updated = ts
 }
 
 func (obj *FirmwareConfig) SetApplicationType(appType string) {
@@ -183,7 +191,7 @@ func (obj *FirmwareConfig) Clone() (*FirmwareConfig, error) {
 	return cloneObj.(*FirmwareConfig), nil
 }
 
-func (obj *FirmwareConfig) Validate() error {
+func (obj *FirmwareConfig) Validate(tenantId string) error {
 	if obj == nil {
 		return errors.New("Firmware config is not present")
 	}
@@ -201,7 +209,7 @@ func (obj *FirmwareConfig) Validate() error {
 	}
 
 	for _, modelId := range obj.SupportedModelIds {
-		if !shared.IsExistModel(modelId) {
+		if !shared.IsExistModel(tenantId, modelId) {
 			return fmt.Errorf("Model: %s does not exist", modelId)
 		}
 	}
@@ -234,8 +242,8 @@ func (obj *FirmwareConfig) Validate() error {
 	return nil
 }
 
-func (obj *FirmwareConfig) ValidateName() error {
-	list, err := GetFirmwareConfigAsListDB()
+func (obj *FirmwareConfig) ValidateName(tenantId string) error {
+	list, err := GetFirmwareConfigAsListDB(tenantId)
 	if err != nil {
 		return err
 	}
@@ -244,7 +252,7 @@ func (obj *FirmwareConfig) ValidateName() error {
 		if config == nil || obj.ID == config.ID || obj.ApplicationType != config.ApplicationType {
 			continue
 		}
-		if strings.ToUpper(config.Description) == strings.ToUpper(obj.Description) {
+		if strings.EqualFold(config.Description, obj.Description) {
 			return errors.New("This description is already used in " + config.ID)
 		}
 	}
@@ -664,11 +672,11 @@ func (ff *FirmwareConfigFacade) PutAll(nmap map[string]interface{}) {
 	}
 }
 
-func GetFirmwareConfigOneDB(id string) (*FirmwareConfig, error) {
+func GetFirmwareConfigOneDB(tenantId string, id string) (*FirmwareConfig, error) {
 	if len(id) == 0 {
 		return nil, errors.New("id is empty")
 	}
-	inst, err := db.GetCachedSimpleDao().GetOne(db.TABLE_FIRMWARE_CONFIG, id)
+	inst, err := db.GetCachedSimpleDao().GetOne(tenantId, db.TABLE_FIRMWARE_CONFIGS, id)
 	if err != nil {
 		return nil, err
 	}
@@ -682,21 +690,21 @@ func GetFirmwareConfigOneDB(id string) (*FirmwareConfig, error) {
 	return fc, nil
 }
 
-func CreateFirmwareConfigOneDB(fc *FirmwareConfig) error {
+func CreateFirmwareConfigOneDB(tenantId string, fc *FirmwareConfig) error {
 	// create record in DB
 	if util.IsBlank(fc.ID) {
 		fc.ID = uuid.New().String()
 	}
 	fc.Updated = util.GetTimestamp()
-	return db.GetCachedSimpleDao().SetOne(db.TABLE_FIRMWARE_CONFIG, fc.ID, fc)
+	return db.GetCachedSimpleDao().SetOne(tenantId, db.TABLE_FIRMWARE_CONFIGS, fc.ID, fc)
 }
 
-func DeleteOneFirmwareConfig(id string) error {
-	return db.GetCachedSimpleDao().DeleteOne(db.TABLE_FIRMWARE_CONFIG, id)
+func DeleteOneFirmwareConfig(tenantId string, id string) error {
+	return db.GetCachedSimpleDao().DeleteOne(tenantId, db.TABLE_FIRMWARE_CONFIGS, id)
 }
 
-func GetFirmwareConfigAsListDB() ([]*FirmwareConfig, error) {
-	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(db.TABLE_FIRMWARE_CONFIG, 0)
+func GetFirmwareConfigAsListDB(tenantId string) ([]*FirmwareConfig, error) {
+	rulelst, err := db.GetCachedSimpleDao().GetAllAsList(tenantId, db.TABLE_FIRMWARE_CONFIGS, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -714,8 +722,8 @@ func GetFirmwareConfigAsListDB() ([]*FirmwareConfig, error) {
 	return lst, nil
 }
 
-func GetFirmwareVersion(id string) string {
-	fc, err := GetFirmwareConfigOneDB(id)
+func GetFirmwareVersion(tenantId string, id string) string {
+	fc, err := GetFirmwareConfigOneDB(tenantId, id)
 	if err != nil {
 		log.Error(fmt.Sprintf("GetFirmwareVersion: %v", err))
 		return ""
