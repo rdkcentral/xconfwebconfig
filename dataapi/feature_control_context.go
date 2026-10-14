@@ -139,7 +139,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 		accountId := xAccountId.GetAccountId()
 		accountType := xAccountId.GetAccountType()
 		contextMap[common.ACCOUNT_ID] = accountId
-		contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
+		contextMap[common.ACCOUNT_TYPE] = strings.ToLower(accountType)
 		contextMap[common.ACCOUNT_HASH] = util.CalculateHash(contextMap[common.ACCOUNT_ID])
 		log.WithFields(fields).Debug("AddContextForPods: Successfully fetched AcntId and AcntType from Grp Svc")
 
@@ -168,7 +168,7 @@ func getAccountInfoFromGrpService(ws *xhttp.XconfServer, contextMap map[string]s
 		}
 
 		if accountType, ok := accountData["Type"]; ok && accountType != "" {
-			contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
+			contextMap[common.ACCOUNT_TYPE] = strings.ToLower(accountType)
 		}
 		if accountState, ok := accountData["State"]; ok && accountState != "" {
 			contextMap[common.ACCOUNT_STATE] = accountState
@@ -385,7 +385,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 					accountId = xAccountId.GetAccountId()
 					accountType := xAccountId.GetAccountType()
 					contextMap[common.ACCOUNT_ID] = accountId
-					contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
+					contextMap[common.ACCOUNT_TYPE] = strings.ToLower(accountType)
 					td = &AccountServiceData{
 						AccountId: contextMap[common.ACCOUNT_ID],
 					}
@@ -414,7 +414,7 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 						}
 
 						if accountType, ok := accountData["Type"]; ok && accountType != "" {
-							contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
+							contextMap[common.ACCOUNT_TYPE] = strings.ToLower(accountType)
 						}
 
 						if accountState, ok := accountData["State"]; ok && accountState != "" {
@@ -567,7 +567,7 @@ func AddFeatureControlContext(ws *xhttp.XconfServer, r *http.Request, contextMap
 					}
 
 					if accountType, ok := accountData["Type"]; ok && accountType != "" {
-						contextMap[common.ACCOUNT_TYPE] = strings.ToUpper(accountType)
+						contextMap[common.ACCOUNT_TYPE] = strings.ToLower(accountType)
 					}
 
 					if State, ok := accountData["State"]; ok {
