@@ -394,6 +394,13 @@ func AddFeatureControlContextFromAccountService(ws *xhttp.XconfServer, contextMa
 					if err != nil {
 						log.WithFields(fields).Errorf("AddFeatureControlContextFromAccountService Error getting accountProducts info from Grp Svc, err=%v", err)
 					} else {
+
+						if td == nil {
+							td = &AccountServiceData{
+								AccountId: contextMap[common.ACCOUNT_ID],
+							}
+						}
+
 						if partner, ok := accountData["Partner"]; ok && partner != "" {
 							td.PartnerId = partner //adding PartnerId to AccountServiceData
 							contextMap[common.PARTNER_ID] = strings.ToUpper(partner)
