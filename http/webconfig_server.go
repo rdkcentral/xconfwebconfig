@@ -134,7 +134,7 @@ func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
 
 	return &tls.Config{
 		RootCAs:            rootCAs,
-		InsecureSkipVerify: conf.GetBoolean("xconfwebconfig.http_client.insecure_skip_verify", true),
+		InsecureSkipVerify: conf.GetBoolean("xconfwebconfig.http_client.insecure_skip_verify", false),
 		Certificates:       certs,
 	}, nil
 }
