@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/rdkcentral/xconfwebconfig/common"
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -88,7 +89,7 @@ func (c *DefaultDeviceService) SetDeviceServiceHost(host string) {
 }
 
 func (c *DefaultDeviceService) GetMeshPodAccountBySerialNum(serialNum string, fields log.Fields) (DeviceServiceObject, error) {
-	url := fmt.Sprintf(c.getPodUrlTemplate, c.DeviceServiceHost(), serialNum)
+	url := fmt.Sprintf(c.getPodUrlTemplate, c.DeviceServiceHost(), url.PathEscape(serialNum))
 	headers := map[string]string{
 		common.HeaderUserAgent: common.HeaderXconfDataService,
 	}

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/go-akka/configuration"
@@ -410,4 +411,23 @@ func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_MultipleValidRequests
 			assert.Equal(t, tc.expected, result.DeviceServiceData.AccountId)
 		})
 	}
+}
+
+func TestDefaultDeviceService_GetMeshPodAccountBySerialNum_EscapesPathSegment(t *testing.T) {
+	gotPath := ""
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.EscapedPath()
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":200,"message":"Success","data":{"account_id":"acc-1"}}`))
+	}))
+	defer mockServer.Close()
+	service := &DefaultDeviceService{
+		HttpClient:        NewHttpClient(configuration.ParseString(""), "device-service", nil),
+		host:              mockServer.URL,
+		getPodUrlTemplate: "%s/device/%s",
+	}
+	_, err := service.GetMeshPodAccountBySerialNum("serial/../123?x=y", log.Fields{"test": "path_escape_regression"})
+
+	assert.NoError(t, err)
+	assert.Equal(t, fmt.Sprintf("/device/%s", url.PathEscape("serial/../123?x=y")), gotPath)
 }
