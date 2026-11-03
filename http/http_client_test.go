@@ -1,10 +1,12 @@
 package http
 
 import (
+	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-akka/configuration"
 	"github.com/rdkcentral/xconfwebconfig/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -21,6 +23,35 @@ func TestNewHttpClient(t *testing.T) {
 	client := NewHttpClient(sc.Config, "test_service", nil)
 	assert.NotNil(t, client)
 	assert.NotNil(t, client.Client) // Should have embedded http.Client
+}
+
+func TestNewHttpClientTlsOverrides(t *testing.T) {
+	conf := configuration.ParseString(`
+xconfwebconfig {
+    svc_a { tls_server_name = "a.example.com" }
+    svc_b { tls_server_name = "" }
+    svc_c { tls_insecure_skip_verify = false }
+}`)
+	shared := &tls.Config{InsecureSkipVerify: false}
+	sharedSkip := &tls.Config{InsecureSkipVerify: true}
+	tlsOf := func(c *HttpClient) *tls.Config { return c.Client.Transport.(*http.Transport).TLSClientConfig }
+
+	// server name override is applied on a clone, shared config untouched
+	tlsA := tlsOf(NewHttpClient(conf, "svc_a", shared))
+	assert.Equal(t, "a.example.com", tlsA.ServerName)
+	assert.False(t, tlsA.InsecureSkipVerify)
+	assert.NotSame(t, shared, tlsA)
+	assert.Equal(t, "", shared.ServerName)
+
+	// no overrides keeps the shared config as-is, including inherited skip verify
+	assert.Same(t, shared, tlsOf(NewHttpClient(conf, "svc_b", shared)))
+	assert.Same(t, sharedSkip, tlsOf(NewHttpClient(conf, "svc_b", sharedSkip)))
+
+	// per-service tls_insecure_skip_verify is ignored; only http_client.insecure_skip_verify applies
+	assert.Same(t, sharedSkip, tlsOf(NewHttpClient(conf, "svc_c", sharedSkip)))
+
+	// nil shared config still gets the override
+	assert.Equal(t, "a.example.com", tlsOf(NewHttpClient(conf, "svc_a", nil)).ServerName)
 }
 
 func TestAddMoracideTags(t *testing.T) {

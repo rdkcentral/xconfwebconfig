@@ -28,10 +28,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rdkcentral/xconfwebconfig/common"
-
 	"github.com/go-akka/configuration"
 	"github.com/google/uuid"
+	"github.com/rdkcentral/xconfwebconfig/common"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -77,6 +76,8 @@ func NewHttpClient(conf *configuration.Config, serviceName string, tlsConfig *tl
 	confKey = fmt.Sprintf("xconfwebconfig.%v.retry_in_msecs", serviceName)
 	retryInMsecs := int(conf.GetInt32(confKey, defaultRetriesInMsecs))
 
+	tlsConfig = ApplyServiceTlsOverrides(conf, serviceName, tlsConfig)
+
 	return &HttpClient{
 		Client: &http.Client{
 			Transport: &http.Transport{
@@ -96,6 +97,26 @@ func NewHttpClient(conf *configuration.Config, serviceName string, tlsConfig *tl
 		retries:      retries,
 		retryInMsecs: retryInMsecs,
 	}
+}
+
+// ApplyServiceTlsOverrides returns a per-service copy of tlsConfig when the service
+// defines tls_server_name; otherwise the shared config is returned.
+func ApplyServiceTlsOverrides(conf *configuration.Config, serviceName string, tlsConfig *tls.Config) *tls.Config {
+	confKey := fmt.Sprintf("xconfwebconfig.%v.tls_server_name", serviceName)
+	serverName := strings.TrimSpace(conf.GetString(confKey))
+	if serverName == "" {
+		return tlsConfig
+	}
+
+	// Clone so the override does not leak into the shared TLS config used by other services
+	if tlsConfig != nil {
+		tlsConfig = tlsConfig.Clone()
+	} else {
+		tlsConfig = &tls.Config{}
+	}
+	tlsConfig.ServerName = serverName
+	log.Infof("%s: TLS ServerName override set to %s", serviceName, serverName)
+	return tlsConfig
 }
 
 // Do is a wrapper around http.Client.Do
