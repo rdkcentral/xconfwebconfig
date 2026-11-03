@@ -119,6 +119,11 @@ func ApplyServiceTlsOverrides(conf *configuration.Config, serviceName string, tl
 	return tlsConfig
 }
 
+// SetTlsConfig must be called before the client makes any request.
+func (c *HttpClient) SetTlsConfig(tlsConfig *tls.Config) {
+	c.Client.Transport.(*http.Transport).TLSClientConfig = tlsConfig
+}
+
 // Do is a wrapper around http.Client.Do
 // Inputs: method, url, headers, body as bytes (bbytes), fields for logging (baseFields),
 //

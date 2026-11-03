@@ -212,6 +212,9 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 			panic("xconfwebconfig.partner_services.sat.host is required when partner services are enabled")
 		}
 		partnerSatConnector.SetSatServiceHost(partnerSatHost)
+		if c, ok := partnerSatConnector.(*DefaultSatService); ok {
+			c.SetTlsConfig(ApplyServiceTlsOverrides(conf, "partner_services.sat", tlsConfig))
+		}
 
 		partnerSatClientID := os.Getenv("PARTNER_SAT_CLIENT_ID")
 		if util.IsBlank(partnerSatClientID) {
@@ -238,6 +241,9 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 			panic("Partner host is required when partner services are enabled")
 		}
 		partnerAccountConnector.SetAccountServiceHost(partnerAccountHost)
+		if c, ok := partnerAccountConnector.(*DefaultAccountService); ok {
+			c.SetTlsConfig(ApplyServiceTlsOverrides(conf, "partner_services.account", tlsConfig))
+		}
 	}
 
 	return &XconfServer{
