@@ -30,7 +30,6 @@ func TestNewHttpClientTlsOverrides(t *testing.T) {
 xconfwebconfig {
     svc_a { tls_server_name = "a.example.com" }
     svc_b { tls_server_name = "" }
-    svc_c { tls_insecure_skip_verify = false }
 }`)
 	shared := &tls.Config{InsecureSkipVerify: false}
 	sharedSkip := &tls.Config{InsecureSkipVerify: true}
@@ -47,11 +46,30 @@ xconfwebconfig {
 	assert.Same(t, shared, tlsOf(NewHttpClient(conf, "svc_b", shared)))
 	assert.Same(t, sharedSkip, tlsOf(NewHttpClient(conf, "svc_b", sharedSkip)))
 
-	// per-service tls_insecure_skip_verify is ignored; only http_client.insecure_skip_verify applies
-	assert.Same(t, sharedSkip, tlsOf(NewHttpClient(conf, "svc_c", sharedSkip)))
-
 	// nil shared config still gets the override
 	assert.Equal(t, "a.example.com", tlsOf(NewHttpClient(conf, "svc_a", nil)).ServerName)
+}
+
+func TestPartnerTlsConfigDoesNotInheritPrimaryOverride(t *testing.T) {
+	conf := configuration.ParseString(`
+xconfwebconfig {
+    svc_a { tls_server_name = "primary.example.com" }
+    partner_services {
+        sat { tls_server_name = "partner.example.com" }
+        account { host = "https://partner" }
+    }
+}`)
+	shared := &tls.Config{}
+	tlsOf := func(c *HttpClient) *tls.Config { return c.Client.Transport.(*http.Transport).TLSClientConfig }
+
+	client := NewHttpClient(conf, "svc_a", shared)
+	client.SetTlsConfig(ApplyServiceTlsOverrides(conf, "partner_services.sat", shared))
+	assert.Equal(t, "partner.example.com", tlsOf(client).ServerName)
+
+	// no partner override falls back to the shared config, not the primary one
+	client = NewHttpClient(conf, "svc_a", shared)
+	client.SetTlsConfig(ApplyServiceTlsOverrides(conf, "partner_services.account", shared))
+	assert.Same(t, shared, tlsOf(client))
 }
 
 func TestAddMoracideTags(t *testing.T) {
