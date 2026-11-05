@@ -18,10 +18,33 @@
 package http
 
 import (
+	"crypto/tls"
+	"net/http"
 	"testing"
 
+	"github.com/go-akka/configuration"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestDefaultSatService_GetHttpClient(t *testing.T) {
+	assert.Nil(t, (&DefaultSatService{}).GetHttpClient())
+
+	conf := configuration.ParseString(`
+xconfwebconfig {
+    xconf { sat_service_name = "sat_service" }
+    sat_service {
+        client_id = "id"
+        client_secret = "secret"
+        host = "https://sat.example.com"
+        tls_server_name = "sat.internal.example.com"
+    }
+}`)
+	connector := NewSatServiceConnector(conf, &tls.Config{}, nil)
+	client := connector.GetHttpClient()
+	assert.NotNil(t, client)
+	assert.Same(t, connector.(*DefaultSatService).HttpClient.Client, client)
+	assert.Equal(t, "sat.internal.example.com", client.Transport.(*http.Transport).TLSClientConfig.ServerName)
+}
 
 // Test DefaultSatService getter/setter functions
 func TestDefaultSatService_SatServiceName(t *testing.T) {
