@@ -3,6 +3,8 @@
 * [XConf DataService Overview](#xconf-dataservice-overview)
 * [Architecture](#architecture)
 * [Run the application](#run-the-application)
+* [Breaking Changes](#breaking-changes)
+    * [Removal of enable_cert_validation](#removal-of-enable_cert_validation)
 * [Endpoints](#endpoints)
     * [XConf Primary API](#xconf-primary-api)
     * [Device Configuration Manager](#device-configuration-manager-dcm)
@@ -64,6 +66,30 @@ mkdir -p /app/logs/xconfwebconfig
 cd .../xconfwebconfig
 bin/xconfwebconfig-linux-amd64 -f config/sample_xconfwebconfig.conf
 ```
+
+## Breaking Changes
+
+### Removal of enable_cert_validation
+
+The `xconfwebconfig.http_client.enable_cert_validation` config flag has been removed and is now ignored. TLS for outbound HTTP clients is controlled by the following settings in the `xconfwebconfig.http_client` block:
+
+| Key | Legacy fallback key | Default | Description |
+|---|---|---|---|
+| `ca_cert_file` | `ca_comodo_cert_file` | `""` | CA used to verify upstream server certs (PEM). Blank = system CA store |
+| `insecure_skip_verify` | – | `false` | Skip upstream server cert verification |
+| `client_cert_file` | `cert_file` | `""` | Client certificate (PEM). Blank = no mTLS |
+| `client_key_file` | `private_key_file` | `""` | Client private key (PEM). Required if `client_cert_file` is set |
+
+Behavior changes:
+* **Server cert verification is now on by default.** Previously, with `enable_cert_validation = true` (the default), verification was always skipped. Now upstream certs are verified against `ca_cert_file`, or the system CA store if it is blank.
+* **CA and client certs are optional.** Previously both were required unless `enable_cert_validation = false`. Now a blank CA uses the system CA store, and a blank client cert/key disables mTLS.
+* **The service fails at startup on an invalid TLS config.** This includes an unreadable or unparsable CA file, an invalid client key pair, or only one of `client_cert_file`/`client_key_file` being set.
+
+Migration:
+* Remove `enable_cert_validation` from your config.
+* If you had `enable_cert_validation = false`, cert files were never loaded. Remove or blank out any `ca_comodo_cert_file`, `cert_file`, and `private_key_file` entries unless you want them used, because they are now read as fallbacks and must point to valid files.
+* If you relied on the old default, either set `ca_cert_file` to the CA that signs your upstream services, or set `insecure_skip_verify = true` to keep the old no-verification behavior (not recommended).
+* To use mTLS, set both `client_cert_file` and `client_key_file`.
 
 ## Endpoints
 
