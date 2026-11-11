@@ -127,7 +127,7 @@ func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
 		certs = append(certs, cert)
 		log.Info("client cert configured; mTLS enabled for outbound HTTP clients")
 	} else if !util.IsBlank(certFile) || !util.IsBlank(privateKeyFile) {
-		log.Warn("mTLS disabled: client_cert_file and client_key_file must both be set")
+		return nil, fmt.Errorf("incomplete mTLS configuration: client_cert_file and client_key_file must both be set")
 	} else {
 		log.Info("no client cert configured; mTLS disabled for outbound HTTP clients")
 	}
