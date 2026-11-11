@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/rdkcentral/xconfwebconfig/util"
@@ -39,6 +40,9 @@ type SatServiceConnector interface {
 	SetTokenUrlTemplate(template string)
 	SetTokenPartnerUrlTemplate(template string)
 	GetSatTokenFromSatService(fields log.Fields, vargs ...string) (*SatServiceResponse, error)
+	// GetHttpClient returns the client configured for the SAT service host (TLS, timeouts),
+	// e.g. for fetching SAT signing keys from the same host. May return nil.
+	GetHttpClient() *http.Client
 }
 
 type DefaultSatService struct {
@@ -148,6 +152,13 @@ func (c *DefaultSatService) SetTokenUrlTemplate(template string) {
 
 func (c *DefaultSatService) SetTokenPartnerUrlTemplate(template string) {
 	c.tokenPartnerUrlTemplate = template
+}
+
+func (c *DefaultSatService) GetHttpClient() *http.Client {
+	if c.HttpClient == nil {
+		return nil
+	}
+	return c.HttpClient.Client
 }
 
 func (c *DefaultSatService) GetSatTokenFromSatService(fields log.Fields, vargs ...string) (*SatServiceResponse, error) {

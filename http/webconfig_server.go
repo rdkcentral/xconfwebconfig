@@ -23,7 +23,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -100,40 +100,42 @@ type AppMetricsConfig struct {
 }
 
 func NewTlsConfig(conf *configuration.Config) (*tls.Config, error) {
-	certValidationEnabled := conf.GetBoolean("xconfwebconfig.http_client.enable_cert_validation", true)
-	if !certValidationEnabled {
-		log.Warn("TLS certificate validation is disabled by config flag")
-		return nil, nil
-	}
-	caCertPEM, err := ioutil.ReadFile(conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file"))
-	if err != nil {
-		return nil, fmt.Errorf("unable to read comodo cert file %s with error: %+v",
-			conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file"), err)
-	}
-
-	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM(caCertPEM)
-	if !ok {
-		return nil, fmt.Errorf("unable to append cert from pem: %+v", err)
+	// Load CA certificate for HTTP client, using legacy keys as fallbacks
+	caFile := conf.GetString("xconfwebconfig.http_client.ca_cert_file", conf.GetString("xconfwebconfig.http_client.ca_comodo_cert_file"))
+	// nil RootCAs falls back to the system CA store
+	var rootCAs *x509.CertPool
+	if !util.IsBlank(caFile) {
+		caCert, err := os.ReadFile(caFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA certificate file %s: %w", caFile, err)
+		}
+		rootCAs = x509.NewCertPool()
+		if !rootCAs.AppendCertsFromPEM(caCert) {
+			return nil, fmt.Errorf("failed to parse CA certificate from %s", caFile)
+		}
 	}
 
-	certFile := conf.GetString("xconfwebconfig.http_client.cert_file")
-	if len(certFile) == 0 {
-		return nil, fmt.Errorf("missing file %v", certFile)
-	}
-	privateKeyFile := conf.GetString("xconfwebconfig.http_client.private_key_file")
-	if len(privateKeyFile) == 0 {
-		return nil, fmt.Errorf("missing file %v", privateKeyFile)
-	}
-	cert, err := tls.LoadX509KeyPair(certFile, privateKeyFile)
-	if err != nil {
-		return nil, err
+	// Load client certificate for HTTP client for mTLS, using legacy keys as fallbacks)
+	var certs []tls.Certificate
+	certFile := conf.GetString("xconfwebconfig.http_client.client_cert_file", conf.GetString("xconfwebconfig.http_client.cert_file"))
+	privateKeyFile := conf.GetString("xconfwebconfig.http_client.client_key_file", conf.GetString("xconfwebconfig.http_client.private_key_file"))
+	if !util.IsBlank(certFile) && !util.IsBlank(privateKeyFile) {
+		cert, err := tls.LoadX509KeyPair(certFile, privateKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load client key pair %s/%s: %w", certFile, privateKeyFile, err)
+		}
+		certs = append(certs, cert)
+		log.Info("client cert configured; mTLS enabled for outbound HTTP clients")
+	} else if !util.IsBlank(certFile) || !util.IsBlank(privateKeyFile) {
+		return nil, fmt.Errorf("incomplete mTLS configuration: client_cert_file and client_key_file must both be set")
+	} else {
+		log.Info("no client cert configured; mTLS disabled for outbound HTTP clients")
 	}
 
 	return &tls.Config{
-		RootCAs:            roots,
-		InsecureSkipVerify: true,
-		Certificates:       []tls.Certificate{cert},
+		RootCAs:            rootCAs,
+		InsecureSkipVerify: conf.GetBoolean("xconfwebconfig.http_client.insecure_skip_verify", false),
+		Certificates:       certs,
 	}, nil
 }
 
@@ -210,6 +212,9 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 			panic("xconfwebconfig.partner_services.sat.host is required when partner services are enabled")
 		}
 		partnerSatConnector.SetSatServiceHost(partnerSatHost)
+		if c, ok := partnerSatConnector.(*DefaultSatService); ok {
+			c.SetTlsConfig(ApplyServiceTlsOverrides(conf, "partner_services.sat", tlsConfig))
+		}
 
 		partnerSatClientID := os.Getenv("PARTNER_SAT_CLIENT_ID")
 		if util.IsBlank(partnerSatClientID) {
@@ -236,6 +241,9 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 			panic("Partner host is required when partner services are enabled")
 		}
 		partnerAccountConnector.SetAccountServiceHost(partnerAccountHost)
+		if c, ok := partnerAccountConnector.(*DefaultAccountService); ok {
+			c.SetTlsConfig(ApplyServiceTlsOverrides(conf, "partner_services.account", tlsConfig))
+		}
 	}
 
 	return &XconfServer{
@@ -273,7 +281,7 @@ func (s *XconfServer) TestingMiddleware(next http.Handler) http.Handler {
 
 		if r.Method == "POST" {
 			if r.Body != nil {
-				if rbytes, err := ioutil.ReadAll(r.Body); err == nil {
+				if rbytes, err := io.ReadAll(r.Body); err == nil {
 					xw.SetBody(string(rbytes))
 				}
 			} else {
@@ -412,7 +420,7 @@ func (s *XconfServer) LogRequestStarts(w http.ResponseWriter, r *http.Request) X
 	if r.Method == "POST" || r.Method == "PUT" {
 		var body string
 		if r.Body != nil {
-			b, err := ioutil.ReadAll(r.Body)
+			b, err := io.ReadAll(r.Body)
 			if err != nil {
 				copyFields["error"] = err
 				log.WithFields(copyFields).Error("request starts")

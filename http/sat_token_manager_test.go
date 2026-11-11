@@ -19,6 +19,7 @@ package http
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -72,6 +73,10 @@ func (m *MockSatServiceConnector) SetTokenUrlTemplate(template string) {
 
 func (m *MockSatServiceConnector) SetTokenPartnerUrlTemplate(template string) {
 	m.tokenPartnerUrlTemplate = template
+}
+
+func (m *MockSatServiceConnector) GetHttpClient() *http.Client {
+	return nil
 }
 
 func (m *MockSatServiceConnector) GetSatTokenFromSatService(fields log.Fields, vargs ...string) (*SatServiceResponse, error) {
