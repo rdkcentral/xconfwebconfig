@@ -18,13 +18,94 @@
 package logupload
 
 import (
+	"bytes"
 	"strconv"
 	"strings"
 	"testing"
 
+	re "github.com/rdkcentral/xconfwebconfig/rulesengine"
 	log "github.com/sirupsen/logrus"
 	"gotest.tools/assert"
 )
+
+func TestCopySettingsRecordsAppliedRules(t *testing.T) {
+	testValue := "XG1v4"
+	rule := &DCMGenericRule{
+		ID:   "rule-123",
+		Name: "model-rule",
+		Rule: re.Rule{
+			Condition: &re.Condition{
+				FreeArg: &re.FreeArg{Name: "model"},
+				FixedArg: &re.FixedArg{
+					Bean: &re.Bean{Value: re.Value{JLString: &testValue}},
+				},
+				Operation: re.StandardOperationIs,
+			},
+		},
+	}
+
+	tests := []struct {
+		name         string
+		settingsType string
+		settings     *Settings
+	}{
+		{name: "log upload", settingsType: "logUpload", settings: &Settings{GroupName: "group-1"}},
+		{name: "VOD", settingsType: "vod", settings: &Settings{VodSettingsName: "vod-1"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fields := log.Fields{"requestId": "request-1"}
+			output := captureSettingsLogs(t, func() {
+				CopySettings(NewSettings(0), test.settings, rule, map[string]string{}, fields)
+			})
+
+			assert.Equal(t, output, "")
+			assert.DeepEqual(t, fields[test.settingsType+"Rule"], log.Fields{
+				"ruleId":        "rule-123",
+				"ruleName":      "model-rule",
+				"ruleCondition": rule.ToStringOnlyBaseProperties(),
+			})
+			assert.Equal(t, fields["requestId"], "request-1")
+		})
+	}
+
+	t.Run("both settings types", func(t *testing.T) {
+		fields := log.Fields{}
+		CopySettings(NewSettings(0), &Settings{GroupName: "group-1", VodSettingsName: "vod-1"}, rule, map[string]string{}, fields)
+		assert.Assert(t, fields["logUploadRule"] != nil)
+		assert.Assert(t, fields["vodRule"] != nil)
+	})
+}
+
+func TestCopySettingsDoesNotRecordRulesWhenSettingsAreNotApplied(t *testing.T) {
+	fields := log.Fields{}
+	output := captureSettingsLogs(t, func() {
+		CopySettings(NewSettings(0), &Settings{}, &DCMGenericRule{}, map[string]string{}, fields)
+	})
+
+	assert.Equal(t, output, "")
+	assert.Equal(t, len(fields), 0)
+}
+
+func captureSettingsLogs(t *testing.T, run func()) string {
+	t.Helper()
+	var output bytes.Buffer
+	logger := log.StandardLogger()
+	previousOutput := logger.Out
+	previousFormatter := logger.Formatter
+	previousLevel := logger.GetLevel()
+	logger.SetOutput(&output)
+	logger.SetFormatter(&log.JSONFormatter{})
+	logger.SetLevel(log.InfoLevel)
+	t.Cleanup(func() {
+		logger.SetOutput(previousOutput)
+		logger.SetFormatter(previousFormatter)
+		logger.SetLevel(previousLevel)
+	})
+	run()
+	return strings.TrimSpace(output.String())
+}
 
 func TestGetOffset(t *testing.T) {
 	macAddressList := []string{"DB:87:06:0D:63:F7", "00:1B:44:11:3A:B7", "00:1B:44:11:3A:B6", "52:26:C6:BA:22:F1", "57:16:E6:CA:85:03", "79:76:B4:5E:11:27", "F4:9C:E2:5F:08:94", "4E:47:F4:67:12:BC"}

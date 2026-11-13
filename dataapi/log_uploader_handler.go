@@ -108,15 +108,24 @@ func GetContextMapAndSettingTypes(r *http.Request) (map[string]string, []string)
 
 func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2Settings bool) {
 	// ==== log pre-processing ====
-	var fields log.Fields
-	if xw, ok := w.(*xhttp.XResponseWriter); ok {
+	fields := log.Fields{}
+	contextMap, settingTypes := GetContextMapAndSettingTypes(r)
+	xw, ok := w.(*xhttp.XResponseWriter)
+	if ok {
 		fields = xw.Audit()
-	} else {
+	}
+	defer func() {
+		status := http.StatusInternalServerError
+		if ok && xw.Status() != 0 {
+			status = xw.Status()
+		}
+		logSettingsRequest(contextMap, fields, status)
+	}()
+	if !ok {
 		xhttp.Error(w, http.StatusInternalServerError, common.NotOK)
 		return
 	}
 
-	contextMap, settingTypes := GetContextMapAndSettingTypes(r)
 	fields[common.ESTB_MAC_ADDRESS] = contextMap[common.ESTB_MAC_ADDRESS]
 	coastTags, _ := AddLogUploaderContext(Ws, r, contextMap, true, fields)
 	xconfTags := AddGroupServiceFTContext(Ws, common.ESTB_MAC_ADDRESS, contextMap, false, fields)
@@ -211,4 +220,18 @@ func GetLogUploaderSettings(w http.ResponseWriter, r *http.Request, isTelemetry2
 			xhttp.WriteXconfResponse(w, 200, response)
 		}
 	}
+}
+
+func logSettingsRequest(context map[string]string, fields log.Fields, status int) {
+	eventFields := common.CopyLogFields(fields)
+	eventFields["status"] = status
+	for _, key := range []string{
+		common.ESTB_MAC_ADDRESS, common.ESTB_IP, common.MODEL, common.FIRMWARE_VERSION,
+		common.ENV, common.APPLICATION_TYPE, common.TENANT_ID, common.PARTNER_ID, common.CHECK_NOW,
+	} {
+		if value := context[key]; value != "" {
+			eventFields[key] = value
+		}
+	}
+	log.WithFields(common.FilterLogFields(eventFields)).Info("SettingsUtil XCONF_LOG")
 }
