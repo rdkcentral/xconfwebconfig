@@ -18,15 +18,155 @@
 package dataapi
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gorilla/mux"
 	"github.com/rdkcentral/xconfwebconfig/common"
+	xhttp "github.com/rdkcentral/xconfwebconfig/http"
 	"github.com/rdkcentral/xconfwebconfig/shared"
+	"github.com/rdkcentral/xconfwebconfig/shared/logupload"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestSettingsRequestCompletionLog(t *testing.T) {
+	for _, status := range []int{http.StatusOK, http.StatusNotFound} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			fields := log.Fields{
+				"audit_id":   "request-1",
+				"moneytrace": "must-not-be-logged",
+			}
+			entries := captureSettingsRequestEvents(t, func() {
+				if status == http.StatusOK {
+					logupload.CopySettings(logupload.NewSettings(0), &logupload.Settings{
+						GroupName: "group-1", VodSettingsName: "vod-1",
+					}, &logupload.DCMGenericRule{ID: "rule-1", Name: "matched-rule"}, map[string]string{}, fields)
+				}
+				logSettingsRequest(map[string]string{
+					common.ESTB_MAC_ADDRESS: "08:76:ff:28:8e:50",
+					common.MODEL:            "TCA203",
+					common.FIRMWARE_VERSION: "10.06.07.000000",
+					common.APPLICATION_TYPE: shared.XHOME,
+					common.ENV:              "PROD",
+					common.PARTNER_ID:       "cox",
+					"unrelated":             "must-not-be-logged",
+				}, fields, status)
+			})
+			require.Len(t, entries, 1)
+			entry := entries[0]
+			assert.Equal(t, "info", entry["level"])
+			assert.Equal(t, float64(status), entry["status"])
+			assert.Equal(t, "request-1", entry["audit_id"])
+			assert.Equal(t, "08:76:ff:28:8e:50", entry[common.ESTB_MAC_ADDRESS])
+			assert.Equal(t, "TCA203", entry[common.MODEL])
+			assert.Equal(t, "10.06.07.000000", entry[common.FIRMWARE_VERSION])
+			assert.Equal(t, shared.XHOME, entry[common.APPLICATION_TYPE])
+			assert.Equal(t, "PROD", entry[common.ENV])
+			assert.Equal(t, "cox", entry[common.PARTNER_ID])
+			assert.NotContains(t, entry, "moneytrace")
+			assert.NotContains(t, entry, "unrelated")
+			assert.NotContains(t, fields, "status")
+			if status == http.StatusOK {
+				for _, key := range []string{"logUploadRule", "vodRule"} {
+					rule, ok := entry[key].(map[string]interface{})
+					require.True(t, ok)
+					assert.Equal(t, "rule-1", rule["ruleId"])
+					assert.Equal(t, "matched-rule", rule["ruleName"])
+					assert.Contains(t, rule, "ruleCondition")
+				}
+			} else {
+				assert.NotContains(t, entry, "logUploadRule")
+				assert.NotContains(t, entry, "vodRule")
+			}
+		})
+	}
+}
+
+func TestGetLogUploaderSettingsLogsEarlyError(t *testing.T) {
+	for _, handler := range []http.HandlerFunc{GetLogUploaderSettingsHandler, GetLogUploaderT2SettingsHandler} {
+		w := httptest.NewRecorder()
+		entries := captureSettingsRequestEvents(t, func() {
+			handler(w, httptest.NewRequest(http.MethodGet, "/loguploader/getSettings?model=TCA203", nil))
+		})
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		require.Len(t, entries, 1)
+		assert.Equal(t, float64(http.StatusInternalServerError), entries[0]["status"])
+		assert.Equal(t, "TCA203", entries[0][common.MODEL])
+	}
+}
+
+func TestGetLogUploaderSettingsLogsNoSettings(t *testing.T) {
+	originalConfig, originalHTTPServer := Xc, xhttp.Ws
+	manager := xhttp.GetSatTokenManager()
+	if manager == nil {
+		xhttp.InitSatTokenManager(nil)
+		manager = xhttp.GetSatTokenManager()
+	}
+	originalTestOnly := manager.TestOnly()
+	manager.SetTestOnly(true)
+	Xc = &XconfConfigs{}
+	t.Cleanup(func() {
+		Xc, xhttp.Ws = originalConfig, originalHTTPServer
+		manager.SetTestOnly(originalTestOnly)
+	})
+
+	for _, query := range []string{"", "&checkNow=true"} {
+		for _, handler := range []http.HandlerFunc{GetLogUploaderSettingsHandler, GetLogUploaderT2SettingsHandler} {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet,
+				"/loguploader/getSettings/xhome?model=TCA203&estbMacAddress=08:76:ff:28:8e:50&partnerId=cox"+query, nil)
+			req = mux.SetURLVars(req, map[string]string{common.APPLICATION_TYPE: shared.XHOME})
+			entries := captureSettingsRequestEvents(t, func() {
+				handler(xhttp.NewXResponseWriter(w, log.Fields{"audit_id": "request-404"}), req)
+			})
+			assert.Equal(t, http.StatusNotFound, w.Code)
+			require.Len(t, entries, 1)
+			assert.Equal(t, float64(http.StatusNotFound), entries[0]["status"])
+			assert.Equal(t, shared.XHOME, entries[0][common.APPLICATION_TYPE])
+			assert.Equal(t, "TCA203", entries[0][common.MODEL])
+			assert.Equal(t, "request-404", entries[0]["audit_id"])
+			assert.NotContains(t, entries[0], "logUploadRule")
+			assert.NotContains(t, entries[0], "vodRule")
+		}
+	}
+}
+
+func captureSettingsRequestEvents(t *testing.T, run func()) []map[string]interface{} {
+	t.Helper()
+	logger := log.StandardLogger()
+	output, formatter, level := logger.Out, logger.Formatter, logger.GetLevel()
+	var buffer bytes.Buffer
+	logger.SetOutput(&buffer)
+	logger.SetFormatter(&log.JSONFormatter{})
+	logger.SetLevel(log.InfoLevel)
+	defer func() {
+		logger.SetOutput(output)
+		logger.SetFormatter(formatter)
+		logger.SetLevel(level)
+	}()
+	run()
+
+	var entries []map[string]interface{}
+	decoder := json.NewDecoder(&buffer)
+	for {
+		var entry map[string]interface{}
+		err := decoder.Decode(&entry)
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+		if entry["msg"] == "SettingsUtil XCONF_LOG" {
+			entries = append(entries, entry)
+		}
+	}
+	return entries
+}
 
 // Test GetContextMapAndSettingTypes function
 

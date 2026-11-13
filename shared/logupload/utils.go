@@ -37,6 +37,16 @@ const (
 	LOCAL_TIME           string = "Local time"
 )
 
+func recordAppliedRule(settingsType string, rule *DCMGenericRule, fields log.Fields) {
+	if fields != nil {
+		fields[settingsType+"Rule"] = log.Fields{
+			"ruleId":        rule.ID,
+			"ruleName":      rule.Name,
+			"ruleCondition": rule.ToStringOnlyBaseProperties(),
+		}
+	}
+}
+
 func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, context map[string]string, fields log.Fields) *Settings {
 	if len(output.GroupName) < 1 && len(settings.GroupName) > 0 {
 		output.CopyDeviceSettings(settings)
@@ -62,7 +72,7 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 			output.CopyLusSetting(settings, false)
 		}
 		output.RuleIDs[rule.ID] = rule.Name
-		log.WithFields(common.FilterLogFields(fields)).Info("SettingsUtil Received attributes from device: " + rule.ToStringOnlyBaseProperties() + "  Applied rule for Log Upload Settings: ") //+ this.toString())
+		recordAppliedRule("logUpload", rule, fields)
 
 		//if timeWindow is 0 then return non-random cron expression.
 		//Randomize getSettings request time cron expression.This shall return random cron expression for each request, with in the range of initial cron and time window.
@@ -115,7 +125,7 @@ func CopySettings(output *Settings, settings *Settings, rule *DCMGenericRule, co
 	if len(output.VodSettingsName) < 1 && len(settings.VodSettingsName) > 0 {
 		output.CopyVodSettings(settings)
 		output.RuleIDs[rule.ID] = rule.Name
-		log.WithFields(common.FilterLogFields(fields)).Info("SettingsUtil Received attributes from device: " + rule.ToStringOnlyBaseProperties() + "  Applied rule for VOD settings.")
+		recordAppliedRule("vod", rule, fields)
 	}
 	return output
 }
