@@ -100,11 +100,16 @@ func NewHttpClient(conf *configuration.Config, serviceName string, tlsConfig *tl
 }
 
 // ApplyServiceTlsOverrides returns a per-service copy of tlsConfig when the service
-// defines tls_server_name; otherwise the shared config is returned.
+// overrides tls_server_name or tls_insecure_skip_verify; otherwise the shared config is returned.
 func ApplyServiceTlsOverrides(conf *configuration.Config, serviceName string, tlsConfig *tls.Config) *tls.Config {
 	confKey := fmt.Sprintf("xconfwebconfig.%v.tls_server_name", serviceName)
 	serverName := strings.TrimSpace(conf.GetString(confKey))
-	if serverName == "" {
+
+	sharedSkipVerify := tlsConfig != nil && tlsConfig.InsecureSkipVerify
+	confKey = fmt.Sprintf("xconfwebconfig.%v.tls_insecure_skip_verify", serviceName)
+	insecureSkipVerify := conf.GetBoolean(confKey, sharedSkipVerify)
+
+	if serverName == "" && insecureSkipVerify == sharedSkipVerify {
 		return tlsConfig
 	}
 
@@ -114,8 +119,14 @@ func ApplyServiceTlsOverrides(conf *configuration.Config, serviceName string, tl
 	} else {
 		tlsConfig = &tls.Config{}
 	}
-	tlsConfig.ServerName = serverName
-	log.Infof("%s: TLS ServerName override set to %s", serviceName, serverName)
+	if serverName != "" {
+		tlsConfig.ServerName = serverName
+		log.Infof("%s: TLS ServerName override set to %s", serviceName, serverName)
+	}
+	if insecureSkipVerify != sharedSkipVerify {
+		tlsConfig.InsecureSkipVerify = insecureSkipVerify
+		log.Warnf("%s: TLS InsecureSkipVerify override set to %v", serviceName, insecureSkipVerify)
+	}
 	return tlsConfig
 }
 
