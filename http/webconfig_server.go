@@ -78,6 +78,7 @@ type XconfServer struct {
 	tlsConfig                    *tls.Config
 	notLoggedHeaders             []string
 	metricsEnabled               bool
+	pprofEnabled                 bool
 	AppName                      string
 }
 
@@ -165,7 +166,7 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 	db.SetDatabaseClient(dbclient)
 
 	metricsEnabled := conf.GetBoolean("xconfwebconfig.server.metrics_enabled", MetricsEnabledDefault)
-
+	pprofEnabled := conf.GetBoolean("xconfwebconfig.server.pprof_enabled", false)
 	// configure headers that should not be logged
 	ignoredHeaders := conf.GetStringList("xconfwebconfig.log.ignored_headers")
 	ignoredHeaders = append(common.DefaultIgnoredHeaders, ignoredHeaders...)
@@ -268,6 +269,7 @@ func NewXconfServer(sc *common.ServerConfig, testOnly bool, ec *ExternalConnecto
 		tlsConfig:                      tlsConfig,
 		notLoggedHeaders:               notLoggedHeaders,
 		metricsEnabled:                 metricsEnabled,
+		pprofEnabled:                   pprofEnabled,
 		AppName:                        appName,
 		AppMetricsConfig:               appMetricsConfig,
 		XpcTracer:                      xpcTracer,
@@ -304,6 +306,10 @@ func (s *XconfServer) NoAuthMiddleware(next http.Handler) http.Handler {
 
 func (s *XconfServer) MetricsEnabled() bool {
 	return s.metricsEnabled
+}
+
+func (s *XconfServer) PprofEnabled() bool {
+	return s.pprofEnabled
 }
 
 func (s *XconfServer) TlsConfig() *tls.Config {
