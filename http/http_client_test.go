@@ -61,6 +61,47 @@ xconfwebconfig {
 	assert.Equal(t, "a.example.com", tlsOf(NewHttpClient(conf, "svc_a", nil)).ServerName)
 }
 
+func TestApplyServiceTlsOverridesInsecureSkipVerify(t *testing.T) {
+	conf := configuration.ParseString(`
+xconfwebconfig {
+    skip_on { tls_insecure_skip_verify = true }
+    skip_off { tls_insecure_skip_verify = false }
+    name_and_skip { tls_server_name = "n.example.com", tls_insecure_skip_verify = true }
+    unset { host = "https://unset" }
+}`)
+	shared := &tls.Config{InsecureSkipVerify: false}
+	sharedSkip := &tls.Config{InsecureSkipVerify: true}
+
+	// skip verify override alone produces a clone, shared config untouched
+	got := ApplyServiceTlsOverrides(conf, "skip_on", shared)
+	assert.NotSame(t, shared, got)
+	assert.True(t, got.InsecureSkipVerify)
+	assert.False(t, shared.InsecureSkipVerify)
+
+	// service can re-enable verification when shared config skips it
+	got = ApplyServiceTlsOverrides(conf, "skip_off", sharedSkip)
+	assert.NotSame(t, sharedSkip, got)
+	assert.False(t, got.InsecureSkipVerify)
+	assert.True(t, sharedSkip.InsecureSkipVerify)
+
+	// matching value is not an override
+	assert.Same(t, sharedSkip, ApplyServiceTlsOverrides(conf, "skip_on", sharedSkip))
+
+	// unset key inherits the shared value
+	assert.Same(t, sharedSkip, ApplyServiceTlsOverrides(conf, "unset", sharedSkip))
+
+	// both overrides applied together
+	got = ApplyServiceTlsOverrides(conf, "name_and_skip", shared)
+	assert.Equal(t, "n.example.com", got.ServerName)
+	assert.True(t, got.InsecureSkipVerify)
+
+	// nil shared config
+	got = ApplyServiceTlsOverrides(conf, "skip_on", nil)
+	assert.NotNil(t, got)
+	assert.True(t, got.InsecureSkipVerify)
+	assert.Nil(t, ApplyServiceTlsOverrides(conf, "unset", nil))
+}
+
 func TestPartnerTlsConfigDoesNotInheritPrimaryOverride(t *testing.T) {
 	conf := configuration.ParseString(`
 xconfwebconfig {
